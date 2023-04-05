@@ -5,6 +5,7 @@ services:
     restart: always
     volumes:
       - ./.env:/app/.env
+      - ./access.log:/app/access.log
     #   - ./json:/usr/share/nginx/html/json
     ports:
       - 3010:3010

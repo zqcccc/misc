@@ -1,11 +1,19 @@
 require('dotenv').config({ override: true })
 const http = require('http')
 const express = require('express')
-const child_process = require('child_process')
-const app = express()
+// const child_process = require('child_process')
 const https = require('https')
 const url = require('url')
+const fs = require('fs')
+const path = require('path')
+const morgan = require('morgan')
+
 const { countryMap } = require('./utils')
+
+const app = express()
+
+const accessLogStream = fs.createWriteStream('./access.log', { flags: 'a' })
+app.use(morgan('combined', { stream: accessLogStream }))
 
 const settles: [number, string, boolean][] = [
   [70143836, '解锁非自制剧', true],
