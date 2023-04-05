@@ -5,8 +5,9 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon index.ts",
-    "build": "tsc index.ts",
-    "docker:build": "docker build . -t 172232502/my-nf"
+    "build": "tsc",
+    "docker:build": "docker build . -t 172232502/my-nf",
+    "docker:run": "docker compose down && docker compose up -d"
   },
   "keywords": [],
   "author": "",
