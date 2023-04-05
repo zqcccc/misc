@@ -10,7 +10,7 @@ const path = require('path');
 const morgan = require('morgan');
 const { countryMap } = require('./utils');
 const app = express();
-const accessLogStream = fs.createWriteStream('./access.log', { flags: 'a' });
+const accessLogStream = fs.createWriteStream(path.join(__dirname, 'access.log'), { flags: 'a' });
 app.use(morgan('combined', { stream: accessLogStream }));
 const settles = [
     [70143836, '解锁非自制剧', true],
