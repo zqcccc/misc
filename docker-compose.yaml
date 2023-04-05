@@ -1,0 +1,10 @@
+version: "3"
+services:
+  netflix-test:
+    image: 172232502/my-nf:latest
+    restart: always
+    volumes:
+      - ./.env:/app/.env
+    #   - ./json:/usr/share/nginx/html/json
+    ports:
+      - 3010:3010
