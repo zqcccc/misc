@@ -36,7 +36,7 @@ function checkNetflix(movieId, msg, checkLocation) {
   return new Promise<[boolean, string]>((resolve, reject) => {
     const req = protocol.request(options, (res) => {
       let country = '未知国家'
-      if (checkLocation) {
+      if (checkLocation && res.headers.location) {
         const p = res.headers.location.split('/')
         country = countryMap[p[3]] || '未知国家'
       }
