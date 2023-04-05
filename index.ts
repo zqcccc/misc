@@ -75,6 +75,7 @@ app.get('/nf', (req, res) => {
   ).then(
     (result) => {
       res.status(200)
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8')
       for (let i = 0; i < result.length; i++) {
         if (result[i][0]) {
           res.end(result[i][1])
