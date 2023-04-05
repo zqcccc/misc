@@ -12,7 +12,10 @@ const { countryMap } = require('./utils')
 
 const app = express()
 
-const accessLogStream = fs.createWriteStream('./access.log', { flags: 'a' })
+const accessLogStream = fs.createWriteStream(
+  path.join(__dirname, 'access.log'),
+  { flags: 'a' }
+)
 app.use(morgan('combined', { stream: accessLogStream }))
 
 const settles: [number, string, boolean][] = [
