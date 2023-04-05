@@ -1,14 +1,15 @@
 version: '3'
 services:
   netflix-test:
-    # image: 172232502/my-nf:latest
-    build:
-      context: .
-      dockerfile: ./Dockerfile
+    image: 172232502/my-nf:latest
+    #build:
+    #  context: .
+    #    dockerfile: ./Dockerfile
     restart: always
     volumes:
-      - ./.env:/app/.env
-      - ./access.log:/app/access.log
+      - './.env:/app/.env'
+      - './access.log:/app/access.log'
     #   - ./json:/usr/share/nginx/html/json
-    ports:
-      - 3010:3010
+    #ports:
+    #  - 3010:3010
+    network_mode: 'host'
