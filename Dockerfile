@@ -5,3 +5,4 @@ COPY . .
 RUN yarn install --production=true
 # EXPOSE 8090
 CMD ["node", "index.js"]
+ENTRYPOINT [ "/bin/bash", "-l", "-c" ]
