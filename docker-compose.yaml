@@ -1,7 +1,7 @@
 version: '3'
 services:
   misc:
-    image: 172232502/misc-2
+    image: 172232502/misc
     #build:
     #  context: .
     #    dockerfile: ./Dockerfile
@@ -12,4 +12,5 @@ services:
     #   - ./json:/usr/share/nginx/html/json
     ports:
       - 3010:3010
+        #- 3000:3000
     # network_mode: 'host'
