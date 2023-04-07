@@ -1,18 +1,28 @@
+import { GET } from '../api/nf/route'
+
 const NF = async () => {
-  const data = await fetch(process.env.TEST_ENDPOINT as string, {
-    cache: 'no-store',
-  })
+  // const data = await Promise.all(
+  //   settles.map((params) => {
+  //     return checkNetflix(...params)
+  //   })
+  // )
+  const data = await GET()
+  console.log(
+    '%c data: ',
+    'font-size:12px;background-color: #93C0A4;color:#fff;',
+    data
+  )
 
-  const text = await data.text().then((text) => {
-    console.log(
-      '%c text: ',
-      'font-size:12px;background-color: #A8978E;color:#fff;',
-      text
-    )
-    return text
-  })
-
-  return <div>text from server:{text}</div>
+  return (
+    <div className='w-full h-full min-h-screen flex flex-col justify-center items-center'>
+      <h1 className='text-3xl font-bold mb-3'>Netflix status:</h1>
+      {data.map(([isUnlock, countryStr], index) => (
+        <p className='mb-3' key={index}>
+          {isUnlock ? 'unlock' : 'lock'} - {countryStr}
+        </p>
+      ))}
+    </div>
+  )
 }
 
 export default NF
