@@ -1,6 +1,7 @@
 import { GET } from '../api/nf/route'
 
-const NF = async () => {
+const NF = async (req: any) => {
+  console.log('%c req: ', 'font-size:12px;background-color: #2EAFB0;color:#fff;', req)
   // const data = await Promise.all(
   //   settles.map((params) => {
   //     return checkNetflix(...params)

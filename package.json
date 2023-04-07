@@ -3,10 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3010",
     "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "start": "next start -p 3010",
+    "lint": "next lint",
+    "docker:dev": "docker-compose -f docker-compose.dev.yaml up"
   },
   "dependencies": {
     "@types/node": "18.15.11",

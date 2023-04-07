@@ -1,0 +1,10 @@
+# :2015
+# respond "Hello, world!"
+
+http://127.0.0.1:8080 {
+  # respond "Hello, world!"
+	reverse_proxy  http://netflix-test:3010 {
+    header_up  Host  {upstream_hostport}
+    header_up  X-Forwarded-Host  {host}
+  }
+}
