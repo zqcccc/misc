@@ -7,12 +7,15 @@
     "build": "next build",
     "start": "next start -p 3010",
     "lint": "next lint",
-    "docker:dev": "docker-compose -f docker-compose.dev.yaml up"
+    "docker:dev": "docker-compose -f docker-compose.dev.yaml up",
+    "prisma:dev": "ts-node --project ./tsconfig-debug.json ./prisma/script.ts"
   },
   "dependencies": {
+    "@prisma/client": "^4.13.0",
     "@types/node": "18.15.11",
     "@types/react": "18.0.33",
     "@types/react-dom": "18.0.11",
+    "echarts": "^5.4.2",
     "eslint": "8.37.0",
     "eslint-config-next": "13.2.4",
     "next": "13.2.4",
@@ -23,6 +26,8 @@
   "devDependencies": {
     "autoprefixer": "^10.4.14",
     "postcss": "^8.4.21",
-    "tailwindcss": "^3.3.1"
+    "prisma": "^4.13.0",
+    "tailwindcss": "^3.3.1",
+    "ts-node": "^10.9.1"
   }
 }
