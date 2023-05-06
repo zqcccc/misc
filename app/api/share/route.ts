@@ -1,9 +1,15 @@
 import { NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
+import { Prisma, PrismaClient, Share } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
-function transformToResponse(json: any) {
+function transformToResponse(json: Share | null):
+  | (Omit<Share, 'date' | 'price' | 'pe'> & {
+      date: string[]
+      price: string[]
+      pe: string[]
+    })
+  | null {
   if (!json) return json
   return {
     id: json.id,
@@ -11,9 +17,11 @@ function transformToResponse(json: any) {
     date: json?.date.split(','),
     price: json?.price.split(','),
     pe: json?.pe.split(','),
+    createdAt: json.createdAt,
+    updatedAt: json.updatedAt,
   }
 }
-function transformToDatabase(json: any) {
+function transformToDatabase(json: any): Prisma.ShareCreateInput {
   if (!json) return json
   return {
     id: json.id,
@@ -21,6 +29,8 @@ function transformToDatabase(json: any) {
     date: json?.date.join(','),
     price: json?.price.join(','),
     pe: (json?.pe || json?.pe_ttm)?.join(','),
+    // createAt: json.createAt,
+    // updateAt: json.updateAt,
   }
 }
 function getShare(id: string) {
@@ -29,13 +39,17 @@ function getShare(id: string) {
       where: { id: id },
     })
     .then((json) => {
-      console.log('json: ', json)
+      // console.log('json: ', json)
       return transformToResponse(json)
     })
 }
 function saveShare(data: any) {
-  return prisma.share.create({
-    data: transformToDatabase(data),
+  return prisma.share.upsert({
+    where: {
+      id: data.id,
+    },
+    create: transformToDatabase(data),
+    update: transformToDatabase(data),
   })
 }
 // /api/share
@@ -49,27 +63,33 @@ export async function GET(request: Request) {
     const json = await getShare(id)
 
     if (json) {
-      return NextResponse.json(json)
-    } else {
-      const [res, hasSavedShareInfo] = await Promise.all([
-        fetch(`https://eniu.com/chart/pea/${id}/t/all`),
-        prisma.shareInfo.findUnique({
-          where: {
-            id,
-          },
-        }),
-      ])
-      const json = await res.json()
-      // console.log('json: ', json)
-
-      if (json) {
-        const newShare = await saveShare({
-          ...json,
-          id,
-          name: hasSavedShareInfo?.name || 'unknown share',
-        })
-        return NextResponse.json(transformToResponse(newShare))
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      if (json.updatedAt >= today) {
+        console.log('directly return', json.id)
+        // directly return the json when the updatedAt is today
+        return NextResponse.json(json)
       }
+    }
+
+    const [res, hasSavedShareInfo] = await Promise.all([
+      fetch(`https://eniu.com/chart/pea/${id}/t/all`),
+      prisma.shareInfo.findUnique({
+        where: {
+          id,
+        },
+      }),
+    ])
+    const newJson = await res.json()
+    // console.log('newJson: ', newJson)
+
+    if (newJson) {
+      const newShare = await saveShare({
+        ...newJson,
+        id,
+        name: hasSavedShareInfo?.name || 'unknown share',
+      })
+      return NextResponse.json(transformToResponse(newShare))
     }
   } catch (error) {
     console.log('error: ', error)

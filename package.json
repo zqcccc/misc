@@ -8,7 +8,8 @@
     "start": "next start -p 3010",
     "lint": "next lint",
     "docker:dev": "docker-compose -f docker-compose.dev.yaml up",
-    "prisma:dev": "ts-node --project ./tsconfig-debug.json ./prisma/script.ts"
+    "prisma:dev": "ts-node --project ./tsconfig-debug.json ./prisma/script.ts",
+    "prisma:studio": "prisma studio"
   },
   "dependencies": {
     "@prisma/client": "^4.13.0",
