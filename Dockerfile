@@ -14,7 +14,6 @@ RUN \
   elif [ -f pnpm-lock.yaml ]; then yarn global add pnpm && pnpm i --frozen-lockfile; \
   else echo "Lockfile not found." && exit 1; \
   fi
-RUN yarn prisma:generate
 
 
 # Rebuild the source code only when needed
@@ -28,7 +27,7 @@ COPY . .
 # Uncomment the following line in case you want to disable telemetry during the build.
 # ENV NEXT_TELEMETRY_DISABLED 1
 
-RUN yarn build
+RUN yarn prisma generate && yarn build
 
 # If using npm comment out above and use below instead
 # RUN npm run build
