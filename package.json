@@ -9,10 +9,11 @@
     "lint": "next lint",
     "docker:dev": "docker-compose -f docker-compose.dev.yaml up",
     "prisma:dev": "ts-node --project ./tsconfig-debug.json ./prisma/script.ts",
-    "prisma:studio": "prisma studio"
+    "prisma:studio": "prisma studio",
+    "prisma:generate": "prisma generate --schema=./prisma/schema.prisma"
   },
   "dependencies": {
-    "@prisma/client": "^4.13.0",
+    "@prisma/client": "4.13.0",
     "@types/node": "18.15.11",
     "@types/react": "18.0.33",
     "@types/react-dom": "18.0.11",
