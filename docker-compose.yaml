@@ -7,8 +7,8 @@ services:
     #    dockerfile: ./Dockerfile
     restart: always
     volumes:
-      - './.env.local:/app/.env.local'
-      # - './access.log:/app/access.log'
+      - './.env:/app/.env'
+      - './prisma/dev.db:/app/prisma/dev.db'
     #   - ./json:/usr/share/nginx/html/json
     ports:
       - 3010:3010
