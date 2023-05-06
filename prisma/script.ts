@@ -19,7 +19,7 @@ async function main() {
   // ).json()
 
   // read json and write to database
-  // const json = require('../stock_list.json')
+  // const json = require('../node_modules/list.json')
   // json.reduce(async (p: any, element: any) => {
   //   await p
   //   console.log('element: ', element)
@@ -54,7 +54,7 @@ async function main() {
   //   }
   // }, Promise.resolve())
 
-  console.log('hello world')
+  // console.log('hello world')
 
   // const user = await prisma.share.create({
   //   data: {
@@ -62,6 +62,38 @@ async function main() {
   //   }
   // })
   // console.log(user)
+
+  // give an id and find its share and update it when the updateAt is older than 1 day
+  const share = await prisma.share.findUnique({
+    where: {
+      id: 'sh600519',
+    },
+  })
+  // console.log('share: ', share)
+  // share?.updatedAt
+  // const today = new Date();
+  // today.setHours(0, 0, 0, 0)
+  // console.log('today: ', today)
+
+  // share?.updatedAt && console.log('share?.updatedAt > today: ', share?.updatedAt > today)
+
+  const share2 = await prisma.share.upsert({
+    where: {
+      id: 'sh600519',
+    },
+    update: {
+      name: '茅台222',
+    },
+    create: {
+      id: 'sh600519',
+      name: '贵州茅台',
+      date: share?.date || '',
+      price: share?.price || '',
+      pe: share?.pe || '',
+    },
+  })
+
+  console.log('share2: ', share2.name)
 }
 
 main()
