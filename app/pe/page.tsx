@@ -88,7 +88,7 @@ const option = {
 }
 
 const seriesMap = new Map<string, any[]>()
-const PE = (props: { date: string[]; pe_ttm: number[] }) => {
+const PE = () => {
   const [id, setId] = useState('sh600519')
   const hasInit = useRef(false)
   const charts = useRef<ECharts.ECharts | null>(null)
