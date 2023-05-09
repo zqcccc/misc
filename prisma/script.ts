@@ -64,11 +64,11 @@ async function main() {
   // console.log(user)
 
   // give an id and find its share and update it when the updateAt is older than 1 day
-  const share = await prisma.share.findUnique({
-    where: {
-      id: 'sh600519',
-    },
-  })
+  // const share = await prisma.share.findUnique({
+  //   where: {
+  //     id: 'sh600519',
+  //   },
+  // })
   // console.log('share: ', share)
   // share?.updatedAt
   // const today = new Date();
@@ -77,23 +77,81 @@ async function main() {
 
   // share?.updatedAt && console.log('share?.updatedAt > today: ', share?.updatedAt > today)
 
-  const share2 = await prisma.share.upsert({
-    where: {
-      id: 'sh600519',
-    },
-    update: {
-      name: '茅台222',
-    },
-    create: {
-      id: 'sh600519',
-      name: '贵州茅台',
-      date: share?.date || '',
-      price: share?.price || '',
-      pe: share?.pe || '',
-    },
-  })
+  // const share2 = await prisma.share.upsert({
+  //   where: {
+  //     id: 'sh600519',
+  //   },
+  //   update: {
+  //     name: '茅台222',
+  //   },
+  //   create: {
+  //     id: 'sh600519',
+  //     name: '贵州茅台',
+  //     date: share?.date || '',
+  //     price: share?.price || '',
+  //     pe: share?.pe || '',
+  //   },
+  // })
 
-  console.log('share2: ', share2.name)
+  // console.log('share2: ', share2.name)
+
+  /**
+   * remove duplicate data
+   */
+  const shares = await prisma.share.findMany()
+  // console.log('shares: ', shares)
+  shares.forEach(async (share) => {
+    console.log('share: ', share.name)
+    const dates = share.date.split(',')
+    const pes = share.pe.split(',')
+    const prices = share.price.split(',')
+
+    // 去重的数组
+    var uniqueArray = new Set(dates)
+
+    // 获取需要删除的索引
+    var indexesToRemove: number[] = []
+    dates.forEach(function (item, index) {
+      if (!uniqueArray.has(item)) {
+        indexesToRemove.push(index)
+      } else {
+        uniqueArray.delete(item)
+      }
+    })
+
+    // 删除索引对应的元素
+    indexesToRemove.reverse().forEach(function (index) {
+      dates.splice(index, 1)
+      pes.splice(index, 1)
+      prices.splice(index, 1)
+      // console.log(`dates.splice(${index}, 1): `, dates.splice(index, 1))
+      // console.log(`pes.splice(${index}, 1): `, pes.splice(index, 1))
+      // console.log(`prices.splice(${index}, 1): `, prices.splice(index, 1))
+    })
+
+    // console.log(dates.length) // 输出: ["A", "C", "D", "E"]
+    // console.log(pes.length) // 输出: ["F", "H", "I", "J"]
+    // console.log(prices.length)
+
+    await prisma.share.upsert({
+      where: {
+        id: share.id,
+      },
+      update: {
+        name: share.name,
+        date: dates.join(','),
+        price: prices.join(','),
+        pe: pes.join(','),
+      },
+      create: {
+        id: share.id,
+        name: share.name,
+        date: dates.join(','),
+        price: prices.join(','),
+        pe: pes.join(','),
+      },
+    })
+  })
 }
 
 main()

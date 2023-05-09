@@ -52,6 +52,37 @@ function saveShare(data: any) {
     update: transformToDatabase(data),
   })
 }
+function removeDuplicates(share: Share) {
+  const dates = share.date.split(',')
+  const pes = share.pe.split(',')
+  const prices = share.price.split(',')
+
+  // 去重的数组
+  var uniqueArray = new Set(dates)
+
+  // 获取需要删除的索引
+  var indexesToRemove: number[] = []
+  dates.forEach(function (item, index) {
+    if (!uniqueArray.has(item)) {
+      indexesToRemove.push(index)
+    } else {
+      uniqueArray.delete(item)
+    }
+  })
+
+  // 删除索引对应的元素
+  indexesToRemove.reverse().forEach(function (index) {
+    dates.splice(index, 1)
+    pes.splice(index, 1)
+    prices.splice(index, 1)
+  })
+  return {
+    ...share,
+    date: dates,
+    pe: pes,
+    price: prices,
+  }
+}
 // /api/share
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -85,7 +116,7 @@ export async function GET(request: Request) {
 
     if (newJson) {
       const newShare = await saveShare({
-        ...newJson,
+        ...removeDuplicates(newJson),
         id,
         name: hasSavedShareInfo?.name || 'unknown share',
       })

@@ -97,12 +97,27 @@ const PE = () => {
   useEffect(() => {
     if (hasInit.current) return
     hasInit.current = true
-    const myChart = ECharts.init(
-      document.getElementById('pe') as HTMLDivElement
-    )
+    const chartContainer = document.getElementById('pe') as HTMLDivElement
+    const myChart = ECharts.init(chartContainer)
+    function resizeChart() {
+      // 获取父容器的宽度和高度
+      var containerWidth = chartContainer.clientWidth
+      var containerHeight = chartContainer.clientHeight
+
+      // 调整图表的大小
+      myChart.resize({
+        width: containerWidth,
+        height: containerHeight,
+      })
+    }
+    // 监听窗口大小改变事件
+    window.addEventListener('resize', resizeChart)
     myChart.setOption(option)
     charts.current = myChart
     getData()
+    return () => {
+      window.removeEventListener('resize', resizeChart)
+    }
   }, [])
 
   const getData = useMemoizedFn(() => {
@@ -141,7 +156,7 @@ const PE = () => {
         </button>
       </div>
       {/* <h1 className='text-3xl font-bold mb-3'>PE:</h1> */}
-      <div id='pe' style={{ width: 1000, height: 800 }}></div>
+      <div id='pe' className='w-full flex-1'></div>
     </div>
   )
 }
