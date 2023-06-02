@@ -8,7 +8,9 @@ const settles: [number, string, boolean][] = [
 
 function checkNetflix(movieId: number, msg: string, checkLocation: boolean) {
   return new Promise<[boolean, string]>((resolve, reject) => {
-    fetch(`https://www.netflix.com/title/${movieId}`, {
+    const url = `https://www.netflix.com/title/${movieId}`
+    // console.log('checkNetflix url:', url)
+    fetch(url, {
       // next: { revalidate: 5 },
       cache: 'no-store',
       headers: {
@@ -32,6 +34,7 @@ function checkNetflix(movieId: number, msg: string, checkLocation: boolean) {
         }
       },
       (error) => {
+        console.log('request error: ', error)
         reject(error)
       }
     )
