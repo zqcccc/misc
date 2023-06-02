@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3010",
+    "dev": "next dev -p 3011",
     "build": "next build",
-    "start": "next start -p 3010",
+    "start": "next start -p 3011",
     "lint": "next lint",
     "docker:dev": "docker-compose -f docker-compose.dev.yaml up",
     "docker:build": "docker buildx build --platform=linux/amd64,linux/arm64 -t 172232502/misc . --push",
