@@ -52,14 +52,10 @@ function saveShare(data: any) {
     update: transformToDatabase(data),
   })
 }
-function getArray(data: string | any[]) {
-  if (typeof data === 'string') return data.split(',')
-  return data
-}
-function removeDuplicates(share: Share & { pe_ttm: string[] }) {
-  const dates = getArray(share.date)
-  const pes = getArray(share.pe || share.pe_ttm)
-  const prices = getArray(share.price)
+function removeDuplicates(share: Prisma.ShareCreateInput) {
+  const dates = share.date.split(',')
+  const pes = share.pe.split(',')
+  const prices = share.price.split(',')
 
   // 去重的数组
   var uniqueArray = new Set(dates)
@@ -116,11 +112,11 @@ export async function GET(request: Request) {
       }),
     ])
     const newJson = await res.json()
-    // console.log('newJson: ', newJson)
+    console.log('newJson: ', newJson)
 
     if (newJson) {
       const newShare = await saveShare({
-        ...removeDuplicates(newJson),
+        ...removeDuplicates(transformToDatabase(newJson)),
         id,
         name: hasSavedShareInfo?.name || 'unknown share',
       })
