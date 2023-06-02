@@ -52,7 +52,7 @@ function saveShare(data: any) {
     update: transformToDatabase(data),
   })
 }
-function removeDuplicates(share: Share) {
+function removeDuplicates(share: Prisma.ShareCreateInput) {
   const dates = share.date.split(',')
   const pes = share.pe.split(',')
   const prices = share.price.split(',')
@@ -112,11 +112,11 @@ export async function GET(request: Request) {
       }),
     ])
     const newJson = await res.json()
-    // console.log('newJson: ', newJson)
+    console.log('newJson: ', newJson)
 
     if (newJson) {
       const newShare = await saveShare({
-        ...removeDuplicates(newJson),
+        ...removeDuplicates(transformToDatabase(newJson)),
         id,
         name: hasSavedShareInfo?.name || 'unknown share',
       })
