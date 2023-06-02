@@ -7,9 +7,9 @@
     "build": "next build",
     "start": "next start -p 3011",
     "lint": "next lint",
-    "docker:dev": "docker-compose -f docker-compose.dev.yaml up",
-    "docker:build": "docker buildx build --platform=linux/amd64,linux/arm64 -t 172232502/misc . --push",
-    "docker:check": "docker compose down && docker compose up -d",
+    "docker:dev": "sudo docker-compose -f docker-compose.dev.yaml up",
+    "docker:build": "sudo docker buildx build --platform=linux/amd64,linux/arm64 -t 172232502/misc . --push",
+    "docker": "sudo docker pull 172232502/misc && sudo docker compose down && sudo docker compose up -d",
     "prisma:dev": "ts-node --project ./tsconfig-debug.json ./prisma/script.ts",
     "prisma:studio": "prisma studio",
     "prisma:generate": "prisma generate --schema=./prisma/schema.prisma"

@@ -52,10 +52,14 @@ function saveShare(data: any) {
     update: transformToDatabase(data),
   })
 }
-function removeDuplicates(share: Share) {
-  const dates = share.date.split(',')
-  const pes = share.pe.split(',')
-  const prices = share.price.split(',')
+function getArray(data: string | any[]) {
+  if (typeof data === 'string') return data.split(',')
+  return data
+}
+function removeDuplicates(share: Share & { pe_ttm: string[] }) {
+  const dates = getArray(share.date)
+  const pes = getArray(share.pe || share.pe_ttm)
+  const prices = getArray(share.price)
 
   // 去重的数组
   var uniqueArray = new Set(dates)
