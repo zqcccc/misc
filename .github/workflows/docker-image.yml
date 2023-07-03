@@ -23,11 +23,24 @@ jobs:
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
-    - name: Build the Docker image
-      run: docker buildx create --use --driver-opt network=host && docker buildx build --platform=linux/amd64,linux/arm64 -t 172232502/misc -t 172232502/misc:${{ steps.version.outputs.next_version }} . --push
-#     -
-#       name: Build and push
-#       uses: docker/build-push-action@v4
-#       with:
-#         push: true
-#         tags: 172232502/misc:latest
+    # - name: Build the Docker image
+    #   run: docker buildx create --use --driver-opt network=host && docker buildx build --platform=linux/amd64,linux/arm64 -t 172232502/misc -t 172232502/misc:${{ steps.version.outputs.next_version }} . --push
+    - 
+      name: Set up QEMU
+      uses: docker/setup-qemu-action@v2
+
+    - 
+      name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+    
+    - 
+      name: Build and push Docker image
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: ${{ steps.version.outputs.next_version }}
+        labels: ${{ steps.version.outputs.next_version }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
