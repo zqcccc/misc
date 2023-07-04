@@ -1,5 +1,5 @@
 import fs from 'fs'
-import path, { resolve } from 'path'
+import path from 'path'
 import matter, { GrayMatterFile } from 'gray-matter'
 import { remark } from 'remark'
 // import html from 'remark-html'
@@ -8,7 +8,7 @@ import remarkGfm from 'remark-gfm'
 import remarkRehype from 'remark-rehype'
 // import rehypeSanitize from 'rehype-sanitize'
 import rehypeStringify from 'rehype-stringify'
-import rehypePrism from '@mapbox/rehype-prism'
+// import rehypePrism from '@mapbox/rehype-prism'
 import rehypePrettyCode from 'rehype-pretty-code'
 
 const postsDirectory = path.join(process.cwd(), 'posts')
@@ -77,7 +77,7 @@ export async function getAllPostIds() {
 
 export async function getAllPost(dirPath = postsDirectory) {
   const allPaths = await getAllPostsPath()
-  return Promise.all(
+  const allPosts = await Promise.all(
     allPaths.map(async (filePath) => {
       return readFile(filePath).then((fileContent) => {
         const matterResult = matter(fileContent.toString())
@@ -88,6 +88,14 @@ export async function getAllPost(dirPath = postsDirectory) {
       })
     })
   )
+  allPosts.sort((a, b) => {
+    if (a.data.date < b.data.date) {
+      return 1
+    } else {
+      return -1
+    }
+  })
+  return allPosts
 }
 
 export function getPostMeta(id: string[]) {
