@@ -5,30 +5,28 @@ import React, { useCallback, useMemo, useRef, useState } from 'react'
 import { copy } from './helpers'
 
 const Pre = (props: any) => {
-  const className = props.children.props.className || ''
+  // const className = props.children.props.className || ''
 
-  const highLightLine = useMemo(() => {
-    const matches = className.match(
-      /language-(?<lang>[^\{\}]+)(\{(?<high>(.+))\})?/
-    )
-    if (matches?.groups?.high) {
-      return matches.groups.high.split(',').reduce((obj: any, cur: any) => {
-        let [from, end] = cur.split('-')
-        console.log('end: ', end)
-        console.log('from: ', from)
-        from = parseInt(from)
-        end = parseInt(end ?? from)
-        for (let i = from; i <= end; i++) {
-          obj[i] = true
-        }
-        return obj
-      }, {})
-    } else {
-      return {}
-    }
-  }, [className])
-
-  console.log('highLightLine: ', highLightLine)
+  // const highLightLine = useMemo(() => {
+  //   const matches = className.match(
+  //     /language-(?<lang>[^\{\}]+)(\{(?<high>(.+))\})?/
+  //   )
+  //   if (matches?.groups?.high) {
+  //     return matches.groups.high.split(',').reduce((obj: any, cur: any) => {
+  //       let [from, end] = cur.split('-')
+  //       console.log('end: ', end)
+  //       console.log('from: ', from)
+  //       from = parseInt(from)
+  //       end = parseInt(end ?? from)
+  //       for (let i = from; i <= end; i++) {
+  //         obj[i] = true
+  //       }
+  //       return obj
+  //     }, {})
+  //   } else {
+  //     return {}
+  //   }
+  // }, [className])
 
   // const code = props.children.props.children.trim()
   const codeDom = useRef<HTMLDivElement>(null)
