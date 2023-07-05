@@ -644,7 +644,7 @@ hook.promise('foo').then(function () {
 
 SyncHook 其实是继承的 Hook，还有个 SyncHookCodeFactory 继承了 HookCodeFactory
 
-![image-20210704192353141](./syncHook文件结构.png)
+![image-20210704192353141](/syncHook文件结构.png)
 
 其实主要是去 `new Hook(args, name)` 得到 hook 实例后，再把同步钩子不能用的方法给重写了
 
@@ -926,7 +926,7 @@ complier 上已经生成好了很多 hooks（包括但不限于以下）：
 - make
 - afterCompile
 
-![webpack主流程](./webpack主流程.png)
+![webpack主流程](/webpack主流程.png)
 
 ## 打包流程
 

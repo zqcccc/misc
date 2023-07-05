@@ -342,7 +342,7 @@ https://www.gatsbyjs.com/guides/strapi/
 6. 在 gatsby-config.js 文件中配置插件，并传递插件所需的配置参数
 7. 重新运行应用
 
-![gatsby插件目录](./gatsby插件目录.png)
+![gatsby插件目录](/gatsby插件目录.png)
 
 ```js
 const axios = require("axios")
