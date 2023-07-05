@@ -25,7 +25,7 @@ export function formatPostDate(date: string, lang: string) {
   return d.toLocaleDateString(...args)
 }
 
-function createFakeElement(value) {
+function createFakeElement(value: string) {
   const isRTL = document.documentElement.getAttribute('dir') === 'rtl'
   const fakeElement = document.createElement('textarea')
   // Prevent zooming on iOS
@@ -47,7 +47,7 @@ function createFakeElement(value) {
   return fakeElement
 }
 
-function select(element) {
+function select(element: HTMLTextAreaElement) {
   const isReadOnly = element.hasAttribute('readonly')
   if (!isReadOnly) {
     element.setAttribute('readonly', '')
