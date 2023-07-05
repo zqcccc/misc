@@ -2,6 +2,7 @@ import dayjs from 'dayjs'
 import { getAllPostIds, getPostData, getPostMeta } from '../../api/post/lib'
 
 import './style.css'
+import Content from './content'
 
 export default async function Post(props: { params: { id: string[] } }) {
   const postData = await getPostData(props.params.id)
@@ -12,7 +13,7 @@ export default async function Post(props: { params: { id: string[] } }) {
       <time dateTime={time.toISOString()} className='block mb-4'>
         {time.format('YYYY-MM-DD')}
       </time>
-      <div dangerouslySetInnerHTML={{ __html: postData.contentHtml }} />
+      <Content>{postData.contentHtml}</Content>
     </article>
   )
 }

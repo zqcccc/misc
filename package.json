@@ -15,7 +15,6 @@
     "prisma:generate": "prisma generate --schema=./prisma/schema.prisma"
   },
   "dependencies": {
-    "@mapbox/rehype-prism": "^0.8.0",
     "@prisma/client": "4.13.0",
     "@types/node": "18.15.11",
     "@types/react": "18.0.33",
@@ -27,18 +26,15 @@
     "eslint-config-next": "13.2.4",
     "gray-matter": "^4.0.3",
     "next": "^13.4.4",
+    "next-mdx-remote": "^4.4.1",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "rehype-pretty-code": "^0.10.0",
-    "rehype-stringify": "^9.0.3",
-    "remark": "^14.0.3",
     "remark-gfm": "^3.0.1",
-    "remark-rehype": "^10.1.0",
     "shiki": "^0.14.3",
     "typescript": "5.0.3"
   },
   "devDependencies": {
-    "@types/mapbox__rehype-prism": "^0.8.0",
     "autoprefixer": "^10.4.14",
     "postcss": "^8.4.21",
     "prisma": "^4.13.0",

@@ -62,7 +62,7 @@ alias sw="w2 start -p 8899 --socksPort 8900" #开启whistle服务
 
 ios 的代理软件特别多，但是因为特殊原因只能在非国区商店里下载到靠谱的代理软件，这里以小火箭为例
 
-![shadowrocket配置](./shadowrocket_w2.jpeg)
+![shadowrocket配置](/shadowrocket_w2.jpeg)
 
 几乎所有的这些软件配置都是大差不差的
 

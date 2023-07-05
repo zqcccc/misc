@@ -1,15 +1,16 @@
 import fs from 'fs'
 import path from 'path'
 import matter, { GrayMatterFile } from 'gray-matter'
-import { remark } from 'remark'
+// import { remark } from 'remark'
 // import html from 'remark-html'
 // import remarkParse from 'remark-parse'
 import remarkGfm from 'remark-gfm'
-import remarkRehype from 'remark-rehype'
+// import remarkRehype from 'remark-rehype'
 // import rehypeSanitize from 'rehype-sanitize'
-import rehypeStringify from 'rehype-stringify'
+// import rehypeStringify from 'rehype-stringify'
 // import rehypePrism from '@mapbox/rehype-prism'
 import rehypePrettyCode from 'rehype-pretty-code'
+import { serialize } from 'next-mdx-remote/serialize'
 
 const postsDirectory = path.join(process.cwd(), 'posts')
 
@@ -118,17 +119,33 @@ export async function getPostData(id: string[]) {
   const matterResult = getPostMeta(id)
 
   // Use remark to convert markdown into HTML string
-  const processedContent = await remark()
-    .use(remarkRehype)
-    // .use(rehypePrism)
-    .use(rehypePrettyCode, {
-      // See Options section below.
-    })
-    .use(rehypeStringify)
-    // .use(rehypeSanitize)
-    .use(remarkGfm)
-    .process(matterResult.content)
-  const contentHtml = processedContent.toString()
+  // const processedContent = await remark()
+  //   .use(remarkRehype)
+  //   // .use(rehypePrism)
+  //   .use(rehypePrettyCode, {
+  //     theme: 'one-dark-pro',
+  //   })
+  //   .use(rehypeStringify)
+  //   // .use(rehypeSanitize)
+  //   .use(remarkGfm)
+  //   .process(matterResult.content)
+  const mdxSource = await serialize(matterResult.content, {
+    mdxOptions: {
+      remarkPlugins: [remarkGfm],
+      rehypePlugins: [
+        [
+          rehypePrettyCode,
+          {
+            theme: 'one-dark-pro',
+          },
+        ],
+      ],
+      format: 'mdx',
+    },
+  })
+  // console.log('mdxSource: ', mdxSource)
+  // const contentHtml = processedContent.toString()
+  const contentHtml = mdxSource
 
   // Combine the data with the id and contentHtml
   return {
