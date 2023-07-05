@@ -40,9 +40,7 @@ jobs:
         context: .
         platforms: linux/amd64,linux/arm64
         push: true
-        tags: ｜
-          172232502/misc:latest
-          172232502/misc:${{ steps.version.outputs.next_version }}
+        tags: 172232502/misc:latest,172232502/misc:${{ steps.version.outputs.next_version }}
         labels: 172232502/misc:${{ steps.version.outputs.next_version }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
