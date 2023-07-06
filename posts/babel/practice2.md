@@ -28,7 +28,7 @@ https://github.com/zqcccc/temp/blob/6f116f8d85/parser/changeCode.cjs
 
 替换过程中的一些边界 case 也让我不停地修改了脚本，代码写的有点冗余，但是结果还是挺满意的，核心就是这个组装新 `TemplateLiteral` 节点的函数 `getTemplateLiteralArguments` 了
 
-```js {1-3,4}
+```js
 function getTemplateLiteralArguments(
   map,
   quasis,

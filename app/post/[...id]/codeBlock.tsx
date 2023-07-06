@@ -57,7 +57,9 @@ const Pre = (props: any) => {
       >
         {copied ? 'Copied' : ' Copy '}
       </button>
-      <pre {...props}>{props.children}</pre>
+      <pre {...props} style={{ background: '#011627' }}>
+        {props.children}
+      </pre>
     </div>
   )
 }
