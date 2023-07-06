@@ -18,12 +18,11 @@ const ResponsiveImage: React.FC<any> = (props) => (
 const components = {
   img: ResponsiveImage,
   pre: Pre,
-  // code: ({ children, ...props }: any) =>
-  //   (
-  //     <code className='language-inline-code' {...props}>
-  //       {children}
-  //     </code>
-  //   ),
+  code: ({ children, ...props }: any) => (
+    <code className='language-inline-code' {...props}>
+      {children}
+    </code>
+  ),
 }
 
 const Content: React.FC<{ children: any }> = ({ children }) => {
