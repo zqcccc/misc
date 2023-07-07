@@ -3,6 +3,7 @@ import { getAllPostIds, getPostData, getPostMeta } from '../../api/post/lib'
 
 import './style.css'
 import Content from './content'
+import ReactCusdis from './Cusdis'
 
 export default async function Post(props: { params: { id: string[] } }) {
   const postData = await getPostData(props.params.id)
@@ -14,6 +15,7 @@ export default async function Post(props: { params: { id: string[] } }) {
         {time.format('YYYY-MM-DD')}
       </time>
       <Content>{postData.contentHtml}</Content>
+      <ReactCusdis />
     </article>
   )
 }
