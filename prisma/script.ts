@@ -5,6 +5,12 @@ const prisma = new PrismaClient()
 async function main() {
   // ... you will write your Prisma Client queries here
 
+  const json = await prisma.lowCodeConfig.create({
+    data: {
+      json: '{"name": "123"}',
+    }
+  })
+  
   // const user = await prisma.share.create({
   //   data: {
   //     id: '123',
