@@ -30,7 +30,7 @@ export default async function Post() {
           const time = dayjs(post.data.date).format('MMMM DD, YYYY')
           return (
             <li key={index} className='mt-8'>
-              <Link className='block text-[#005b99] text-3xl mb-2 font-bold dark:text-[#f9e062]' href={'post/' + post.path}>
+              <Link className='block text-[#005b99] text-3xl mb-2 font-bold dark:text-[#f9e062]' href={'post/' + post.path} prefetch={false}>
                 {post.data.title}
               </Link>
               <div className='mb-4 text-sm'>{time}</div>
