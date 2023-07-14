@@ -6,7 +6,7 @@ export const metadata = {
     default: "ZQC's Blog", // a default is required when creating a template
   },
   description: "welcome to ZQC's personal blog, nice to meet you",
-  colorScheme: 'dark',
+  colorScheme: 'light dark',
   keywords: ['Next.js', 'React', 'JavaScript', 'blog', 'zqc', 'onlylike.work'],
 }
 
