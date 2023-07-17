@@ -12,6 +12,7 @@ export async function GET(request: Request) {
     })
     return NextResponse.json(config)
   } catch (e) {
+    console.log('error: ', e)
   } finally {
     await prisma.$disconnect()
   }
@@ -33,7 +34,7 @@ export async function POST(request: Request) {
     })
     return NextResponse.json(config)
   } catch (e) {
-    console.log('e: ', e)
+    console.log('error: ', e)
     return NextResponse.json({ error: e })
   } finally {
     await prisma.$disconnect()
