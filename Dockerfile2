@@ -1,17 +1,29 @@
-FROM node:16.20.0-alpine AS builder
-WORKDIR /app
-COPY package.json yarn.lock ./
-RUN yarn
-ENV NODE_ENV=production
-COPY . .
-RUN yarn build
-# EXPOSE 8090
+# assumes that you have already built the app with `next build`
+FROM node:18-alpine AS base
 
-FROM node:16.20.0-alpine AS app
-ENV NODE_ENV=production
+FROM base AS runner
 WORKDIR /app
-COPY package.json yarn.lock ./
-# RUN yarn
-COPY --from=builder /app/.next /app/node_modules ./
+
+ENV NODE_ENV production
+# Uncomment the following line in case you want to disable telemetry during runtime.
+# ENV NEXT_TELEMETRY_DISABLED 1
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+COPY public ./public
+COPY prisma /app/prisma
+RUN chown -R 1001:1001 /app/prisma/
+
+# Automatically leverage output traces to reduce image size
+# https://nextjs.org/docs/advanced-features/output-file-tracing
+COPY --chown=nextjs:nodejs /.next/standalone ./
+COPY --chown=nextjs:nodejs /.next/static ./.next/static
+
+USER nextjs
+
 EXPOSE 3010
-CMD ["yarn", "start"]
+
+ENV PORT 3010
+
+CMD ["node", "server.js"]

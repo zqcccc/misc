@@ -27,5 +27,6 @@ model ShareInfo {
 
 model LowCodeConfig {
   id   Int    @id @default(autoincrement())
+  name String @default("website")
   json String
 }
