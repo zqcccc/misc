@@ -7,7 +7,7 @@ slug: 'learn-webpack'
 
 有一道题是这样的，将给定的数字转化成千分位的格式，如把“10000”转化为“10,000”
 
-```javascript{22}
+```javascript {22}
 // js逻辑写法
 function transform(num) {
   num = (num + '').split('')
@@ -35,7 +35,7 @@ function transform(num) {
 
 正则
 
-```JavaScript
+```js
 var reg = /(?=(?!\b)(\d{3})+$)/g // 对象字面量声明 /pattern/flag
 var reg = new RegExp('(?=(?!\\b)(\\d{3})+$)', 'g') // 构造函数声明正则，其实就是去掉了两边的 / 而且里面的每个 \ 都要转义
 ```
