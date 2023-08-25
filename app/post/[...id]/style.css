@@ -289,7 +289,7 @@ a:focus {
 }
 
 pre {
-  padding: var(--spacing-2) 0;
+  padding: var(--spacing-2);
   border-radius: var(--spacing-2);
 }
 
@@ -303,6 +303,7 @@ pre span {
 */
 .code-block {
   position: relative;
+  margin: var(--spacing-2) 0;
 }
 .gatsby-remark-prismjs-copy-button {
   border: none;
