@@ -33,9 +33,7 @@ export default function Preferential() {
           onChange={(e) => {
             const ips = e.target.value
               .split('\n')
-              .filter(
-                (item, index, list) => item && list.indexOf(item) === index
-              )
+              .filter((item, index, list) => list.indexOf(item) === index)
             setState({ ips })
           }}
         ></textarea>
@@ -44,13 +42,13 @@ export default function Preferential() {
             try {
               const [protocol, base64Str] = state.input.split('://')
               const config = JSON.parse(Base64.decode(base64Str))
-              const newConfigs = state.ips.map((ip) => {
+              const newConfigs = state.ips.filter(Boolean).map((ip) => {
                 return `${protocol}://${Base64.encode(
                   JSON.stringify(
                     Object.assign({}, config, {
                       add: ip,
                       host: config.add,
-                      port: '443',
+                      port: config.port || '443', // 可能不是 443 端口
                     })
                   )
                 )}`

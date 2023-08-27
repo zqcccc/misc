@@ -27,6 +27,7 @@ export default function NodeConfig() {
     input: '',
     unifyName: '',
     nodeList: [] as any[],
+    willGetLoc: true,
   })
   useEffect(() => {
     setState({
@@ -70,7 +71,8 @@ export default function NodeConfig() {
   const isRequestingIp = useRef(false)
   const isRequestingHost = useRef(false)
   useEffect(() => {
-    if (isRequestingIp.current || !state.nodeList.length) return
+    if (isRequestingIp.current || !state.nodeList.length || !state.willGetLoc)
+      return
     const queryHosts: string[] = []
     const queryIps = state.nodeList
       .map(([protocol, obj]) => {
@@ -131,9 +133,19 @@ export default function NodeConfig() {
   return (
     <main className='p-3'>
       <h2>Node Config input</h2>
+      <label>
+        <input
+          type='checkbox'
+          checked={state.willGetLoc}
+          onChange={(e) => {
+            setState({ willGetLoc: e.target.checked })
+          }}
+        />
+        是否要获取ip地区信息
+      </label>
       <textarea
         rows={10}
-        className='w-full'
+        className='w-full mt-2'
         placeholder='ss/ssr/vmess链接，多个链接每行一个'
         value={NodesStore.nodesInput}
         onChange={(e) => NodesStore.setNodesInput(e.target.value)}
