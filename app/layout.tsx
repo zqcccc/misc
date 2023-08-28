@@ -1,3 +1,4 @@
+import Script from 'next/script'
 import './globals.css'
 
 export const metadata = {
@@ -16,8 +17,23 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="zh-Hans">
-      <body className="dark:bg-[#282c35] dark:text-[hsla(0,0%,100%,.88)]">{children}</body>
+    <html lang='zh-Hans'>
+      <body className='dark:bg-[#282c35] dark:text-[hsla(0,0%,100%,.88)]'>
+        {children}
+      </body>
+      <Script
+        async
+        src='https://www.googletagmanager.com/gtag/js?id=G-4DLMMFXJMP'
+      ></Script>
+      <Script id='google-analytics'>
+        {`
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config', 'G-4DLMMFXJMP');
+        `}
+      </Script>
     </html>
   )
 }
