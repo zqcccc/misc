@@ -180,6 +180,19 @@ export default function NodeConfig() {
                           setState({ nodeList })
                         }}
                       ></input>
+                      <button
+                        className='px-1 ml-1'
+                        onClick={() => {
+                          const nodeList = state.nodeList.concat()
+                          const newItem = nodeList[index].concat()
+                          newItem[1] = Object.assign({}, item)
+                          nodeList[index] = newItem
+                          delete nodeList[index][1][key]
+                          setState({ nodeList })
+                        }}
+                      >
+                        x
+                      </button>
                     </div>
                   )
                 })}

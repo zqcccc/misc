@@ -8,12 +8,24 @@ import ReactCusdis from './Cusdis'
 export default async function Post(props: { params: { id: string[] } }) {
   const postData = await getPostData(props.params.id)
   const time = dayjs(postData.date)
+  const changeTime = dayjs(postData.changeTime)
+  const createTimeStr = time.format('YYYY-MM-DD')
+  const changeTimeStr = changeTime.format('YYYY-MM-DD')
   return (
     <article>
       <h1 className='my-1'>{postData.title}</h1>
-      <time dateTime={time.toISOString()} className='block mb-4'>
-        {time.format('YYYY-MM-DD')}
-      </time>
+      <div className='flex'>
+        <time dateTime={time.toISOString()} className='block mb-4'>
+          {createTimeStr}
+        </time>
+        {createTimeStr !== changeTimeStr && (
+          <div className='ml-3'>
+            <time dateTime={changeTime.toISOString()} className='block mb-4'>
+              修改于{changeTimeStr}
+            </time>
+          </div>
+        )}
+      </div>
       <Content>{postData.contentHtml}</Content>
       <ReactCusdis />
     </article>
