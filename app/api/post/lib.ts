@@ -103,6 +103,7 @@ export function getPostMeta(id: string[]) {
   id[id.length - 1] = decodeURIComponent(id[id.length - 1]) + '.md'
   const fullPath = path.join(postsDirectory, ...id)
   const fileContents = fs.readFileSync(fullPath, 'utf8')
+  const stat = fs.statSync(fullPath)
   const matterResult = matter(fileContents) as GrayMatterFile<string> & {
     data: {
       title: string
@@ -111,6 +112,7 @@ export function getPostMeta(id: string[]) {
   }
   return {
     id,
+    changeTime: stat.mtime,
     ...matterResult,
   }
 }
@@ -151,6 +153,7 @@ export async function getPostData(id: string[]) {
   return {
     id,
     contentHtml,
+    changeTime: matterResult.changeTime,
     ...matterResult.data,
   }
 }
