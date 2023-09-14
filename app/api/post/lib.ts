@@ -14,6 +14,8 @@ import { serialize } from 'next-mdx-remote/serialize'
 
 const postsDirectory = path.join(process.cwd(), 'posts')
 
+const plusDirectory = path.join(process.cwd(), 'plusPosts')
+
 type Nested<T> = (T | null | Nested<T>)[] | T | null
 type NestedString = Nested<string>
 
@@ -31,7 +33,7 @@ function readFile(
 }
 
 export async function getAllPostsPath(dirPath = postsDirectory) {
-  const fileNames = fs.readdirSync(dirPath)
+  let fileNames = fs.readdirSync(dirPath)
   const allPaths = await Promise.all(
     fileNames.map(async (fileName) => {
       const p = path.join(dirPath, fileName)
@@ -62,6 +64,9 @@ export async function getAllPostsPath(dirPath = postsDirectory) {
 
 export async function getAllPostIds() {
   const allPaths = await getAllPostsPath()
+  if (fs.existsSync(plusDirectory)) {
+    allPaths.push(...(await getAllPostsPath(plusDirectory)))
+  }
   return allPaths.map((filePath) => {
     return {
       id: path.relative(postsDirectory, filePath).split('.')[0].split('/'),
@@ -78,13 +83,18 @@ export async function getAllPostIds() {
 
 export async function getAllPost(dirPath = postsDirectory) {
   const allPaths = await getAllPostsPath()
+  if (fs.existsSync(plusDirectory)) {
+    allPaths.push(...(await getAllPostsPath(plusDirectory)))
+  }
   const allPosts = await Promise.all(
     allPaths.map(async (filePath) => {
       return readFile(filePath).then((fileContent) => {
         const matterResult = matter(fileContent.toString())
         return {
           ...matterResult,
-          path: path.relative(postsDirectory, filePath).split('.')[0],
+          path: filePath.includes(postsDirectory)
+            ? path.relative(postsDirectory, filePath).split('.')[0]
+            : path.relative(plusDirectory, filePath).split('.')[0],
         }
       })
     })
@@ -101,7 +111,24 @@ export async function getAllPost(dirPath = postsDirectory) {
 
 export function getPostMeta(id: string[]) {
   id[id.length - 1] = decodeURIComponent(id[id.length - 1]) + '.md'
-  const fullPath = path.join(postsDirectory, ...id)
+  const path1 = path.join(postsDirectory, ...id)
+  const path2 = path.join(plusDirectory, ...id)
+  const fullPath = fs.existsSync(path1)
+    ? path1
+    : fs.existsSync(path2)
+    ? path2
+    : ''
+  if (!fullPath) {
+    return {
+      id,
+      changeTime: new Date(),
+      content: '404',
+      data: {
+        title: '',
+        date: '',
+      },
+    }
+  }
   const fileContents = fs.readFileSync(fullPath, 'utf8')
   const stat = fs.statSync(fullPath)
   const matterResult = matter(fileContents) as GrayMatterFile<string> & {
