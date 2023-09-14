@@ -1,5 +1,11 @@
 import { NextResponse } from 'next/server'
 
+declare global {
+  interface Headers {
+    getSetCookie: () => string[]
+  }
+}
+
 export async function POST(request: Request) {
   const username = process.env.EUDIC_USERNAME
   const password = process.env.EUDIC_PASSWORD
@@ -23,7 +29,7 @@ export async function POST(request: Request) {
       const newCookie = sessionCookie
         // .split('=')[1]
         .split(';')
-        .filter((i) => !i.includes('domain'))
+        .filter((i: string) => !i.includes('domain'))
         .join(';')
       let response = new Response()
       // Set a cookie to hide the banner
