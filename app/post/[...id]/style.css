@@ -375,3 +375,7 @@ pre span[data-highlighted-line] {
   @apply bg-zinc-600/50 rounded;
   box-shadow: 0 0 0 4px rgb(82 82 91 / 0.5);
 }
+
+code.language-inline-code {
+  color: rgba(255, 255, 255, 0.88)
+}
