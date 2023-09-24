@@ -11,7 +11,9 @@ const NF = async (req: any) => {
   //     return checkNetflix(...params)
   //   })
   // )
-  const data = await GET().catch((err) => {})
+  const data: [number, string][] = await GET()
+    .then((res) => res.json())
+    .catch((err) => {})
   console.log(
     '%c data: ',
     'font-size:12px;background-color: #93C0A4;color:#fff;',

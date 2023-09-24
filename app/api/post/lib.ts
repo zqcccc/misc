@@ -64,14 +64,23 @@ export async function getAllPostsPath(dirPath = postsDirectory) {
 
 export async function getAllPostIds() {
   const allPaths = await getAllPostsPath()
-  if (fs.existsSync(plusDirectory)) {
-    allPaths.push(...(await getAllPostsPath(plusDirectory)))
-  }
-  return allPaths.map((filePath) => {
+  const linkPaths = allPaths.map((filePath) => {
     return {
       id: path.relative(postsDirectory, filePath).split('.')[0].split('/'),
     }
   })
+  if (fs.existsSync(plusDirectory)) {
+    const plusPaths = await getAllPostsPath(plusDirectory)
+    linkPaths.push(
+      ...plusPaths.map((filePath) => {
+        return {
+          id: path.relative(plusDirectory, filePath).split('.')[0].split('/'),
+        }
+      })
+    )
+    // allPaths.push(...(plusPaths))
+  }
+  return linkPaths
   // return allPaths.map((filePath) => {
   //   return {
   //     params: {

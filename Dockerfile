@@ -51,6 +51,7 @@ RUN chown -R 1001:1001 /app/prisma/
 # https://nextjs.org/docs/advanced-features/output-file-tracing
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/shiki ./node_modules/shiki
 
 USER nextjs
 

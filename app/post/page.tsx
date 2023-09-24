@@ -2,7 +2,7 @@ import dayjs from 'dayjs'
 import { getAllPost } from '../api/post/lib'
 import { Fragment } from 'react'
 import Link from 'next/link'
-
+import { headers } from 'next/headers'
 // import { useState } from 'react'
 
 // export const metadata = {
@@ -10,11 +10,16 @@ import Link from 'next/link'
 // }
 
 export default async function Post() {
-  const start = new Date().getTime()
+  const res =  headers() // trigger dynamic import all post
+  console.log('headers res: ', res)
+  // const start = new Date().getTime()
+  // const res = await fetch('/api/post').then((res) => res.text())
+  // console.log('%c res: ', 'font-size:12px;background-color: #4b4b4b;color:#fff;', res)
   const posts = await getAllPost()
-  const end = new Date().getTime()
-  const diffInMilliseconds = Math.abs(end - start)
-  console.log('%c diffInMilliseconds: ', 'font-size:12px;background-color: #CECAC1;color:#fff;', diffInMilliseconds)
+  console.log('posts: ', posts.map((post) => post.data.title))
+  // const end = new Date().getTime()
+  // const diffInMilliseconds = Math.abs(end - start)
+  // console.log('%c diffInMilliseconds: ', 'font-size:12px;background-color: #CECAC1;color:#fff;', diffInMilliseconds)
   // console.log(
   //   '%c posts: ',
   //   'font-size:12px;background-color: #5A4E52;color:#fff;',

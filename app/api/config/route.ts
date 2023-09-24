@@ -13,6 +13,7 @@ export async function GET(request: Request) {
     return NextResponse.json(config)
   } catch (e) {
     console.log('error: ', e)
+    return NextResponse.json({ error: e })
   } finally {
     await prisma.$disconnect()
   }

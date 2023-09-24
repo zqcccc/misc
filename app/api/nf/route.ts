@@ -1,3 +1,4 @@
+import { NextResponse } from 'next/server'
 import { countryMap } from './utils'
 
 const settles: [number, string][] = [
@@ -43,9 +44,11 @@ function checkNetflix(movieId: number, msg: string) {
 }
 
 export const GET = async () => {
-  return Promise.all(
-    settles.map((params) => {
-      return checkNetflix(...params)
-    })
+  return NextResponse.json<[boolean, string][]>(
+    await Promise.all(
+      settles.map((params) => {
+        return checkNetflix(...params)
+      })
+    )
   )
 }
