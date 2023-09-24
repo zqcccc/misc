@@ -122,6 +122,7 @@ export async function GET(request: Request) {
       })
       return NextResponse.json(transformToResponse(newShare))
     }
+    return NextResponse.json({ id, msg: 'not found' })
   } catch (error) {
     console.log('error: ', error)
     return NextResponse.json(error)
