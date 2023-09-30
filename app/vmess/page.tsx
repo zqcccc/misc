@@ -4,6 +4,7 @@ import { useNodesStore } from '@/store/node'
 import { useSetState } from 'ahooks'
 import { useEffect, useMemo, useRef } from 'react'
 import { Base64 } from 'js-base64'
+import { copy } from '../post/[...id]/helpers'
 
 const emojiMap: Record<string, string> = {
   CN: '🇨🇳',
@@ -164,10 +165,38 @@ export default function NodeConfig() {
             return (
               <div className='m-3' key={index}>
                 <h3>item {item?.ps && `name:${item?.ps}`}</h3>
-                {keys.map((key) => {
+                <div>
+                  delete this one:
+                  <button
+                    className='ml-1 px-2'
+                    onClick={() => {
+                      const nodeList = state.nodeList.concat()
+                      nodeList.splice(index, 1)
+                      setState({ nodeList })
+                    }}
+                  >
+                    X
+                  </button>
+                </div>
+                {keys.map((key, keyIndex) => {
                   return (
-                    <div key={key}>
-                      <span>{key}: </span>
+                    <div key={keyIndex}>
+                      <input
+                        className='w-12'
+                        value={key}
+                        onChange={(e) => {
+                          const nodeList = state.nodeList.concat()
+                          const newItem = nodeList[index].concat()
+                          const v = item[key]
+                          delete item[key]
+                          newItem[1] = Object.assign({}, item, {
+                            [e.target.value]: v,
+                          })
+                          nodeList[index] = newItem
+                          setState({ nodeList })
+                        }}
+                      />
+                      <span> : </span>
                       <input
                         value={item[key]}
                         onChange={(e) => {
@@ -196,6 +225,20 @@ export default function NodeConfig() {
                     </div>
                   )
                 })}
+                <button
+                  className='px-3 mt-2'
+                  onClick={() => {
+                    const nodeList = state.nodeList.concat()
+                    const newItem = nodeList[index].concat()
+                    newItem[1] = Object.assign({}, item, {
+                      '': '',
+                    })
+                    nodeList[index] = newItem
+                    setState({ nodeList })
+                  }}
+                >
+                  +
+                </button>
               </div>
             )
           })}
@@ -203,6 +246,24 @@ export default function NodeConfig() {
       </div>
       <div className='mt-3'>
         <h2>output configs</h2>
+        <div className='mb-1'>
+          <button
+            className='p-2'
+            onClick={() => {
+              NodesStore.setNodesInput(output)
+            }}
+          >
+            save(set to input)
+          </button>
+          <button
+            className='p-2 ml-2'
+            onClick={() => {
+              copy(output)
+            }}
+          >
+            copy
+          </button>
+        </div>
         <textarea
           readOnly
           value={output}
@@ -212,6 +273,16 @@ export default function NodeConfig() {
       </div>
       <div className='mt-3'>
         <h2>output v2ray configs</h2>
+        <div className='mb-1'>
+          <button
+            className='p-2'
+            onClick={() => {
+              copy(btoa(output))
+            }}
+          >
+            copy
+          </button>
+        </div>
         <textarea
           readOnly
           value={btoa(output)}
