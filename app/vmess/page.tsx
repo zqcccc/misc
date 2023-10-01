@@ -165,19 +165,6 @@ export default function NodeConfig() {
             return (
               <div className='m-3' key={index}>
                 <h3>item {item?.ps && `name:${item?.ps}`}</h3>
-                <div>
-                  delete this one:
-                  <button
-                    className='ml-1 px-2'
-                    onClick={() => {
-                      const nodeList = state.nodeList.concat()
-                      nodeList.splice(index, 1)
-                      setState({ nodeList })
-                    }}
-                  >
-                    X
-                  </button>
-                </div>
                 {keys.map((key, keyIndex) => {
                   return (
                     <div key={keyIndex}>
@@ -226,7 +213,7 @@ export default function NodeConfig() {
                   )
                 })}
                 <button
-                  className='px-3 mt-2'
+                  className='px-3 mt-1'
                   onClick={() => {
                     const nodeList = state.nodeList.concat()
                     const newItem = nodeList[index].concat()
@@ -238,6 +225,29 @@ export default function NodeConfig() {
                   }}
                 >
                   +
+                </button>
+                <br />
+                <button
+                  className='px-2 mt-1'
+                  onClick={() => {
+                    const nodeList = state.nodeList.concat()
+                    const newItem = nodeList[index].concat()
+                    nodeList.splice(index + 1, 0, newItem)
+                    setState({ nodeList })
+                  }}
+                >
+                  duplicate this one
+                </button>
+                <br />
+                <button
+                  className='mt-1 px-2'
+                  onClick={() => {
+                    const nodeList = state.nodeList.concat()
+                    nodeList.splice(index, 1)
+                    setState({ nodeList })
+                  }}
+                >
+                  delete this one
                 </button>
               </div>
             )
