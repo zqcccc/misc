@@ -31,6 +31,7 @@ export default function NodeConfig() {
     willGetLoc: true,
   })
   useEffect(() => {
+    if (state.nodeList.length) return
     setState({
       nodeList: NodesStore.nodesInput
         .split('\n')
@@ -83,7 +84,7 @@ export default function NodeConfig() {
           queryHosts.push(obj.add)
           return
         }
-        return `${obj.add}`
+        if (/\d+\.\d+\.\d+\.\d+/.test(obj.add)) return `${obj.add}`
       })
       .filter(Boolean)
     if (queryIps.length) {
@@ -242,6 +243,7 @@ export default function NodeConfig() {
                 <button
                   className='mt-1 px-2'
                   onClick={() => {
+                    if (!window.confirm('delete this one?')) return
                     const nodeList = state.nodeList.concat()
                     nodeList.splice(index, 1)
                     setState({ nodeList })
