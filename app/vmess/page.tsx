@@ -302,6 +302,76 @@ export default function NodeConfig() {
           className='w-full'
         ></textarea>
       </div>
+      <div className='mt-3 pb-10'>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            const gistId = (
+              document.getElementById('gist-id') as HTMLInputElement
+            ).value
+            const githubToken = (
+              document.getElementById('github-token') as HTMLInputElement
+            ).value
+            fetch(`https://api.github.com/gists/${gistId}`, {
+              method: 'PATCH',
+              headers: {
+                Authorization: `token ${githubToken}`,
+              },
+              body: JSON.stringify({
+                files: {
+                  o: {
+                    content: output,
+                  },
+                  b: {
+                    content: btoa(output),
+                  },
+                },
+              }),
+            })
+              .then((res) => {
+                alert('更新成功')
+                res.json().then((data) => {
+                  console.log(data)
+                })
+              })
+              .catch((err) => {
+                alert(`更新失败: ${err.toString()}`)
+              })
+          }}
+        >
+          <div>
+            <label htmlFor='gist-id'>github gist id: </label>
+            <input
+              id='gist-id'
+              type='text'
+              className='w-72'
+              required
+              value={NodesStore.gistId}
+              onChange={(e) => NodesStore.setGistId(e.target.value)}
+            />
+          </div>
+          <div>
+            <label htmlFor='github-token'>github token: </label>
+            <input
+              id='github-token'
+              type='text'
+              className='w-96'
+              required
+              value={NodesStore.githubToken}
+              onChange={(e) => NodesStore.setGithubToken(e.target.value)}
+            />
+          </div>
+          <button
+            type='submit'
+            className='p-2 mt-2'
+            onSubmit={(e) => {
+              console.log(e)
+            }}
+          >
+            save to github gist
+          </button>
+        </form>
+      </div>
     </main>
   )
 }
