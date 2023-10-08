@@ -5,6 +5,9 @@ import { useSetState } from 'ahooks'
 import { useEffect, useMemo, useRef } from 'react'
 import { Base64 } from 'js-base64'
 import { copy } from '../post/[...id]/helpers'
+import { getClipboardText } from './utils'
+import message from 'antd/es/message'
+import 'antd/es/message/style'
 
 const emojiMap: Record<string, string> = {
   CN: '🇨🇳',
@@ -20,6 +23,17 @@ const emojiMap: Record<string, string> = {
   CA: '🇨🇦',
   AU: '🇦🇺',
   SE: '🇸🇪',
+  NL: '🇳🇱',
+  NO: '🇳🇴',
+  RU: '🇷🇺',
+  TH: '🇹🇭',
+  IN: '🇮🇳',
+  MY: '🇲🇾',
+  PT: '🇵🇹',
+  ES: '🇪🇸',
+  IT: '🇮🇹',
+  VN: '🇻🇳',
+  CH: '🇨🇭',
 }
 
 export default function NodeConfig() {
@@ -29,7 +43,13 @@ export default function NodeConfig() {
     unifyName: '',
     nodeList: [] as any[],
     willGetLoc: true,
+    isSubmitting: false,
   })
+
+  useEffect(() => {
+    message.info('如果没有地理信息，刷新页面可获得地理信息')
+  }, [])
+
   useEffect(() => {
     if (state.nodeList.length) return
     setState({
@@ -147,11 +167,41 @@ export default function NodeConfig() {
       </label>
       <textarea
         rows={10}
-        className='w-full mt-2'
+        className='w-full mt-2 p-2'
         placeholder='ss/ssr/vmess链接，多个链接每行一个'
         value={NodesStore.nodesInput}
         onChange={(e) => NodesStore.setNodesInput(e.target.value)}
       ></textarea>
+
+      <div>
+        <button
+          className='py-1 px-2'
+          onClick={() => {
+            getClipboardText().then((text) => {
+              console.log('text: ', text)
+              if (text) {
+                NodesStore.setNodesInput(`${text}\n${NodesStore.nodesInput}`)
+                message.success('已添加到列表头部')
+              }
+            })
+          }}
+        >
+          append to head of list(clipboard)
+        </button>
+        <button
+          className='py-1 px-2 ml-1'
+          onClick={() => {
+            getClipboardText().then((text) => {
+              if (text) {
+                NodesStore.setNodesInput(`${NodesStore.nodesInput}\n${text}`)
+                message.success('已添加到列表尾部')
+              }
+            })
+          }}
+        >
+          append to tail of list(clipboard)
+        </button>
+      </div>
       <input
         type='text'
         placeholder='统一改名'
@@ -165,7 +215,9 @@ export default function NodeConfig() {
             const keys = Object.keys(item)
             return (
               <div className='m-3' key={index}>
-                <h3>item {item?.ps && `name:${item?.ps}`}</h3>
+                <h3>
+                  No.{index} {item?.ps && `name:${item?.ps}`}
+                </h3>
                 {keys.map((key, keyIndex) => {
                   return (
                     <div key={keyIndex}>
@@ -263,6 +315,7 @@ export default function NodeConfig() {
             className='p-2'
             onClick={() => {
               NodesStore.setNodesInput(output)
+              message.info('已设置到 Node Config input')
             }}
           >
             save(set to input)
@@ -271,6 +324,7 @@ export default function NodeConfig() {
             className='p-2 ml-2'
             onClick={() => {
               copy(output)
+              message.info('已复制')
             }}
           >
             copy
@@ -290,6 +344,7 @@ export default function NodeConfig() {
             className='p-2'
             onClick={() => {
               copy(btoa(output))
+              message.info('base64 已复制')
             }}
           >
             copy
@@ -306,6 +361,7 @@ export default function NodeConfig() {
         <form
           onSubmit={(e) => {
             e.preventDefault()
+            setState({ isSubmitting: true })
             const gistId = (
               document.getElementById('gist-id') as HTMLInputElement
             ).value
@@ -337,6 +393,9 @@ export default function NodeConfig() {
               .catch((err) => {
                 alert(`更新失败: ${err.toString()}`)
               })
+              .finally(() => {
+                setState({ isSubmitting: false })
+              })
           }}
         >
           <div>
@@ -364,6 +423,7 @@ export default function NodeConfig() {
           <button
             type='submit'
             className='p-2 mt-2'
+            disabled={state.isSubmitting}
             onSubmit={(e) => {
               console.log(e)
             }}
