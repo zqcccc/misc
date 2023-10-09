@@ -1,6 +1,6 @@
 
 export const metadata = {
-  title: 'proxy edit'
+  title: 'proxy edit',
 }
 
 export default function EnLayout({ children }: { children: React.ReactNode }) {
