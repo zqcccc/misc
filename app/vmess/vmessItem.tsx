@@ -37,6 +37,7 @@ const VmessItem = (props: VmessItemProps) => {
     moveToLast,
   } = props
   const ref = useRef<HTMLDivElement>(null)
+  const moveRef = useRef<HTMLDivElement>(null)
   const keys = Object.keys(item)
   const id = `${Object.values(item).join(',')}_${index}`
   const [{ handlerId }, drop] = useDrop<
@@ -112,7 +113,7 @@ const VmessItem = (props: VmessItemProps) => {
   drag(drop(ref))
   return (
     <div
-      className={`m-3 ${isDragging ? 'border' : ''}`}
+      className={`m-3 max-w-[250px] ${isDragging ? 'border' : ''}`}
       ref={ref}
       data-handler-id={handlerId}
     >
@@ -131,28 +132,32 @@ const VmessItem = (props: VmessItemProps) => {
           </div>
         )
       })}
-      <button className='px-3 mt-1' onClick={onAddField}>
-        +
-      </button>
-      <button className='px-3 mt-1 ml-1' onClick={onCopy}>
-        copy
-      </button>
-      <br />
-      <button className='px-2 mt-1' onClick={onDuplicate}>
-        duplicate this one
-      </button>
-      <br />
-      <button className='mt-1 px-2' onClick={onDelete}>
-        delete this one
-      </button>
-      <br />
-      <button className='mt-1 px-2' onClick={() => moveItem(index, 0)}>
-        move to fist one
-      </button>
-      <br />
-      <button className='mt-1 px-2' onClick={() => moveToLast(index)}>
-        move to last one
-      </button>
+      <div className='flex'>
+        <div className='mr-3'>
+          <button className='px-3 mt-1' onClick={onAddField}>
+            +
+          </button>
+          <button className='px-3 mt-1 ml-1' onClick={onCopy}>
+            copy
+          </button>
+          <br />
+          <button className='px-2 mt-1' onClick={onDuplicate}>
+            duplicate this one
+          </button>
+          <br />
+          <button className='mt-1 px-2' onClick={onDelete}>
+            delete this one
+          </button>
+          <br />
+          <button className='mt-1 px-2' onClick={() => moveItem(index, 0)}>
+            move to fist one
+          </button>
+          <br />
+          <button className='mt-1 px-2' onClick={() => moveToLast(index)}>
+            move to last one
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
