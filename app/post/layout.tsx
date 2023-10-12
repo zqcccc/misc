@@ -2,8 +2,18 @@
 
 import Image from 'next/image'
 import Toggle from '@/components/Toggle'
-import { Reducer, createContext, useEffect, useReducer, useState } from 'react'
+import {
+  Reducer,
+  createContext,
+  useCallback,
+  useEffect,
+  useReducer,
+  useState,
+} from 'react'
 import Link from 'next/link'
+import Drawer from './drawer'
+import Menu from './menu'
+import { useIsUseBrowser } from './util'
 
 const GlobalContext = createContext({})
 
@@ -37,7 +47,9 @@ export default function RootLayout({
   const [globalState, dispatch] = useReducer(reducer, {
     theme: null,
   })
+  const [showDrawer, setShowDrawer] = useState(false)
   const [theme, setTheme] = useState<string | null>(null)
+  const isInBrowser = useIsUseBrowser()
 
   useEffect(() => {
     setTheme(window.__theme)
@@ -48,6 +60,7 @@ export default function RootLayout({
       // window.CUSDIS?.setTheme(window.__theme)
     }
   }, [])
+  const toggleDrawerHandle = useCallback(() => setShowDrawer((v) => !v), [])
 
   return (
     <GlobalContext.Provider value={{ state: globalState, dispatch }}>
@@ -93,6 +106,11 @@ export default function RootLayout({
         </header>
         {children}
       </div>
+      {isInBrowser && (
+        <Drawer visible={showDrawer} onClick={toggleDrawerHandle}>
+          <Menu />
+        </Drawer>
+      )}
     </GlobalContext.Provider>
   )
 }

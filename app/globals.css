@@ -9,6 +9,9 @@
     'Roboto Mono', 'Oxygen Mono', 'Ubuntu Monospace', 'Source Code Pro',
     'Fira Mono', 'Droid Sans Mono', 'Courier New', monospace;
 
+  --bg: #ffffff;
+  --bg-secondary: rgb(249, 250, 251);
+  --textNormal: #222;
   --foreground-rgb: 0, 0, 0;
   --background-start-rgb: 214, 219, 220;
   --background-end-rgb: 255, 255, 255;
@@ -50,6 +53,9 @@
     --background-start-rgb: 0, 0, 0;
     --background-end-rgb: 0, 0, 0;
 
+    --bg: #282c35;
+    --bg-secondary: rgb(54, 60, 72);
+    --textNormal: rgba(255, 255, 255, 0.88);
     --primary-glow: radial-gradient(rgba(1, 65, 255, 0.4), rgba(1, 65, 255, 0));
     --secondary-glow: linear-gradient(
       to bottom right,

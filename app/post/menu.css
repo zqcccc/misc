@@ -1,0 +1,24 @@
+.menuList {
+  color: var(--textNormal);
+  padding: 8px 0;
+  margin-bottom: 40px;
+}
+.menuList li {
+  padding-left: 16px;
+  list-style: none;
+}
+.menuList a {
+  position: relative;
+  display: block;
+  padding-right: 24px;
+  line-height: 2.4;
+  text-decoration: none;
+  outline: none;
+  transition: color 0.3s, background 0.3s;
+}
+.menuList a.active {
+  background: linear-gradient(270deg, #e8ecf4, rgba(232, 236, 244, 0));
+}
+.menuList .sub {
+  padding-left: 16px;
+}
