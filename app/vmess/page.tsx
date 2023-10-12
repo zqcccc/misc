@@ -167,6 +167,27 @@ export default function NodeConfig() {
     moveItem(index, state.nodeList.length - 1)
   })
 
+  const uniqueByIPAndPort = useMemoizedFn(() => {
+    const map: Record<string, any> = {}
+    const duplicated: Record<string, any> = {}
+    const newNodeList = [] as any[]
+    const nodeList = state.nodeList.concat()
+    nodeList.forEach((item, index) => {
+      const [protocol, obj] = item
+      const key = `${obj.add}:${obj.port}`
+      if (map[key]) {
+        // moveToLast(index)
+        duplicated[key] = true
+      } else {
+        map[key] = true
+        newNodeList.push(item)
+      }
+    })
+    console.log('duplicated:', duplicated)
+
+    setState({ nodeList: newNodeList })
+  })
+
   return (
     <DndProvider backend={HTML5Backend}>
       <main className='p-3'>
@@ -312,6 +333,15 @@ export default function NodeConfig() {
               }}
             >
               copy
+            </button>
+            <button
+              className='p-2 ml-2'
+              onClick={() => {
+                uniqueByIPAndPort()
+                message.info('已去重，重复的情况保留先出现的配置')
+              }}
+            >
+              uniqueByIPAndPort
             </button>
           </div>
           <textarea
