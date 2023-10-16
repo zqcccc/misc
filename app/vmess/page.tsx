@@ -11,6 +11,7 @@ import { getClipboardText } from './utils'
 import message from 'antd/es/message'
 import 'antd/es/message/style'
 import VmessItem from './vmessItem'
+import { Button, Popconfirm } from 'antd'
 
 const emojiMap: Record<string, string> = {
   CN: '🇨🇳',
@@ -434,16 +435,36 @@ export default function NodeConfig() {
                 onChange={(e) => NodesStore.setGithubToken(e.target.value)}
               />
             </div>
-            <button
-              type='submit'
-              className='p-2 mt-2'
+            <Popconfirm
+              okType='danger'
+              title='get will overwrite the local input, are you sure?'
+              onConfirm={() => {
+                fetch(
+                  `https://gist.githubusercontent.com/zqcccc/${NodesStore.gistId}/raw/o`
+                )
+                  .then((res) => res.text())
+                  .then((res) => {
+                    console.log(
+                      '%c res: ',
+                      'font-size:12px;background-color: #F5CE50;color:#fff;',
+                      res
+                    )
+                    NodesStore.setNodesInput(res)
+                  })
+              }}
+            >
+              <Button className='mt-2'>get github gist</Button>
+            </Popconfirm>
+            <Button
+              htmlType='submit'
+              className='mt-2 ml-2'
               disabled={state.isSubmitting}
               onSubmit={(e) => {
                 console.log(e)
               }}
             >
               save to github gist
-            </button>
+            </Button>
           </form>
         </div>
       </main>
