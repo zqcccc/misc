@@ -21,7 +21,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang='zh-Hans'>
-      <body className='dark:bg-[#282c35] dark:text-[hsla(0,0%,100%,.88)]'>
+      <body className='dark:bg-[#282c35] dark:text-[hsla(0,0%,100%,.88)] bg-white'>
         {children}
       </body>
       <Script
