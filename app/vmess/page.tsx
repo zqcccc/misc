@@ -94,6 +94,11 @@ export default function NodeConfig() {
       .join('\n')
   }, [state.nodeList])
 
+  const outputBase64 = useMemo(
+    () => (output ? Base64.encode(output) : ''),
+    [output]
+  )
+
   const isRequestingIp = useRef(false)
   const isRequestingHost = useRef(false)
   useEffect(() => {
@@ -358,7 +363,7 @@ export default function NodeConfig() {
             <button
               className='p-2'
               onClick={() => {
-                copy(btoa(output))
+                copy(outputBase64)
                 message.info('base64 已复制')
               }}
             >
@@ -367,7 +372,7 @@ export default function NodeConfig() {
           </div>
           <textarea
             readOnly
-            value={btoa(output)}
+            value={outputBase64}
             rows={10}
             className='w-full'
           ></textarea>
@@ -394,7 +399,7 @@ export default function NodeConfig() {
                       content: output,
                     },
                     b: {
-                      content: btoa(output),
+                      content: outputBase64,
                     },
                   },
                 }),
