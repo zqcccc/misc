@@ -5,15 +5,15 @@ import { useDrag, useDrop } from 'react-dnd'
 type VmessItemProps = {
   item: any
   index: number
-  onKeyChange: (key: string) => (e: ChangeEvent<HTMLInputElement>) => void
-  onValueChange: (key: string) => (e: ChangeEvent<HTMLInputElement>) => void
-  onCopy: () => void
-  onAddField: () => void
-  onDeleteField: (key: string) => () => void
-  onDuplicate: () => void
-  onDelete: () => void
-  moveItem: (dragIndex: number, hoverIndex: number) => void
-  moveToLast: (index: number) => void
+  onKeyChange?: (key: string) => (e: ChangeEvent<HTMLInputElement>) => void
+  onValueChange?: (key: string) => (e: ChangeEvent<HTMLInputElement>) => void
+  onCopy?: () => void
+  onAddField?: () => void
+  onDeleteField?: (key: string) => () => void
+  onDuplicate?: () => void
+  onDelete?: () => void
+  moveItem?: (dragIndex: number, hoverIndex: number) => void
+  moveToLast?: (index: number) => void
 }
 
 interface DragItem {
@@ -91,7 +91,7 @@ const VmessItem = (props: VmessItemProps) => {
       // }
 
       // Time to actually perform the action
-      moveItem(dragIndex, hoverIndex)
+      moveItem?.(dragIndex, hoverIndex)
 
       // Note: we're mutating the monitor item here!
       // Generally it's better to avoid mutations,
@@ -123,10 +123,18 @@ const VmessItem = (props: VmessItemProps) => {
       {keys.map((key, keyIndex) => {
         return (
           <div key={keyIndex}>
-            <input className='w-12' value={key} onChange={onKeyChange(key)} />
+            {onKeyChange ? (
+              <input className='w-12' value={key} onChange={onKeyChange(key)} />
+            ) : (
+              <span>{key}</span>
+            )}
             <span> : </span>
-            <input value={item[key]} onChange={onValueChange(key)}></input>
-            <button className='px-1 ml-1' onClick={onDeleteField(key)}>
+            {onValueChange ? (
+              <input value={item[key]} onChange={onValueChange(key)}></input>
+            ) : (
+              <span>{item[key]}</span>
+            )}
+            <button className='px-1 ml-1' onClick={onDeleteField?.(key)}>
               x
             </button>
           </div>
@@ -134,28 +142,129 @@ const VmessItem = (props: VmessItemProps) => {
       })}
       <div className='flex'>
         <div className='mr-3'>
-          <button className='px-3 mt-1' onClick={onAddField}>
-            +
-          </button>
-          <button className='px-3 mt-1 ml-1' onClick={onCopy}>
-            copy
-          </button>
-          <br />
-          <button className='px-2 mt-1' onClick={onDuplicate}>
-            duplicate this one
-          </button>
-          <br />
-          <button className='mt-1 px-2' onClick={onDelete}>
-            delete this one
-          </button>
-          <br />
-          <button className='mt-1 px-2' onClick={() => moveItem(index, 0)}>
-            move to fist one
-          </button>
-          <br />
-          <button className='mt-1 px-2' onClick={() => moveToLast(index)}>
-            move to last one
-          </button>
+          {onAddField && (
+            <button className='px-3 mt-1' onClick={onAddField}>
+              +
+            </button>
+          )}
+          {onCopy && (
+            <>
+              <button className='px-3 mt-1 ml-1' onClick={onCopy}>
+                copy
+              </button>
+            </>
+          )}
+          {onDuplicate && (
+            <>
+              <br />
+              <button className='px-2 mt-1' onClick={onDuplicate}>
+                duplicate this one
+              </button>
+            </>
+          )}
+          {onDelete && (
+            <>
+              <br />
+              <button className='mt-1 px-2' onClick={onDelete}>
+                delete this one
+              </button>
+            </>
+          )}
+          {moveItem && (
+            <>
+              <br />
+              <button className='mt-1 px-2' onClick={() => moveItem(index, 0)}>
+                move to fist one
+              </button>
+            </>
+          )}
+          {moveToLast && (
+            <>
+              <br />
+              <button className='mt-1 px-2' onClick={() => moveToLast(index)}>
+                move to last one
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+export const VmessItemWithoutDrag = (
+  props: Omit<VmessItemProps, 'moveItem' | 'moveToLast'>
+) => {
+  const {
+    item,
+    index,
+    onKeyChange,
+    onValueChange,
+    onCopy,
+    onAddField,
+    onDeleteField,
+    onDuplicate,
+    onDelete,
+  } = props
+  const ref = useRef<HTMLDivElement>(null)
+  const moveRef = useRef<HTMLDivElement>(null)
+  const keys = Object.keys(item)
+  return (
+    <div className={`m-3 max-w-[250px]`} ref={ref}>
+      <h3>
+        No.{index} {item?.ps && `name:${item?.ps}`}
+      </h3>
+      {keys.map((key, keyIndex) => {
+        return (
+          <div key={keyIndex}>
+            {onKeyChange ? (
+              <input className='w-12' value={key} onChange={onKeyChange(key)} />
+            ) : (
+              <span>{key}</span>
+            )}
+            <span> : </span>
+            {onValueChange ? (
+              <input value={item[key]} onChange={onValueChange(key)}></input>
+            ) : (
+              <span>{item[key]}</span>
+            )}
+            {onDeleteField && (
+              <button className='px-1 ml-1' onClick={onDeleteField?.(key)}>
+                x
+              </button>
+            )}
+          </div>
+        )
+      })}
+      <div className='flex'>
+        <div className='mr-3'>
+          {onAddField && (
+            <button className='px-3 mt-1' onClick={onAddField}>
+              +
+            </button>
+          )}
+          {onCopy && (
+            <>
+              <button className='px-3 mt-1 ml-1' onClick={onCopy}>
+                copy
+              </button>
+            </>
+          )}
+          {onDuplicate && (
+            <>
+              <br />
+              <button className='px-2 mt-1' onClick={onDuplicate}>
+                duplicate this one
+              </button>
+            </>
+          )}
+          {onDelete && (
+            <>
+              <br />
+              <button className='mt-1 px-2' onClick={onDelete}>
+                delete this one
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>
