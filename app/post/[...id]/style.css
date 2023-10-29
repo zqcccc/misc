@@ -86,7 +86,6 @@ html.dark {
   --fontSize-6: 2.488rem;
   --fontSize-7: 2.986rem;
   --color-primary: #005b99;
-  --color-text: #2e353f;
   --color-text-light: #4f5969;
   --color-heading: #1a202c;
   --color-accent: #d1dce5;
@@ -110,7 +109,7 @@ html {
 body {
   font-family: var(--font-body);
   font-size: var(--fontSize-1);
-  color: var(--color-text);
+  color: var(--textNormal);
 }
 
 footer {

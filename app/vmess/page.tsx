@@ -454,6 +454,7 @@ export default function NodeConfig() {
                       'font-size:12px;background-color: #F5CE50;color:#fff;',
                       res
                     )
+                    message.success('获取成功')
                     NodesStore.setNodesInput(res)
                   })
               }}
