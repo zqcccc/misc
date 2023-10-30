@@ -2,11 +2,7 @@ import Script from 'next/script'
 import './globals.css'
 
 export const metadata = {
-  title: {
-    template: "%s | ZQC's Blog",
-    default: "ZQC's Blog", // a default is required when creating a template
-  },
-  description: "welcome to ZQC's personal blog, nice to meet you",
+  description: "welcome to ZQC's personal website, nice to meet you",
   colorScheme: 'light dark',
   keywords: ['Next.js', 'React', 'JavaScript', 'blog', 'zqc', 'onlylike.work'],
   other: {
@@ -21,9 +17,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang='zh-Hans'>
-      <body>
-        {children}
-      </body>
+      <body>{children}</body>
       <Script
         async
         src='https://www.googletagmanager.com/gtag/js?id=G-4DLMMFXJMP'

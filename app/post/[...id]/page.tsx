@@ -1,7 +1,6 @@
 import dayjs from 'dayjs'
 import { getAllPostIds, getPostData, getPostMeta } from '../../api/post/lib'
 
-import './style.css'
 import Content from './content'
 import ReactCusdis from './Cusdis'
 
