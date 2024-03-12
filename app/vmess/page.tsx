@@ -253,6 +253,19 @@ export default function NodeConfig() {
         />
         <div className='mt-3'>
           <h2>node list</h2>
+          <button
+            className='py-1 px-2 ml-1'
+            onClick={() => {
+              setState({
+                nodeList: state.nodeList.map(([p, i]) => {
+                  i.path = i.path?.split('?')[0]
+                  return [p, i]
+                }),
+              })
+            }}
+          >
+            remove all query in path
+          </button>
           <div className='flex w-full flex-wrap'>
             {state.nodeList.map(([_, item], index) => {
               return (
