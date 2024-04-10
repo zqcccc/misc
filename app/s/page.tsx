@@ -10,6 +10,8 @@ export default function Shorter() {
     duration: null as null | number,
     shortUrl: '',
     id: '',
+    queryShortUrl: '',
+    queryResult: '',
   })
   return (
     <main className='p-4'>
@@ -133,6 +135,38 @@ export default function Shorter() {
         >
           Update
         </Button>
+      </div>
+
+      <div className='mt-5'>
+        <div>-------------</div>
+        query origin url:
+        <div className='flex mt-2'>
+          <Input
+            className='flex-1'
+            value={state.queryShortUrl}
+            onChange={(e) => setState({ queryShortUrl: e.target.value })}
+          />
+          <Button
+            className='ml-2'
+            onClick={() => {
+              const key =
+                state.queryShortUrl.split('/').pop() || state.queryShortUrl
+              fetch(`/api/shorter?key=${key}`)
+                .then((res) => res.text())
+                .then((url) => {
+                  setState({ queryResult: url })
+                })
+            }}
+          >
+            query
+          </Button>
+        </div>
+        <div className='mt-2'>
+          {state.queryResult}{' '}
+          {state.queryResult && (
+            <Button onClick={() => copy(state.queryResult)}>Copy</Button>
+          )}
+        </div>
       </div>
     </main>
   )
