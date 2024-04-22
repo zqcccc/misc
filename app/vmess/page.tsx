@@ -16,7 +16,7 @@ import { Button, Popconfirm } from 'antd'
 const emojiMap: Record<string, string> = {
   CN: '🇨🇳',
   HK: '🇭🇰',
-  TW: '🇹🇼',
+  TW: '',
   US: '🇺🇸',
   JP: '🇯🇵',
   KR: '🇰🇷',
@@ -71,10 +71,10 @@ export default function NodeConfig() {
                     state.unifyName || obj.ps
                   }`
                 : state.unifyName || obj.ps
-            obj.path =
-              !obj.path || obj.path.includes('?ed=2048')
-                ? obj.path
-                : `${obj.path}?ed=2048`
+            // obj.path =
+            //   !obj.path || obj.path.includes('?ed=2048')
+            //     ? obj.path
+            //     : `${obj.path}?ed=2048`
             return [protocol, obj]
           } catch (e) {
             return false
