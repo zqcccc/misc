@@ -2,7 +2,7 @@
 
 import { useSetState } from 'ahooks'
 import { copy } from '../post/[...id]/helpers'
-import { Button, Input, InputNumber, message } from 'antd'
+import { Button, Input, InputNumber, message, notification } from 'antd'
 
 export default function Shorter() {
   const [state, setState] = useSetState({
@@ -15,6 +15,26 @@ export default function Shorter() {
   })
   return (
     <main className='p-4'>
+      <div className='flex items-center gap-2'>
+        <div>base url:</div>
+        <Button
+          onClick={() => {
+            fetch('/api/standard', {
+              method: 'POST',
+            })
+              .then((res) => res.text())
+              .then((url) => {
+                copy(url)
+                notification.success({
+                  message: 'copied',
+                  description: url,
+                })
+              })
+          }}
+        >
+          Copy
+        </Button>
+      </div>
       <h2>origin url</h2>
       <Input
         type='text'
@@ -22,7 +42,7 @@ export default function Shorter() {
         value={state.url}
         onChange={(e) => setState({ url: e.target.value })}
       />
-      <div className='mt-2'>
+      <div className='mt-2 flex gap-2 flex-wrap'>
         last time(s)
         <InputNumber
           className='ml-2 w-32'
