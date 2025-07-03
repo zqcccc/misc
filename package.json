@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3011",
+    "dev": "next dev --turbopack -p 3011",
     "build": "next build",
     "start": "next start -p 3011",
     "lint": "next lint",
@@ -17,23 +17,23 @@
   "dependencies": {
     "@prisma/client": "^5.0.0",
     "@types/node": "18.15.11",
-    "@types/react": "18.0.33",
-    "@types/react-dom": "18.0.11",
+    "@types/react": "19.1.8",
+    "@types/react-dom": "19.1.6",
     "ahooks": "^3.7.6",
     "antd": "^5.9.4",
     "dayjs": "^1.11.8",
     "echarts": "^5.4.2",
     "eslint": "8.37.0",
-    "eslint-config-next": "13.2.4",
+    "eslint-config-next": "15.3.4",
     "gray-matter": "^4.0.3",
     "js-base64": "^3.7.5",
-    "next": "^14",
+    "next": "15.3.4",
     "next-mdx-remote": "^4.4.1",
     "node-ipinfo": "^3.4.2",
-    "react": "18.2.0",
+    "react": "19.1.0",
     "react-dnd": "^16.0.1",
     "react-dnd-html5-backend": "^16.0.1",
-    "react-dom": "18.2.0",
+    "react-dom": "19.1.0",
     "rehype-pretty-code": "^0.10.1",
     "remark-gfm": "^3.0.1",
     "shiki": "^0.14.3",
@@ -46,5 +46,9 @@
     "prisma": "^5.0.0",
     "tailwindcss": "^3.3.3",
     "ts-node": "^10.9.1"
+  },
+  "resolutions": {
+    "@types/react": "19.1.8",
+    "@types/react-dom": "19.1.6"
   }
 }

@@ -25,8 +25,8 @@ const components = {
   ),
 }
 
-const Content: React.FC<{ children: any }> = ({ children }) => {
-  return <MDXRemote {...children} components={components} />
+const Content: React.FC<{ source: any }> = ({ source }) => {
+  return <MDXRemote {...source} components={components} />
 }
 
 export default Content

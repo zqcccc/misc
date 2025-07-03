@@ -88,11 +88,30 @@ const option = {
 }
 
 const seriesMap = new Map<string, any[]>()
+
 const PE = () => {
   const [id, setId] = useState('sh600519')
   const hasInit = useRef(false)
   const charts = useRef<ECharts.ECharts | null>(null)
   const [series, setSeries] = useState<any[]>([])
+
+  const getData = useMemoizedFn(() => {
+    if (seriesMap.has(id)) {
+      return
+    }
+    getShare(id).then((data) => {
+      const newSeries = prepareSeries(data)
+      seriesMap.set(id, newSeries)
+      const nextSeries = series.concat(newSeries)
+      setSeries((s) => s.concat(newSeries))
+      charts.current?.setOption({
+        series: nextSeries,
+        legend: {
+          data: nextSeries.map((s) => s.name),
+        },
+      })
+    })
+  })
 
   useEffect(() => {
     if (hasInit.current) return
@@ -118,25 +137,7 @@ const PE = () => {
     return () => {
       window.removeEventListener('resize', resizeChart)
     }
-  }, [])
-
-  const getData = useMemoizedFn(() => {
-    if (seriesMap.has(id)) {
-      return
-    }
-    getShare(id).then((data) => {
-      const newSeries = prepareSeries(data)
-      seriesMap.set(id, newSeries)
-      const nextSeries = series.concat(newSeries)
-      setSeries((s) => s.concat(newSeries))
-      charts.current?.setOption({
-        series: nextSeries,
-        legend: {
-          data: nextSeries.map((s) => s.name),
-        },
-      })
-    })
-  })
+  }, [getData])
 
   return (
     <div className='w-full h-full min-h-screen flex flex-col justify-center items-center'>
