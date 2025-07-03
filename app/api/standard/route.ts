@@ -1,7 +1,6 @@
 import { NextRequest } from "next/server";
-
 export const GET = async (req: NextRequest) => {
-  const ip = req.headers.get('x-forwarded-for') || req.ip
+  const ip = req.headers.get('x-forwarded-for') || ''
   
   return new Response(JSON.stringify({ ip }))
 }

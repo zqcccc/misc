@@ -4,10 +4,10 @@ import { getAllPostIds, getPostData, getPostMeta } from '../../api/post/lib'
 import Content from './content'
 import ReactCusdis from './Cusdis'
 
-export default async function Post(props: { params?: { id?: string[] } }) {
-  console.log('%c props: ', 'font-size:12px;background-color: #B03734;color:#fff;', props)
-  if (!props.params?.id) return <>not found</>
-  const postData = await getPostData(props.params.id)
+export default async function Post(props: { params?: Promise<{ id?: string[] }> }) {
+  if (!(await props.params)?.id) return <>not found</>
+  console.log('%c props.params?.id: ', 'font-size:12px;background-color: #9E9689;color:#fff;', (await props.params)?.id)
+  const postData = await getPostData((await props.params)?.id || [])
   console.log('postData.date: ', postData.date)
   const time = dayjs(postData.date || undefined)
   const changeTime = dayjs(postData.changeTime)
@@ -28,7 +28,8 @@ export default async function Post(props: { params?: { id?: string[] } }) {
           </div>
         )} */}
       </div>
-      <Content source={postData.contentHtml} />
+      {/* @ts-expect-error Server Component */}
+      <Content source={postData.content} />
       <ReactCusdis />
     </article>
   )
@@ -41,7 +42,8 @@ export async function generateStaticParams() {
   return paths
 }
 
-export async function generateMetadata({ params }: any) {
+export async function generateMetadata(props: any) {
+  const params = await props.params;
   const postMeta = getPostMeta(params.id)
   return {
     title: postMeta.data.title || 'post',

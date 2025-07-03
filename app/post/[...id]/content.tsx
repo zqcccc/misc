@@ -1,8 +1,10 @@
-'use client'
-
 import Image from 'next/image'
-import { MDXRemote } from 'next-mdx-remote'
+import { MDXRemote, MDXRemoteOptions } from 'next-mdx-remote-client/rsc'
 import Pre from './codeBlock'
+import { Suspense } from "react";
+import rehypePrettyCode from 'rehype-pretty-code';
+import remarkGfm from 'remark-gfm';
+import React from 'react';
 
 const ResponsiveImage: React.FC<any> = (props) => (
   <Image
@@ -25,8 +27,36 @@ const components = {
   ),
 }
 
-const Content: React.FC<{ source: any }> = ({ source }) => {
-  return <MDXRemote {...source} components={components} />
+const Content = async ({ source }: { source: string }) => {
+  const options: MDXRemoteOptions = {
+    mdxOptions: {
+      remarkPlugins: [remarkGfm],
+      rehypePlugins: [
+        [
+          rehypePrettyCode,
+          {
+            theme: 'one-dark-pro',
+          },
+        ],
+      ],
+      format: 'mdx',
+    },
+    parseFrontmatter: true,
+    // scope: {
+    //   readingTime: calculateSomeHow(source),
+    // },
+    vfileDataIntoScope: "toc", // <---------
+  };
+
+  return <Suspense fallback={<>Loading...</>}>
+    {/* @ts-expect-error Server Component */}
+    <MDXRemote
+      source={source}
+      options={options}
+      components={components}
+      onError={() => <>error</>}
+    />
+  </Suspense>
 }
 
 export default Content
