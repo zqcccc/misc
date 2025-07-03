@@ -3,11 +3,14 @@ import './globals.css'
 
 export const metadata = {
   description: "welcome to ZQC's personal website, nice to meet you",
-  colorScheme: 'light dark',
   keywords: ['Next.js', 'React', 'JavaScript', 'blog', 'zqc', 'onlylike.work'],
   other: {
     'google-adsense-account': 'ca-pub-6426066570730708',
   },
+}
+
+export const viewport = {
+  colorScheme: 'light dark',
 }
 
 export default function RootLayout({

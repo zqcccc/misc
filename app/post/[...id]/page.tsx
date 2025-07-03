@@ -4,9 +4,9 @@ import { getAllPostIds, getPostData, getPostMeta } from '../../api/post/lib'
 import Content from './content'
 import ReactCusdis from './Cusdis'
 
-export default async function Post(props: { params?: { id?: string[] }, }) {
+export default async function Post(props: { params?: { id?: string[] } }) {
   console.log('%c props: ', 'font-size:12px;background-color: #B03734;color:#fff;', props)
-  if(!props.params?.id) return <>not found</>
+  if (!props.params?.id) return <>not found</>
   const postData = await getPostData(props.params.id)
   console.log('postData.date: ', postData.date)
   const time = dayjs(postData.date || undefined)
@@ -28,7 +28,7 @@ export default async function Post(props: { params?: { id?: string[] }, }) {
           </div>
         )} */}
       </div>
-      <Content>{postData.contentHtml}</Content>
+      <Content source={postData.contentHtml} />
       <ReactCusdis />
     </article>
   )

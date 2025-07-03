@@ -1,24 +1,13 @@
-import { GET } from '../api/nf/route'
+import React from 'react'
 
-const NF = async (req: any) => {
-  console.log(
-    '%c req: ',
-    'font-size:12px;background-color: #2EAFB0;color:#fff;',
-    req
-  )
-  // const data = await Promise.all(
-  //   settles.map((params) => {
-  //     return checkNetflix(...params)
-  //   })
-  // )
-  const data: [number, string][] = await GET()
-    .then((res) => res.json())
-    .catch((err) => {})
-  console.log(
-    '%c data: ',
-    'font-size:12px;background-color: #93C0A4;color:#fff;',
-    data
-  )
+const NF = async () => {
+  let data: [boolean, string][] | null = null
+  try {
+    const res = await fetch('/api/nf', { cache: 'no-store' })
+    data = await res.json()
+  } catch (err) {
+    // ignore
+  }
 
   return (
     <div className='w-full h-full min-h-screen flex flex-col justify-center items-center'>
