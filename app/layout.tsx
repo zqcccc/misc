@@ -19,9 +19,9 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang='zh-Hans'>
+    <html lang='zh-Hans' suppressHydrationWarning>
       <body>{children}</body>
-      <Script id='clarity'>
+      <Script id='ms_clarity' type='text/javascript'>
         {`(function(c,l,a,r,i,t,y){
         c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
         t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;

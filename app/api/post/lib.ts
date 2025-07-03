@@ -10,7 +10,7 @@ import remarkGfm from 'remark-gfm'
 // import rehypeStringify from 'rehype-stringify'
 // import rehypePrism from '@mapbox/rehype-prism'
 import rehypePrettyCode from 'rehype-pretty-code'
-import { serialize } from 'next-mdx-remote/serialize'
+import { serialize } from 'next-mdx-remote-client/serialize'
 
 const postsDirectory = path.join(process.cwd(), 'posts')
 
@@ -155,40 +155,9 @@ export function getPostMeta(id: string[]) {
 
 export async function getPostData(id: string[]) {
   const matterResult = getPostMeta(id)
-
-  // Use remark to convert markdown into HTML string
-  // const processedContent = await remark()
-  //   .use(remarkRehype)
-  //   // .use(rehypePrism)
-  //   .use(rehypePrettyCode, {
-  //     theme: 'one-dark-pro',
-  //   })
-  //   .use(rehypeStringify)
-  //   // .use(rehypeSanitize)
-  //   .use(remarkGfm)
-  //   .process(matterResult.content)
-  const mdxSource = await serialize(matterResult.content, {
-    mdxOptions: {
-      remarkPlugins: [remarkGfm],
-      rehypePlugins: [
-        [
-          rehypePrettyCode,
-          {
-            theme: 'one-dark-pro',
-          },
-        ],
-      ],
-      format: 'mdx',
-    },
-  })
-  // console.log('mdxSource: ', mdxSource)
-  // const contentHtml = processedContent.toString()
-  const contentHtml = mdxSource
-
-  // Combine the data with the id and contentHtml
   return {
     id,
-    contentHtml,
+    content: matterResult.content,
     changeTime: matterResult.changeTime,
     ...matterResult.data,
   }
