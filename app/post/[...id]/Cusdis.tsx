@@ -4,7 +4,7 @@ import React from 'react'
 import { useScript } from './useScript'
 import { useState } from 'react'
 
-type CusidisProps = {
+type CusdisProps = {
   attrs: {
     host: string
     appId: string
@@ -15,8 +15,9 @@ type CusidisProps = {
   }
   lang?: string
   style?: React.CSSProperties
+  className?: string
 }
-export function ReactCusdis(props: CusidisProps) {
+export function ReactCusdis(props: CusdisProps) {
   const divRef = React.useRef<HTMLDivElement>(null)
 
   const host = props.attrs.host || 'https://cusdis.com'
@@ -50,13 +51,14 @@ export function ReactCusdis(props: CusidisProps) {
         data-page-url={props.attrs.pageUrl}
         data-theme={props.attrs.theme}
         style={props.style}
+        className={props.className}
         ref={divRef}
       ></div>
     </>
   )
 }
 
-function WrapperCusdis() {
+function WrapperCusdis(props: Partial<CusdisProps>) {
   const [inBrowser, setInBrowser] = useState(false)
   React.useEffect(() => {
     setInBrowser(true)
@@ -73,6 +75,7 @@ function WrapperCusdis() {
         theme: window.__theme as 'light' | 'dark' | 'auto',
       }}
       lang='zh-cn'
+      className={props.className}
     />
   ) : null
 }
