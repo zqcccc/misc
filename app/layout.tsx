@@ -20,6 +20,22 @@ export default function RootLayout({
 }) {
   return (
     <html lang='zh-Hans' suppressHydrationWarning>
+      <head>
+        <Script id="theme-init" strategy="beforeInteractive">
+          {`
+            (function() {
+              try {
+                var theme = localStorage.getItem('theme');
+                var darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
+                if (!theme) {
+                  theme = darkQuery.matches ? 'dark' : 'light';
+                }
+                document.documentElement.className = theme;
+              } catch (e) {}
+            })();
+          `}
+        </Script>
+      </head>
       <body>{children}</body>
       <Script id='ms_clarity' type='text/javascript'>
         {`(function(c,l,a,r,i,t,y){

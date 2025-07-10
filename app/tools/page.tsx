@@ -16,20 +16,20 @@ const tools = [
 
 export default function ToolsHome() {
   return (
-    <div className="max-w-2xl mx-auto my-10 p-8 bg-white rounded-xl shadow-lg">
-      <h1 className="text-3xl font-bold mb-6">在线工具集合</h1>
-      <p className="text-gray-600 mb-8">收录多种实用的在线工具，全部免费、无需下载，浏览器本地处理，安全高效。</p>
+    <div className="max-w-2xl mx-auto my-10 p-8 rounded-xl shadow-lg bg-white dark:bg-[#282c35] transition-colors">
+      <h1 className="text-3xl font-bold mb-6 text-gray-900 dark:text-gray-100">在线工具集合</h1>
+      <p className="text-gray-600 dark:text-gray-300 mb-8">收录多种实用的在线工具，全部免费、无需下载，浏览器本地处理，安全高效。</p>
       <div className="grid gap-6">
         {tools.map(tool => (
           <a
             key={tool.href}
             href={tool.href}
-            className="flex items-center gap-4 p-5 bg-gray-50 rounded-lg border border-gray-200 hover:shadow transition"
+            className="flex items-center gap-4 p-5 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 hover:bg-blue-50 dark:bg-[#363c48] dark:hover:bg-[#444b5a] hover:shadow transition"
           >
             <span className="text-3xl">{tool.icon}</span>
             <div>
-              <div className="font-semibold text-lg">{tool.name}</div>
-              <div className="text-gray-500 text-sm">{tool.desc}</div>
+              <div className="font-semibold text-lg text-gray-900 dark:text-gray-100">{tool.name}</div>
+              <div className="text-gray-600 dark:text-gray-400 text-sm">{tool.desc}</div>
             </div>
           </a>
         ))}

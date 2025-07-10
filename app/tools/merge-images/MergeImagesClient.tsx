@@ -48,39 +48,39 @@ function SortableImage({ id, src, name, onMoveUp, onMoveDown, onRemove, index, t
       style={style}
       {...attributes}
       {...listeners}
-      className="flex items-center gap-4 mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg shadow-sm cursor-grab relative"
+      className="flex items-center gap-4 mb-4 p-3 bg-gray-50 dark:bg-[#363c48] border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm cursor-grab relative"
     >
       <img
         src={src}
         alt={name}
-        className="w-20 h-20 object-cover rounded-md border border-gray-200 bg-white"
+        className="w-20 h-20 object-cover rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#282c35]"
       />
       <div className="flex-1">
-        <div className="text-sm text-gray-800 mb-1 truncate">{name}</div>
+        <div className="text-sm text-gray-800 dark:text-gray-200 mb-1 truncate">{name}</div>
         <div className="flex gap-2">
           <button
             onClick={onMoveUp}
             disabled={index === 0}
-            className={`px-2 py-0.5 rounded border text-xs ${index === 0 ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed' : 'bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200'}`}
+            className={`px-2 py-0.5 rounded border text-xs ${index === 0 ? 'bg-gray-100 dark:bg-[#282c35] border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed' : 'bg-gray-100 dark:bg-[#363c48] border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-[#444b5a]'}`}
           >
             ↑ 上移
           </button>
           <button
             onClick={onMoveDown}
             disabled={index === total - 1}
-            className={`px-2 py-0.5 rounded border text-xs ${index === total - 1 ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed' : 'bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200'}`}
+            className={`px-2 py-0.5 rounded border text-xs ${index === total - 1 ? 'bg-gray-100 dark:bg-[#282c35] border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed' : 'bg-gray-100 dark:bg-[#363c48] border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-[#444b5a]'}`}
           >
             ↓ 下移
           </button>
           <button
             onClick={onRemove}
-            className="px-2 py-0.5 rounded border border-red-200 bg-red-50 text-red-600 text-xs hover:bg-red-100"
+            className="px-2 py-0.5 rounded border border-red-200 dark:border-red-700 bg-red-50 dark:bg-[#4b2323] text-red-600 dark:text-red-400 text-xs hover:bg-red-100 dark:hover:bg-[#6b2c2c]"
           >
             删除
           </button>
         </div>
       </div>
-      <span className="absolute right-3 top-3 text-xs text-gray-400 select-none">拖拽排序</span>
+      <span className="absolute right-3 top-3 text-xs text-gray-400 dark:text-gray-500 select-none">拖拽排序</span>
     </div>
   );
 }
@@ -251,11 +251,11 @@ export default function MergeImagesClient() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto my-10 p-8 bg-white rounded-xl shadow-lg">
+    <div className="max-w-2xl mx-auto my-10 p-8 bg-white dark:bg-[#282c35] rounded-xl shadow-lg transition-colors">
       <div className="mb-6 flex items-center gap-4">
         <label
           htmlFor="file-upload"
-          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md shadow cursor-pointer hover:bg-blue-700 transition-colors font-medium"
+          className="inline-flex items-center px-4 py-2 bg-blue-600 dark:bg-blue-800 text-white rounded-md shadow cursor-pointer hover:bg-blue-700 dark:hover:bg-blue-900 transition-colors font-medium"
         >
           <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5-5m0 0l5 5m-5-5v12" />
@@ -270,11 +270,11 @@ export default function MergeImagesClient() {
             className="hidden"
           />
         </label>
-        <span className="text-gray-400 text-sm">支持多图，拖拽/按钮调整顺序</span>
+        <span className="text-gray-400 dark:text-gray-500 text-sm">支持多图，拖拽/按钮调整顺序</span>
       </div>
       {fileObjs.length > 0 && (
-        <div className="mb-8 bg-gray-50 rounded-lg p-5 shadow">
-          <div className="font-semibold mb-3 text-gray-700">图片顺序预览</div>
+        <div className="mb-8 bg-gray-50 dark:bg-[#363c48] rounded-lg p-5 shadow">
+          <div className="font-semibold mb-3 text-gray-700 dark:text-gray-100">图片顺序预览</div>
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={fileObjs.map(f => f.id)} strategy={verticalListSortingStrategy}>
               {fileObjs.map((f, idx) => (
@@ -350,7 +350,7 @@ export default function MergeImagesClient() {
                 value={customBase}
                 onChange={e => setCustomBase(e.target.value)}
                 placeholder={layout === 'vertical' ? '宽度(px)' : '高度(px)'}
-                className="w-20 ml-1 px-2 py-0.5 rounded border border-gray-300 text-sm"
+                className="w-20 ml-1 px-2 py-0.5 rounded border border-gray-300 dark:border-gray-600 text-sm bg-white dark:bg-[#282c35] text-gray-900 dark:text-gray-100"
               />
             )}
             {imgStats && (
@@ -366,7 +366,7 @@ export default function MergeImagesClient() {
         <select
           value={outputType}
           onChange={e => setOutputType(e.target.value as any)}
-          className="border rounded px-2 py-1"
+          className="border rounded px-2 py-1 bg-white dark:bg-[#282c35] text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
         >
           <option value="image/png">PNG（无损）</option>
           <option value="image/jpeg">JPEG（有损，可调质量）</option>
@@ -384,14 +384,14 @@ export default function MergeImagesClient() {
             onChange={e => setQuality(Number(e.target.value))}
             className="w-48 accent-blue-600"
           />
-          <span className="ml-2 text-blue-700 font-semibold w-10 inline-block">{quality}%</span>
+          <span className="ml-2 text-blue-700 dark:text-blue-300 font-semibold w-10 inline-block">{quality}%</span>
         </div>
       )}
       <div className="flex items-center gap-4 mb-2">
         <button
           onClick={handleMerge}
           disabled={fileObjs.length === 0 || loading}
-          className={`px-9 py-2 text-lg rounded-md font-semibold shadow transition-colors ${fileObjs.length === 0 || loading ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+          className={`px-9 py-2 text-lg rounded-md font-semibold shadow transition-colors ${fileObjs.length === 0 || loading ? 'bg-gray-200 dark:bg-[#363c48] text-gray-400 dark:text-gray-500 cursor-not-allowed' : 'bg-blue-600 dark:bg-blue-800 text-white hover:bg-blue-700 dark:hover:bg-blue-900'}`}
         >
           {loading ? "合并中..." : "合并图片"}
         </button>
@@ -399,18 +399,18 @@ export default function MergeImagesClient() {
           <a
             href={resultUrl}
             download="merged.png"
-            className="px-6 py-2 text-lg rounded-md font-semibold shadow bg-green-600 text-white hover:bg-green-700 transition-colors"
+            className="px-6 py-2 text-lg rounded-md font-semibold shadow bg-green-600 dark:bg-green-800 text-white hover:bg-green-700 dark:hover:bg-green-900 transition-colors"
           >
             下载图片
           </a>
         )}
       </div>
       {resultUrl && (
-        <div className="mt-10 text-center bg-gray-50 rounded-lg p-6 shadow">
-          <h3 className="font-semibold mb-4">合成结果</h3>
-          <img src={resultUrl} alt="合成图片" className="max-w-full border border-gray-200 mb-4 rounded bg-white inline-block" />
+        <div className="mt-10 text-center bg-gray-50 dark:bg-[#363c48] rounded-lg p-6 shadow">
+          <h3 className="font-semibold mb-4 text-gray-900 dark:text-gray-100">合成结果</h3>
+          <img src={resultUrl} alt="合成图片" className="max-w-full border border-gray-200 dark:border-gray-700 mb-4 rounded bg-white dark:bg-[#282c35] inline-block" />
           <div>
-            <a href={resultUrl} download="merged.png" className="text-blue-600 font-medium text-base hover:underline">
+            <a href={resultUrl} download="merged.png" className="text-blue-600 dark:text-blue-300 font-medium text-base hover:underline">
               下载图片
             </a>
           </div>
