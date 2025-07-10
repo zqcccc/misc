@@ -10,7 +10,10 @@ const Menu = () => {
         <Link href='/'>home</Link>
       </li>
       <li>
-        <Link href='/vmess'>Vmess</Link>
+        <Link href="/tools">Tools</Link>
+      </li>
+      <li>
+        <Link href='/vmess'>Vmess(deprecated)</Link>
       </li>
       <li>
         <p>awesome collections</p>
