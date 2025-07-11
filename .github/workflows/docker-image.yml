@@ -46,5 +46,5 @@ jobs:
         cache-to: type=gha,mode=max
     - name: Notify webhook to deploy
       run: |
-        curl -X POST {{ secrets.MY_WEBHOOK_URL }} \
-            -H "X-Hook-Token: {{ secrets.MY_WEBHOOK_TOKEN }}"
+        curl -X POST ${{ secrets.MY_WEBHOOK_URL }} \
+            -H "X-Hook-Token: ${{ secrets.MY_WEBHOOK_TOKEN }}"
