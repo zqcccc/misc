@@ -11,6 +11,7 @@ export const GET = async (req: Request) => {
 
 export const POST = async (request: Request) => {
   const apiUrl = process.env.REMOTE_API
+  console.log('apiUrl: ', apiUrl)
   const res = await fetch(`${apiUrl}/url`, {
     method: 'POST',
     body: request.body,
@@ -22,6 +23,7 @@ export const POST = async (request: Request) => {
     cache: 'no-store',
   })
   const key = await res.text()
+  console.log('key: ', key)
 
   return new Response(`${process.env.SHORTENER_PREFIX}/url/${key}`)
 }
