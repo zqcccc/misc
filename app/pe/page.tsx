@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import * as ECharts from 'echarts'
 import { useMemoizedFn } from 'ahooks'
 
 function getShare(id: string) {
@@ -92,7 +91,7 @@ const seriesMap = new Map<string, any[]>()
 const PE = () => {
   const [id, setId] = useState('sh600519')
   const hasInit = useRef(false)
-  const charts = useRef<ECharts.ECharts | null>(null)
+  const charts = useRef<any>(null)
   const [series, setSeries] = useState<any[]>([])
 
   const getData = useMemoizedFn(() => {
@@ -116,26 +115,33 @@ const PE = () => {
   useEffect(() => {
     if (hasInit.current) return
     hasInit.current = true
-    const chartContainer = document.getElementById('pe') as HTMLDivElement
-    const myChart = ECharts.init(chartContainer)
-    function resizeChart() {
-      // 获取父容器的宽度和高度
-      var containerWidth = chartContainer.clientWidth
-      var containerHeight = chartContainer.clientHeight
 
-      // 调整图表的大小
-      myChart.resize({
-        width: containerWidth,
-        height: containerHeight,
-      })
-    }
-    // 监听窗口大小改变事件
-    window.addEventListener('resize', resizeChart)
-    myChart.setOption(option)
-    charts.current = myChart
-    getData()
+    let isMounted = true
+    let resizeChart = () => {}
+
+    import('echarts').then((ECharts) => {
+      if (!isMounted) return
+      const chartContainer = document.getElementById('pe') as HTMLDivElement | null
+      if (!chartContainer) return
+      const myChart = ECharts.init(chartContainer)
+      resizeChart = () => {
+        const containerWidth = chartContainer.clientWidth
+        const containerHeight = chartContainer.clientHeight
+        myChart.resize({
+          width: containerWidth,
+          height: containerHeight,
+        })
+      }
+      window.addEventListener('resize', resizeChart)
+      myChart.setOption(option)
+      charts.current = myChart
+      getData()
+    })
+
     return () => {
+      isMounted = false
       window.removeEventListener('resize', resizeChart)
+      charts.current?.dispose?.()
     }
   }, [getData])
 

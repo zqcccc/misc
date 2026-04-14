@@ -1,7 +1,7 @@
 'use client'
 
 import { useSetState } from 'ahooks'
-import { parseNodeLine, serializeNode } from './utils'
+import { parseNodeLine, serializeNode } from '../utils'
 
 export default function Preferential() {
   const [state, setState] = useSetState({
