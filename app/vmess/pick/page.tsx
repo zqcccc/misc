@@ -3,9 +3,8 @@
 import { useNodesStore } from '@/store/node'
 import { useSetState } from 'ahooks'
 import { Button, Input, InputNumber, message } from 'antd'
-import { Base64 } from 'js-base64'
 import { useEffect, useMemo } from 'react'
-import { getRandom } from '../utils'
+import { getRandom, parseNodeLines, serializeNodeLines } from '../utils'
 import { VmessItemWithoutDrag } from '../vmessItem'
 import { copy } from '@/app/post/[...id]/helpers'
 
@@ -19,20 +18,7 @@ const Pick = () => {
     isSubmitting: false,
   })
 
-  const getAll = () =>
-    NodesStore.nodesInput
-      .split('\n')
-      .map((item) => {
-        try {
-          const [protocol, base64Str] = item.split('://')
-          const jsonStr = Base64.decode(base64Str)
-          const obj = JSON.parse(jsonStr)
-          return [protocol, obj]
-        } catch (e) {
-          return false
-        }
-      })
-      .filter(Boolean) as [string, any][]
+  const getAll = () => parseNodeLines(NodesStore.nodesInput)
   const showList = () => {
     setState({
       nodeList: getAll(),
@@ -63,12 +49,7 @@ const Pick = () => {
   }, [NodesStore.nodesInput])
 
   const output = useMemo(() => {
-    return state.nodeList
-      .map(([protocol, obj]) => {
-        const base64Str = Base64.encode(JSON.stringify(obj))
-        return `${protocol}://${base64Str}`
-      })
-      .join('\n')
+    return serializeNodeLines(state.nodeList)
   }, [state.nodeList])
 
   return (

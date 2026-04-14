@@ -7,7 +7,12 @@ import { useMemoizedFn, useSetState } from 'ahooks'
 import { useEffect, useMemo, useRef } from 'react'
 import { Base64 } from 'js-base64'
 import { copy } from '../post/[...id]/helpers'
-import { getClipboardText } from './utils'
+import {
+  getClipboardText,
+  parseNodeLines,
+  serializeNodeLines,
+  stripPathQuery,
+} from './utils'
 import message from 'antd/es/message'
 import 'antd/es/message/style'
 import VmessItem from './vmessItem'
@@ -57,41 +62,24 @@ export default function NodeConfig() {
   useEffect(() => {
     if (state.nodeList.length) return
     setState({
-      nodeList: NodesStore.nodesInput
-        .split('\n')
-        .map((item) => {
-          try {
-            const [protocol, base64Str] = item.split('://')
-            const jsonStr = Base64.decode(base64Str)
-            const obj = JSON.parse(jsonStr)
-            const ipInfo = NodesStore.getIp(obj.add)
-            obj.ps =
-              ipInfo && !obj.ps.includes(ipInfo.countryCode)
-                ? `${emojiMap[ipInfo.countryCode] || ''}${ipInfo.countryCode}-${
-                    state.unifyName || obj.ps
-                  }`
-                : state.unifyName || obj.ps
-            // obj.path =
-            //   !obj.path || obj.path.includes('?ed=2048')
-            //     ? obj.path
-            //     : `${obj.path}?ed=2048`
-            return [protocol, obj]
-          } catch (e) {
-            return false
-          }
-        })
-        .filter(Boolean),
+      nodeList: parseNodeLines(NodesStore.nodesInput).map(([protocol, config]) => {
+        const obj = Object.assign({}, config)
+        const ipInfo = NodesStore.getIp(obj.add)
+        const nodeName = obj.ps || ''
+        obj.ps =
+          ipInfo && !nodeName.includes(ipInfo.countryCode)
+            ? `${emojiMap[ipInfo.countryCode] || ''}${ipInfo.countryCode}-${
+                state.unifyName || nodeName
+              }`
+            : state.unifyName || nodeName
+        return [protocol, obj]
+      }),
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [NodesStore.nodesInput, NodesStore.nodeMap, state.unifyName])
 
   const output = useMemo(() => {
-    return state.nodeList
-      .map(([protocol, obj]) => {
-        const base64Str = Base64.encode(JSON.stringify(obj))
-        return `${protocol}://${base64Str}`
-      })
-      .join('\n')
+    return serializeNodeLines(state.nodeList)
   }, [state.nodeList])
 
   const outputBase64 = useMemo(
@@ -211,7 +199,7 @@ export default function NodeConfig() {
         <textarea
           rows={10}
           className='w-full mt-2 p-2'
-          placeholder='ss/ssr/vmess链接，多个链接每行一个'
+          placeholder='ss/vless/vmess链接，多个链接每行一个'
           value={NodesStore.nodesInput}
           onChange={(e) => NodesStore.setNodesInput(e.target.value)}
         ></textarea>
@@ -258,8 +246,7 @@ export default function NodeConfig() {
             onClick={() => {
               setState({
                 nodeList: state.nodeList.map(([p, i]) => {
-                  i.path = i.path?.split('?')[0]
-                  return [p, i]
+                  return [p, Object.assign({}, i, { path: stripPathQuery(i.path) })]
                 }),
               })
             }}
