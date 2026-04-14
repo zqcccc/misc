@@ -1,7 +1,7 @@
 'use client'
 
 import { useSetState } from 'ahooks'
-import { Base64 } from 'js-base64'
+import { parseNodeLine, serializeNode } from './utils'
 
 export default function Preferential() {
   const [state, setState] = useSetState({
@@ -40,18 +40,20 @@ export default function Preferential() {
         <button
           onClick={() => {
             try {
-              const [protocol, base64Str] = state.input.split('://')
-              const config = JSON.parse(Base64.decode(base64Str))
+              const parsedNode = parseNodeLine(state.input)
+              if (!parsedNode) {
+                throw new Error('invalid input')
+              }
+              const [protocol, config] = parsedNode
               const newConfigs = state.ips.filter(Boolean).map((ip) => {
-                return `${protocol}://${Base64.encode(
-                  JSON.stringify(
-                    Object.assign({}, config, {
-                      add: ip,
-                      host: config.add,
-                      port: config.port || '443', // 可能不是 443 端口
-                    })
-                  )
-                )}`
+                const nextConfig = Object.assign({}, config, {
+                  add: ip,
+                  port: config.port || '443',
+                })
+                if ('host' in config) {
+                  nextConfig.host = config.add
+                }
+                return serializeNode([protocol, nextConfig])
               })
               setState({ output: newConfigs.join('\n') })
             } catch (error) {
