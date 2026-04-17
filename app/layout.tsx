@@ -1,5 +1,8 @@
 import Script from 'next/script'
+import AdUnit from '@/components/AdUnit'
 import './globals.css'
+
+const AD_SLOT_FOOTER = '4555521397'
 
 export const metadata = {
   description: "welcome to ZQC's personal website, nice to meet you",
@@ -36,7 +39,12 @@ export default function RootLayout({
           `}
         </Script>
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        <div style={{ margin: '24px auto', maxWidth: '1200px', padding: '0 16px' }}>
+          <AdUnit slot={AD_SLOT_FOOTER} />
+        </div>
+      </body>
       <Script id='ms_clarity' type='text/javascript'>
         {`(function(c,l,a,r,i,t,y){
         c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};

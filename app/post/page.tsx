@@ -11,7 +11,7 @@ import { headers } from 'next/headers'
 
 export default async function Post() {
   const res =  await headers() // trigger dynamic import all post
-  console.log('headers res: ', res)
+  // console.log('headers res: ', res)
   // const start = new Date().getTime()
   // const res = await fetch('/api/post').then((res) => res.text())
   // console.log('%c res: ', 'font-size:12px;background-color: #4b4b4b;color:#fff;', res)
