@@ -24,6 +24,11 @@ export default function RootLayout({
   return (
     <html lang='zh-Hans' suppressHydrationWarning>
       <head>
+        <script
+          async
+          src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6426066570730708'
+          crossOrigin='anonymous'
+        />
         <Script id="theme-init" strategy="beforeInteractive">
           {`
             (function() {
@@ -65,11 +70,6 @@ export default function RootLayout({
         gtag('config', 'G-4DLMMFXJMP');
         `}
       </Script>
-      <Script
-        crossOrigin='anonymous'
-        async
-        src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6426066570730708'
-      ></Script>
     </html>
   )
 }
