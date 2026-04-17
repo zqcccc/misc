@@ -5,7 +5,7 @@ import { useSetState } from 'ahooks'
 import { Button, Input, InputNumber, message } from 'antd'
 import { useEffect, useMemo } from 'react'
 import { getRandom, parseNodeLines, serializeNodeLines } from '../utils'
-import { VmessItemWithoutDrag } from '../vmessItem'
+import { VmessItemWithoutDrag } from '../vmessItemNoDrag'
 import { copy } from '@/app/post/[...id]/helpers'
 
 const Pick = () => {
