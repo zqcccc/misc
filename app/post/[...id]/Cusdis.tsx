@@ -72,7 +72,7 @@ function WrapperCusdis(props: Partial<CusdisProps>) {
         pageId: `${window.location.hostname}_${window.location.pathname}`,
         pageTitle: document.title,
         pageUrl: location.href,
-        theme: window.__theme as 'light' | 'dark' | 'auto',
+        theme: document.documentElement.className as 'light' | 'dark' | 'auto',
       }}
       lang='zh-cn'
       className={props.className}

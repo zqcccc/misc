@@ -1,11 +1,9 @@
 'use client'
-import { DndProvider } from 'react-dnd'
-import { HTML5Backend } from 'react-dnd-html5-backend'
-
 import { useNodesStore } from '@/store/node'
 import { useMemoizedFn, useSetState } from 'ahooks'
 import { useEffect, useMemo, useRef } from 'react'
 import { Base64 } from 'js-base64'
+import dynamic from 'next/dynamic'
 import { copy } from '../post/[...id]/helpers'
 import {
   getClipboardText,
@@ -15,8 +13,12 @@ import {
 } from './utils'
 import message from 'antd/es/message'
 import 'antd/es/message/style'
-import VmessItem from './vmessItem'
 import { Button, Popconfirm } from 'antd'
+
+const VmessDndWrapper = dynamic(() => import('./vmessDraggableList'), {
+  ssr: false,
+})
+const VmessItem = dynamic(() => import('./vmessItem'), { ssr: false })
 
 const emojiMap: Record<string, string> = {
   CN: '🇨🇳',
@@ -183,7 +185,7 @@ export default function NodeConfig() {
   })
 
   return (
-    <DndProvider backend={HTML5Backend}>
+    <VmessDndWrapper>
       <main className='p-3'>
         <h2>Node Config input</h2>
         <label>
@@ -474,6 +476,6 @@ export default function NodeConfig() {
           </form>
         </div>
       </main>
-    </DndProvider>
+    </VmessDndWrapper>
   )
 }
