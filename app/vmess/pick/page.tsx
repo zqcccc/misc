@@ -2,8 +2,11 @@
 
 import { useNodesStore } from '@/store/node'
 import { useSetState } from 'ahooks'
-import { Button, Input, InputNumber, message } from 'antd'
 import { useEffect, useMemo } from 'react'
+import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { getRandom, parseNodeLines, serializeNodeLines } from '../utils'
 import { VmessItemWithoutDrag } from '../vmessItemNoDrag'
 import { copy } from '@/app/post/[...id]/helpers'
@@ -55,28 +58,35 @@ const Pick = () => {
   return (
     <div className='p-4'>
       <h1>Pick</h1>
-      <Input.TextArea
+      <Textarea
         rows={12}
         value={NodesStore.nodesInput}
         onChange={(e) => {
           NodesStore.setNodesInput(e.target.value)
         }}
       />
-      <div className='mt-2'>
+      <div className='mt-2 flex items-center gap-2 flex-wrap'>
         <span>过滤词：</span>
         <Input
+          type='text'
           className='w-48'
           value={state.filterWord}
           onChange={(e) => setState({ filterWord: e.target.value })}
-          onPressEnter={filterHandle}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') filterHandle()
+          }}
         />
-        <span className='ml-2'>过滤数量：</span>
-        <InputNumber
+        <span>过滤数量：</span>
+        <Input
+          type='number'
+          className='w-24'
           value={state.filterNumber}
-          onChange={(e) => setState({ filterNumber: e || 0 })}
-          onPressEnter={filterHandle}
+          onChange={(e) => setState({ filterNumber: Number(e.target.value) || 0 })}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') filterHandle()
+          }}
         />
-        <Button className='ml-2' onClick={filterHandle}>
+        <Button variant='outline' onClick={filterHandle}>
           过滤
         </Button>
       </div>
@@ -96,12 +106,13 @@ const Pick = () => {
       </div>
       <div className='mt-2'>
         <span>Filter list：</span>
-        <Input.TextArea rows={12} value={output} readOnly />
+        <Textarea rows={12} value={output} readOnly />
         <Button
+          variant='outline'
           className='mt-2'
           onClick={() => {
             copy(output)
-            message.info('已复制')
+            toast.info('已复制')
           }}
         >
           Copy

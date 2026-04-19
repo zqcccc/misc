@@ -1,5 +1,6 @@
 import Script from 'next/script'
 import AdUnit from '@/components/AdUnit'
+import { Toaster } from 'sonner'
 import './globals.css'
 
 const AD_SLOT_FOOTER = '4555521397'
@@ -53,6 +54,7 @@ export default function RootLayout({
         <div style={{ margin: '24px auto', maxWidth: '1200px', padding: '0 16px' }}>
           <AdUnit slot={AD_SLOT_FOOTER} />
         </div>
+        <Toaster richColors position='top-center' />
       </body>
       <Script
         id='adsbygoogle'

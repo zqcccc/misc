@@ -11,9 +11,8 @@ import {
   serializeNodeLines,
   stripPathQuery,
 } from './utils'
-import message from 'antd/es/message'
-import 'antd/es/message/style'
-import { Button, Popconfirm } from 'antd'
+import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
 
 const VmessDndWrapper = dynamic(() => import('./vmessDraggableList'), {
   ssr: false,
@@ -58,7 +57,7 @@ export default function NodeConfig() {
   })
 
   useEffect(() => {
-    message.info('如果没有地理信息，刷新页面可获得地理信息')
+    toast.info('如果没有地理信息，刷新页面可获得地理信息')
   }, [])
 
   useEffect(() => {
@@ -206,34 +205,36 @@ export default function NodeConfig() {
           onChange={(e) => NodesStore.setNodesInput(e.target.value)}
         ></textarea>
 
-        <div>
-          <button
-            className='py-1 px-2'
+        <div className='flex gap-2 flex-wrap'>
+          <Button
+            variant='outline'
+            size='sm'
             onClick={() => {
               getClipboardText().then((text) => {
                 console.log('text: ', text)
                 if (text) {
                   NodesStore.setNodesInput(`${text}\n${NodesStore.nodesInput}`)
-                  message.success('已添加到列表头部')
+                  toast.success('已添加到列表头部')
                 }
               })
             }}
           >
             append to head of list(clipboard)
-          </button>
-          <button
-            className='py-1 px-2 ml-1'
+          </Button>
+          <Button
+            variant='outline'
+            size='sm'
             onClick={() => {
               getClipboardText().then((text) => {
                 if (text) {
                   NodesStore.setNodesInput(`${NodesStore.nodesInput}\n${text}`)
-                  message.success('已添加到列表尾部')
+                  toast.success('已添加到列表尾部')
                 }
               })
             }}
           >
             append to tail of list(clipboard)
-          </button>
+          </Button>
         </div>
         <input
           type='text'
@@ -243,8 +244,10 @@ export default function NodeConfig() {
         />
         <div className='mt-3'>
           <h2>node list</h2>
-          <button
-            className='py-1 px-2 ml-1'
+          <Button
+            variant='outline'
+            size='sm'
+            className='ml-1'
             onClick={() => {
               setState({
                 nodeList: state.nodeList.map(([p, i]) => {
@@ -254,7 +257,7 @@ export default function NodeConfig() {
             }}
           >
             remove all query in path
-          </button>
+          </Button>
           <div className='flex w-full flex-wrap'>
             {state.nodeList.map(([_, item], index) => {
               return (
@@ -323,34 +326,37 @@ export default function NodeConfig() {
         </div>
         <div className='mt-3'>
           <h2>output configs</h2>
-          <div className='mb-1'>
-            <button
-              className='p-2'
+          <div className='mb-1 flex gap-2 flex-wrap'>
+            <Button
+              variant='outline'
+              size='sm'
               onClick={() => {
                 NodesStore.setNodesInput(output)
-                message.info('已设置到 Node Config input')
+                toast.info('已设置到 Node Config input')
               }}
             >
               save(set to input)
-            </button>
-            <button
-              className='p-2 ml-2'
+            </Button>
+            <Button
+              variant='outline'
+              size='sm'
               onClick={() => {
                 copy(output)
-                message.info('已复制')
+                toast.info('已复制')
               }}
             >
               copy
-            </button>
-            <button
-              className='p-2 ml-2'
+            </Button>
+            <Button
+              variant='outline'
+              size='sm'
               onClick={() => {
                 uniqueByIPAndPort()
-                message.info('已去重，重复的情况保留先出现的配置')
+                toast.info('已去重，重复的情况保留先出现的配置')
               }}
             >
               uniqueByIPAndPort
-            </button>
+            </Button>
           </div>
           <textarea
             readOnly
@@ -362,15 +368,16 @@ export default function NodeConfig() {
         <div className='mt-3'>
           <h2>output v2ray configs</h2>
           <div className='mb-1'>
-            <button
-              className='p-2'
+            <Button
+              variant='outline'
+              size='sm'
               onClick={() => {
                 copy(outputBase64)
-                message.info('base64 已复制')
+                toast.info('base64 已复制')
               }}
             >
               copy
-            </button>
+            </Button>
           </div>
           <textarea
             readOnly
@@ -407,7 +414,7 @@ export default function NodeConfig() {
                 }),
               })
                 .then((res) => {
-                  message.success('更新成功')
+                  toast.success('更新成功')
                   res.json().then((data) => {
                     console.log(data)
                   })
@@ -442,10 +449,16 @@ export default function NodeConfig() {
                 onChange={(e) => NodesStore.setGithubToken(e.target.value)}
               />
             </div>
-            <Popconfirm
-              okType='danger'
-              title='get will overwrite the local input, are you sure?'
-              onConfirm={() => {
+            <Button
+              variant='outline'
+              className='mt-2'
+              onClick={() => {
+                if (
+                  !window.confirm(
+                    'get will overwrite the local input, are you sure?'
+                  )
+                )
+                  return
                 fetch(
                   `https://gist.githubusercontent.com/zqcccc/${NodesStore.gistId}/raw/o`
                 )
@@ -456,20 +469,17 @@ export default function NodeConfig() {
                       'font-size:12px;background-color: #F5CE50;color:#fff;',
                       res
                     )
-                    message.success('获取成功')
+                    toast.success('获取成功')
                     NodesStore.setNodesInput(res)
                   })
               }}
             >
-              <Button className='mt-2'>get github gist</Button>
-            </Popconfirm>
+              get github gist
+            </Button>
             <Button
-              htmlType='submit'
+              type='submit'
               className='mt-2 ml-2'
               disabled={state.isSubmitting}
-              onSubmit={(e) => {
-                console.log(e)
-              }}
             >
               save to github gist
             </Button>
