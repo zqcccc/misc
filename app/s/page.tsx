@@ -1,8 +1,16 @@
 'use client'
 
 import { useSetState } from 'ahooks'
+import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { copy } from '../post/[...id]/helpers'
-import { Button, Input, InputNumber, message, notification } from 'antd'
+
+const SHORT_URL_PATH_PREFIX = '/url'
+
+const buildShortUrl = (key: string) =>
+  `${window.location.origin}${SHORT_URL_PATH_PREFIX}/${key}`
 
 export default function Shorter() {
   const [state, setState] = useSetState({
@@ -13,46 +21,86 @@ export default function Shorter() {
     queryShortUrl: '',
     queryResult: '',
   })
+  const [defaultRedirectUrl, setDefaultRedirectUrl] = useState('')
+  const [baseUrl, setBaseUrl] = useState('')
+  useEffect(() => {
+    fetch('/api/shorter/default')
+      .then((res) => res.text())
+      .then(setDefaultRedirectUrl)
+    fetch('/api/standard', {
+      method: 'POST',
+    })
+      .then((res) => res.text())
+      .then(setBaseUrl)
+  }, [])
   return (
     <main className='p-4'>
-      <div className='flex items-center gap-2'>
+      <div className='flex items-center gap-2 flex-wrap'>
         <div>base url:</div>
+        {baseUrl && (
+          <a
+            href={baseUrl}
+            target='_blank'
+            rel='noreferrer'
+            className='break-all'
+          >
+            {baseUrl}
+          </a>
+        )}
         <Button
+          variant='outline'
+          size='sm'
           onClick={() => {
-            fetch('/api/standard', {
-              method: 'POST',
-            })
-              .then((res) => res.text())
-              .then((url) => {
-                copy(url)
-                notification.success({
-                  message: 'copied',
-                  description: url,
-                })
-              })
+            if (!baseUrl) return
+            copy(baseUrl)
+            toast.success('copied', { description: baseUrl })
           }}
         >
           Copy
         </Button>
       </div>
-      <h2>origin url</h2>
+      {defaultRedirectUrl && (
+        <div className='mt-2 flex items-center gap-2 flex-wrap text-sm'>
+          <div>default redirect:</div>
+          <a
+            href={defaultRedirectUrl}
+            target='_blank'
+            rel='noreferrer'
+            className='break-all'
+          >
+            {defaultRedirectUrl}
+          </a>
+          <Button
+            variant='outline'
+            size='sm'
+            onClick={() => {
+              copy(defaultRedirectUrl)
+              toast.success('copied')
+            }}
+          >
+            Copy
+          </Button>
+        </div>
+      )}
+      <h2 className='mt-4'>origin url</h2>
       <Input
         type='text'
-        className='w-full'
         value={state.url}
         onChange={(e) => setState({ url: e.target.value })}
       />
-      <div className='mt-2 flex gap-2 flex-wrap'>
+      <div className='mt-2 flex gap-2 flex-wrap items-center'>
         last time(s)
-        <InputNumber
-          className='ml-2 w-32'
-          value={state.duration}
+        <Input
+          type='number'
+          className='w-32'
+          value={state.duration ?? ''}
           onChange={(e) => {
-            setState({ duration: e })
+            const v = e.target.value
+            setState({ duration: v === '' ? null : Number(v) })
           }}
         />
         <Button
-          className='ml-2'
+          variant='outline'
           onClick={() => {
             setState({ duration: (state.duration || 0) + 1 * 24 * 60 * 60 })
           }}
@@ -60,7 +108,7 @@ export default function Shorter() {
           +1day
         </Button>
         <Button
-          className='ml-2'
+          variant='outline'
           onClick={() => {
             setState({ duration: (state.duration || 0) + 30 * 24 * 60 * 60 })
           }}
@@ -68,7 +116,7 @@ export default function Shorter() {
           +30day
         </Button>
         <Button
-          className='ml-2'
+          variant='outline'
           onClick={() => {
             setState({ duration: (state.duration || 0) + 90 * 24 * 60 * 60 })
           }}
@@ -76,7 +124,7 @@ export default function Shorter() {
           +3months
         </Button>
         <Button
-          className='ml-2'
+          variant='outline'
           onClick={() => {
             setState({ duration: (state.duration || 0) - 30 * 24 * 60 * 60 })
           }}
@@ -84,7 +132,7 @@ export default function Shorter() {
           -1months
         </Button>
         <Button
-          className='ml-2'
+          variant='outline'
           onClick={() => {
             setState({ duration: null })
           }}
@@ -94,7 +142,6 @@ export default function Shorter() {
       </div>
       <Button
         className='mt-2'
-        type='primary'
         onClick={() => {
           fetch('/api/shorter', {
             method: 'POST',
@@ -104,38 +151,37 @@ export default function Shorter() {
             body: JSON.stringify({ url: state.url, duration: state.duration }),
           })
             .then((res) => res.text())
-            .then((url) => setState({ shortUrl: url }))
+            .then((key) => setState({ shortUrl: buildShortUrl(key) }))
         }}
       >
         submit
       </Button>
       {state.shortUrl && (
-        <p>
-          short url: {state.shortUrl}
+        <p className='mt-2 flex items-center gap-2 flex-wrap'>
+          <span>short url: {state.shortUrl}</span>
           <Button
-            className='ml-2'
+            variant='outline'
+            size='sm'
             onClick={() => {
               copy(state.shortUrl)
-              message.success('copied')
+              toast.success('copied')
             }}
           >
             copy
           </Button>
         </p>
       )}
-      <div className='mt-2'>
+      <div className='mt-2 flex items-center gap-2 flex-wrap'>
         Update ID:
         <Input
+          className='w-48'
           value={state.id}
-          className='w-48 ml-2'
           onChange={(e) => setState({ id: e.target.value })}
         />
         <Button
-          className='ml-2'
-          type='primary'
           onClick={() => {
             if (!state.id) {
-              message.error('id is empty')
+              toast.error('id is empty')
               return
             }
             fetch('/api/shorter', {
@@ -150,7 +196,7 @@ export default function Shorter() {
               }),
             })
               .then((res) => res.text())
-              .then((url) => setState({ shortUrl: url }))
+              .then((key) => setState({ shortUrl: buildShortUrl(key) }))
           }}
         >
           Update
@@ -160,14 +206,14 @@ export default function Shorter() {
       <div className='mt-5'>
         <div>-------------</div>
         query origin url:
-        <div className='flex mt-2'>
+        <div className='flex mt-2 gap-2'>
           <Input
             className='flex-1'
             value={state.queryShortUrl}
             onChange={(e) => setState({ queryShortUrl: e.target.value })}
           />
           <Button
-            className='ml-2'
+            variant='outline'
             onClick={() => {
               const key =
                 state.queryShortUrl.split('/').pop() || state.queryShortUrl
@@ -181,10 +227,19 @@ export default function Shorter() {
             query
           </Button>
         </div>
-        <div className='mt-2'>
-          {state.queryResult}{' '}
+        <div className='mt-2 flex items-center gap-2 flex-wrap'>
+          <span>{state.queryResult}</span>
           {state.queryResult && (
-            <Button onClick={() => copy(state.queryResult)}>Copy</Button>
+            <Button
+              variant='outline'
+              size='sm'
+              onClick={() => {
+                copy(state.queryResult)
+                toast.success('copied')
+              }}
+            >
+              Copy
+            </Button>
           )}
         </div>
       </div>

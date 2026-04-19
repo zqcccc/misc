@@ -8,7 +8,6 @@ const nextConfig = {
   },
   experimental: {
     optimizePackageImports: [
-      'antd',
       '@dnd-kit/core',
       '@dnd-kit/sortable',
       '@dnd-kit/modifiers',
