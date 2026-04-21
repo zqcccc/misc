@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useSyncExternalStore } from 'react'
+
+const subscribe = () => () => {}
+const getSnapshot = () => true
+const getServerSnapshot = () => false
 
 export const useIsUseBrowser = () => {
-  const [isInBrowser, setIsInBrowser] = useState(false)
-  useEffect(() => {
-    setIsInBrowser(true)
-  }, [])
-  return isInBrowser
+  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
 }
