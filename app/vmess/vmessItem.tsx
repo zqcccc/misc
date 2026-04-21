@@ -1,5 +1,5 @@
-import { ChangeEvent, useRef } from 'react'
-import type { Identifier, XYCoord } from 'dnd-core'
+import { ChangeEvent, useCallback, useRef } from 'react'
+import type { Identifier } from 'dnd-core'
 import { useDrag, useDrop } from 'react-dnd'
 
 export { VmessItemWithoutDrag } from './vmessItemNoDrag'
@@ -112,11 +112,18 @@ const VmessItem = (props: VmessItemProps) => {
       isDragging: monitor.isDragging(),
     }),
   })
-  drag(drop(ref))
+  const connectDragAndDropRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      ref.current = node
+      drag(node)
+      drop(node)
+    },
+    [drag, drop]
+  )
   return (
     <div
       className={`m-3 max-w-[250px] ${isDragging ? 'border' : ''}`}
-      ref={ref}
+      ref={connectDragAndDropRef}
       data-handler-id={handlerId}
     >
       <h3>

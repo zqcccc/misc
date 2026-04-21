@@ -1,13 +1,33 @@
 import * as React from 'react'
+
+type ScriptStatus = 'idle' | 'loading' | 'ready' | 'error'
+
+function readScriptStatus(src: string): ScriptStatus | null {
+  if (!src || typeof document === 'undefined') {
+    return null
+  }
+
+  const script = document.querySelector(
+    `script[src="${src}"]`
+  ) as HTMLScriptElement | null
+  const value = script?.getAttribute('data-status')
+
+  return value === 'ready' || value === 'error' || value === 'loading'
+    ? value
+    : null
+}
+
 export function useScript(src: string) {
   // Keep track of script status ("idle", "loading", "ready", "error")
-  const [status, setStatus] = React.useState(src ? 'loading' : 'idle')
+  const [status, setStatus] = React.useState<ScriptStatus>(
+    () => readScriptStatus(src) ?? (src ? 'loading' : 'idle')
+  )
+  const existingStatus = readScriptStatus(src)
   React.useEffect(
     () => {
       // Allow falsy src value if waiting on other data needed for
       // constructing the script URL passed to this hook.
       if (!src) {
-        setStatus('idle')
         return
       }
       // Fetch existing script element by src
@@ -33,10 +53,6 @@ export function useScript(src: string) {
         }
         script.addEventListener('load', setAttributeFromEvent)
         script.addEventListener('error', setAttributeFromEvent)
-      } else {
-        // Grab existing script status from attribute and set to state.
-        // @ts-expect-error
-        setStatus(script.getAttribute('data-status'))
       }
       // Script event handler to update status in state
       // Note: Even if the script already exists we still need to add
@@ -57,5 +73,5 @@ export function useScript(src: string) {
     },
     [src] // Only re-run effect if script src changes
   )
-  return status
+  return src ? existingStatus ?? status : 'idle'
 }

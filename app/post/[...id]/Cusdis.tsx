@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { useScript } from './useScript'
-import { useState } from 'react'
+import { useIsUseBrowser } from '../util'
 
 type CusdisProps = {
   attrs: {
@@ -59,10 +59,7 @@ export function ReactCusdis(props: CusdisProps) {
 }
 
 function WrapperCusdis(props: Partial<CusdisProps>) {
-  const [inBrowser, setInBrowser] = useState(false)
-  React.useEffect(() => {
-    setInBrowser(true)
-  }, [])
+  const inBrowser = useIsUseBrowser()
 
   return inBrowser ? (
     <ReactCusdis

@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import React, { useState } from "react";
 import {
   DndContext,
@@ -50,9 +51,12 @@ function SortableImage({ id, src, name, onMoveUp, onMoveDown, onRemove, index, t
       {...listeners}
       className="flex items-center gap-4 mb-4 p-3 bg-gray-50 dark:bg-[#363c48] border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm cursor-grab relative"
     >
-      <img
+      <Image
         src={src}
         alt={name}
+        unoptimized
+        width={80}
+        height={80}
         className="w-20 h-20 object-cover rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#282c35]"
       />
       <div className="flex-1">
@@ -93,6 +97,7 @@ export default function MergeImagesClient() {
   const [customBase, setCustomBase] = useState('');
   const [imgStats, setImgStats] = useState<{ minWidth: number; maxWidth: number; minHeight: number; maxHeight: number } | null>(null);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
+  const [resultSize, setResultSize] = useState<{ width: number; height: number } | null>(null);
   const [loading, setLoading] = useState(false);
   const [quality, setQuality] = useState(90);
   const [outputType, setOutputType] = useState<'image/png' | 'image/jpeg' | 'image/webp'>('image/png');
@@ -110,6 +115,7 @@ export default function MergeImagesClient() {
       }))).then(async (objs) => {
         setFileObjs(objs);
         setResultUrl(null);
+        setResultSize(null);
         const imgs = await Promise.all(
           objs.map(obj => new Promise<HTMLImageElement>((resolve, reject) => {
             const img = new window.Image();
@@ -147,6 +153,7 @@ export default function MergeImagesClient() {
     arr.splice(idx, 1);
     setFileObjs(arr);
     setResultUrl(null);
+    setResultSize(null);
   };
 
   const handleDragEnd = (event: any) => {
@@ -243,6 +250,7 @@ export default function MergeImagesClient() {
         dataUrl = canvas.toDataURL(outputType, quality / 100);
       }
       setResultUrl(dataUrl);
+      setResultSize({ width: canvasWidth, height: canvasHeight });
     } catch (err) {
       alert("图片合并失败: " + (err as any)?.message);
     } finally {
@@ -408,7 +416,15 @@ export default function MergeImagesClient() {
       {resultUrl && (
         <div className="mt-10 text-center bg-gray-50 dark:bg-[#363c48] rounded-lg p-6 shadow">
           <h3 className="font-semibold mb-4 text-gray-900 dark:text-gray-100">合成结果</h3>
-          <img src={resultUrl} alt="合成图片" className="max-w-full border border-gray-200 dark:border-gray-700 mb-4 rounded bg-white dark:bg-[#282c35] inline-block" />
+          <Image
+            src={resultUrl}
+            alt="合成图片"
+            unoptimized
+            width={resultSize?.width ?? 1}
+            height={resultSize?.height ?? 1}
+            className="max-w-full border border-gray-200 dark:border-gray-700 mb-4 rounded bg-white dark:bg-[#282c35] inline-block"
+            style={{ maxWidth: '100%', height: 'auto' }}
+          />
           <div>
             <a href={resultUrl} download="merged.png" className="text-blue-600 dark:text-blue-300 font-medium text-base hover:underline">
               下载图片

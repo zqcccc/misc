@@ -28,7 +28,6 @@ export default async function Post(props: { params?: Promise<{ id?: string[] }> 
           </div>
         )} */}
       </div>
-      {/* @ts-expect-error Server Component */}
       <Content source={postData.content} />
       <ReactCusdis className='mt-12' />
     </article>

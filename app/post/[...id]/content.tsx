@@ -10,8 +10,8 @@ const ResponsiveImage: React.FC<any> = (props) => (
   <Image
     alt={props.alt}
     sizes='100vw'
-    width='672'
-    height='672'
+    width={672}
+    height={672}
     style={{ width: '100%', height: 'auto' }}
     {...props}
   />
@@ -49,7 +49,6 @@ const Content = async ({ source }: { source: string }) => {
   };
 
   return <Suspense fallback={<>Loading...</>}>
-    {/* @ts-expect-error Server Component */}
     <MDXRemote
       source={source}
       options={options}

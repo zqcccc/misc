@@ -1,7 +1,7 @@
 'use client'
 
 import Toggle from '@/components/Toggle'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import Drawer from './drawer'
 import Menu from './menu'
 import { useIsUseBrowser } from './util'
@@ -68,10 +68,7 @@ export default function HeaderControls() {
   const [theme, setThemeState] = useState<Theme | null>(null)
   const [showDrawer, setShowDrawer] = useState(false)
   const isInBrowser = useIsUseBrowser()
-
-  useEffect(() => {
-    setThemeState(readInitialTheme())
-  }, [])
+  const resolvedTheme = isInBrowser ? (theme ?? readInitialTheme()) : null
 
   const applyTheme = useCallback((next: Theme) => {
     document.documentElement.className = next
@@ -85,13 +82,13 @@ export default function HeaderControls() {
 
   return (
     <>
-      {theme !== null ? (
+      {resolvedTheme !== null ? (
         <Toggle
           icons={{
             checked: <MoonIcon />,
             unchecked: <SunIcon />,
           }}
-          checked={theme === THEME_DARK}
+          checked={resolvedTheme === THEME_DARK}
           onChange={(e: any) =>
             applyTheme(e.target.checked ? THEME_DARK : THEME_LIGHT)
           }
