@@ -31,7 +31,12 @@ export const GET = async (req: Request) => {
     return new Response('', { status: STATUS_BAD_REQUEST })
   }
   const redis = await getRedis()
-  const url = (await redis.get(key.trim())) || ''
+  const trimmedKey = key.trim()
+  const url = (await redis.get(trimmedKey)) || ''
+  if (searchParams.get('format') === 'json') {
+    const ttl = await redis.ttl(trimmedKey)
+    return Response.json({ url, ttl })
+  }
   return new Response(url)
 }
 
