@@ -8,7 +8,6 @@ services:
     restart: always
     volumes:
       - './.env:/app/.env'
-      - './prisma/dev.db:/app/prisma/dev.db'
       - './plusPosts:/app/plusPosts'
     #   - ./json:/usr/share/nginx/html/json
     ports:
