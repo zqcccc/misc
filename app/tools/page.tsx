@@ -6,6 +6,12 @@ export const metadata = {
 
 const tools = [
   {
+    name: '利润线 vs 股价',
+    desc: '输入美股代码，自动绘制股价、TTM EPS 利润线与参考线。',
+    href: '/pe',
+    icon: '📈',
+  },
+  {
     name: '图片合并工具',
     desc: '支持多图上传、顺序调整、横/纵向拼接、格式与质量选择。',
     href: '/tools/merge-images',

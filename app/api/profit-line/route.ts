@@ -1,0 +1,456 @@
+import { NextResponse } from 'next/server'
+import { getRedis } from '../shorter/redis'
+import {
+  buildProfitLineCacheKey,
+  readProfitLineCache,
+  writeProfitLineCache,
+} from './cache'
+import {
+  buildQuarterPoints,
+  normalizeMarketSymbol,
+  pickEastmoneyEpsRows,
+  type NormalizedMarketSymbol,
+} from './market-data'
+
+type CompanyTicker = {
+  cik_str: number
+  ticker: string
+  title: string
+}
+
+type SecFact = {
+  form?: string
+  start?: string
+  end?: string
+  val?: number
+  frame?: string
+  filed?: string
+}
+
+type SplitEvent = {
+  date: string
+  numerator: number
+  denominator: number
+}
+
+type ProfitLinePayload = {
+  symbol: string
+  name: string
+  market: 'us' | 'cn' | 'hk'
+  currency: string
+  points: ReturnType<typeof buildQuarterPoints>
+  sources: {
+    eps: string
+    price: string
+  }
+  ttmMethod: 'quarterly-rollup' | 'source-eps-ttm'
+  splitAdjusted?: boolean
+}
+
+const SEC_HEADERS = {
+  'User-Agent':
+    process.env.SEC_USER_AGENT || 'misc-profit-line-tool contact@onlylike.work',
+  Accept: 'application/json,text/plain,*/*',
+}
+
+const EPS_TAGS = [
+  'EarningsPerShareDiluted',
+  'EarningsPerShareBasicAndDiluted',
+  'EarningsPerShareBasic',
+]
+
+function jsonError(message: string, status = 400) {
+  return NextResponse.json({ message }, { status })
+}
+
+function jsonPayload(payload: ProfitLinePayload, cacheStatus: 'HIT' | 'MISS') {
+  return NextResponse.json(payload, {
+    headers: {
+      'Cache-Control': 's-maxage=21600, stale-while-revalidate=86400',
+      'x-profit-line-cache': cacheStatus,
+    },
+  })
+}
+
+class ProfitLineDataError extends Error {
+  constructor(
+    message: string,
+    public status = 400,
+  ) {
+    super(message)
+  }
+}
+
+async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(url, init)
+  if (!response.ok) {
+    throw new Error(`${response.status} ${response.statusText}`)
+  }
+  return response.json() as Promise<T>
+}
+
+async function fetchEastmoneyJson<T>(
+  url: string,
+  params: Record<string, string>,
+): Promise<T> {
+  const requestUrl = `${url}?${new URLSearchParams(params).toString()}`
+  return fetchJson<T>(requestUrl, {
+    headers: {
+      Accept: 'application/json,text/plain,*/*',
+      Referer: 'https://emweb.securities.eastmoney.com/',
+      'User-Agent':
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+    },
+    next: { revalidate: 60 * 60 * 6 },
+  })
+}
+
+async function resolveCompany(symbol: string) {
+  const tickers = await fetchJson<Record<string, CompanyTicker>>(
+    'https://www.sec.gov/files/company_tickers.json',
+    {
+      headers: SEC_HEADERS,
+      next: { revalidate: 60 * 60 * 24 * 7 },
+    },
+  )
+  const normalized = symbol.trim().toUpperCase().replace(/\.US$/, '')
+  const company = Object.values(tickers).find(
+    (item) => item.ticker.toUpperCase() === normalized,
+  )
+
+  if (!company) return null
+
+  return {
+    cik: company.cik_str.toString().padStart(10, '0'),
+    ticker: company.ticker.toUpperCase(),
+    name: company.title,
+  }
+}
+
+function daysBetween(start?: string, end?: string) {
+  if (!start || !end) return Number.POSITIVE_INFINITY
+  const startMs = new Date(start).getTime()
+  const endMs = new Date(end).getTime()
+  return Math.round((endMs - startMs) / 86_400_000)
+}
+
+function quarterLabel(date: string, frame?: string) {
+  const match = frame?.match(/^CY(\d{4})Q([1-4])$/)
+  if (match) return `${match[1]} Q${match[2]}`
+  const value = new Date(`${date}T00:00:00Z`)
+  const quarter = Math.floor(value.getUTCMonth() / 3) + 1
+  return `${value.getUTCFullYear()} Q${quarter}`
+}
+
+function pickQuarterlyEps(secFacts: any): Array<{
+  date: string
+  quarter: string
+  eps: number
+  filed: string
+}> {
+  const gaap = secFacts?.facts?.['us-gaap']
+  const tag = EPS_TAGS.find((name) => gaap?.[name]?.units?.['USD/shares'])
+  const facts = tag ? (gaap[tag].units['USD/shares'] as SecFact[]) : []
+  const byEndDate = new Map<
+    string,
+    { date: string; quarter: string; eps: number; filed: string; rank: number }
+  >()
+
+  facts.forEach((fact) => {
+    if (!fact.end || typeof fact.val !== 'number') return
+    if (!['10-Q', '10-K'].includes(fact.form || '')) return
+
+    const hasQuarterFrame = /^CY\d{4}Q[1-4]$/.test(fact.frame || '')
+    const durationDays = daysBetween(fact.start, fact.end)
+    const isQuarterDuration = durationDays >= 70 && durationDays <= 110
+
+    if (!hasQuarterFrame && !isQuarterDuration) return
+
+    const rank =
+      (hasQuarterFrame ? 4 : 0) +
+      (fact.form === '10-Q' ? 2 : 0) +
+      (fact.filed ? new Date(fact.filed).getTime() / 10_000_000_000_000 : 0)
+    const existing = byEndDate.get(fact.end)
+
+    if (!existing || rank >= existing.rank) {
+      byEndDate.set(fact.end, {
+        date: fact.end,
+        quarter: quarterLabel(fact.end, fact.frame),
+        eps: Number(fact.val.toFixed(4)),
+        filed: fact.filed || '',
+        rank,
+      })
+    }
+  })
+
+  return Array.from(byEndDate.values())
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(-48)
+}
+
+function toUnixSeconds(date: string, dayOffset = 0) {
+  const value = new Date(`${date}T00:00:00Z`)
+  value.setUTCDate(value.getUTCDate() + dayOffset)
+  return Math.floor(value.getTime() / 1000)
+}
+
+async function fetchMarketData(symbol: string, firstDate: string) {
+  const yahooSymbol = /\.(SS|SZ|HK)$/.test(symbol)
+    ? symbol
+    : symbol.replace(/\./g, '-')
+  const period1 = toUnixSeconds(firstDate, -14)
+  const period2 = Math.floor(Date.now() / 1000) + 86_400
+  const url = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
+    yahooSymbol,
+  )}?period1=${period1}&period2=${period2}&interval=1d&events=history%7Csplits`
+
+  const data = await fetchJson<any>(url, {
+    headers: {
+      Accept: 'application/json',
+      'User-Agent':
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+    },
+    next: { revalidate: 60 * 60 * 6 },
+  })
+  const result = data?.chart?.result?.[0]
+  const timestamps: number[] = result?.timestamp || []
+  const closes: Array<number | null> = result?.indicators?.quote?.[0]?.close || []
+  const splitEvents = Object.values(result?.events?.splits || {}) as Array<{
+    date: number
+    numerator: number
+    denominator: number
+  }>
+
+  return {
+    prices: timestamps
+      .map((timestamp, index) => ({
+        date: new Date(timestamp * 1000).toISOString().slice(0, 10),
+        close: closes[index],
+      }))
+      .filter((item) => typeof item.close === 'number') as Array<{
+      date: string
+      close: number
+    }>,
+    splits: splitEvents
+      .map((split) => ({
+        date: new Date(split.date * 1000).toISOString().slice(0, 10),
+        numerator: split.numerator,
+        denominator: split.denominator,
+      }))
+      .filter((split) => split.numerator > 0 && split.denominator > 0),
+  }
+}
+
+function splitAdjustmentForDate(splits: SplitEvent[], date: string) {
+  return splits.reduce((factor, split) => {
+    if (split.date <= date) return factor
+    return factor * (split.numerator / split.denominator)
+  }, 1)
+}
+
+async function buildUsPayload(symbol: string): Promise<ProfitLinePayload> {
+  const company = await resolveCompany(symbol)
+  if (!company) {
+    throw new ProfitLineDataError('当前数据源无法识别该美股代码', 404)
+  }
+
+  const secFacts = await fetchJson<any>(
+    `https://data.sec.gov/api/xbrl/companyfacts/CIK${company.cik}.json`,
+    {
+      headers: SEC_HEADERS,
+      cache: 'no-store',
+    },
+  )
+  const quarters = pickQuarterlyEps(secFacts)
+
+  if (quarters.length < 4) {
+    throw new ProfitLineDataError('可用季度 EPS 少于 4 个，无法计算 TTM EPS', 404)
+  }
+
+  const marketData = await fetchMarketData(company.ticker, quarters[0].date)
+  const adjustedQuarters = quarters.map((quarter) => {
+    const splitAdjustment = splitAdjustmentForDate(marketData.splits, quarter.date)
+    return {
+      ...quarter,
+      eps: Number((quarter.eps / splitAdjustment).toFixed(4)),
+    }
+  })
+  const points = buildQuarterPoints(adjustedQuarters, marketData.prices)
+
+  return {
+    symbol: company.ticker,
+    name: company.name,
+    market: 'us',
+    currency: 'USD',
+    points,
+    sources: {
+      eps: 'SEC companyfacts',
+      price: 'Yahoo Finance chart',
+    },
+    ttmMethod: 'quarterly-rollup',
+    splitAdjusted: marketData.splits.length > 0,
+  }
+}
+
+async function fetchEastmoneyQuarters(
+  marketSymbol: Extract<NormalizedMarketSymbol, { market: 'cn' | 'hk' }>,
+): Promise<{
+  name: string
+  quarters: Array<{
+    date: string
+    quarter: string
+    eps: number
+    ttmEps?: number
+  }>
+  ttmMethod: 'quarterly-rollup' | 'source-eps-ttm'
+  epsSource: string
+}> {
+  if (marketSymbol.market === 'cn') {
+    const data = await fetchEastmoneyJson<any>(
+      'https://datacenter.eastmoney.com/securities/api/data/v1/get',
+      {
+        reportName: 'RPT_F10_QTR_MAINFINADATA',
+        columns: 'ALL',
+        quoteColumns: '',
+        filter: `(SECUCODE="${marketSymbol.eastmoneyCode}")`,
+        pageNumber: '1',
+        pageSize: '200',
+        sortTypes: '-1',
+        sortColumns: 'REPORT_DATE',
+        source: 'HSF10',
+        client: 'PC',
+      },
+    )
+    const rawRows = data?.result?.data || []
+    return {
+      name: rawRows[0]?.SECURITY_NAME_ABBR || marketSymbol.symbol,
+      quarters: pickEastmoneyEpsRows(rawRows, 'EPSJB').slice(-48),
+      ttmMethod: 'quarterly-rollup',
+      epsSource: 'Eastmoney A-share quarterly financial indicators',
+    }
+  }
+
+  const data = await fetchEastmoneyJson<any>(
+    'https://datacenter.eastmoney.com/securities/api/data/v1/get',
+    {
+      reportName: 'RPT_HKF10_FN_MAININDICATOR',
+      columns: 'HKF10_FN_MAININDICATOR',
+      quoteColumns: '',
+      filter: `(SECUCODE="${marketSymbol.eastmoneyCode}.HK")`,
+      pageNumber: '1',
+      pageSize: '200',
+      sortTypes: '-1',
+      sortColumns: 'STD_REPORT_DATE',
+      source: 'F10',
+      client: 'PC',
+      v: '01975982096513973',
+    },
+  )
+  const rawRows = data?.result?.data || []
+  return {
+    name: rawRows[0]?.SECURITY_NAME_ABBR || marketSymbol.symbol,
+    quarters: pickEastmoneyEpsRows(rawRows, 'BASIC_EPS', 'EPS_TTM').slice(-48),
+    ttmMethod: 'source-eps-ttm',
+    epsSource: 'Eastmoney HK financial indicators',
+  }
+}
+
+function toRegionalYahooSymbol(
+  marketSymbol: Extract<NormalizedMarketSymbol, { market: 'cn' | 'hk' }>,
+) {
+  if (marketSymbol.market === 'hk') {
+    return `${Number(marketSymbol.symbol).toString().padStart(4, '0')}.HK`
+  }
+
+  return marketSymbol.eastmoneyCode.endsWith('.SH')
+    ? `${marketSymbol.symbol}.SS`
+    : `${marketSymbol.symbol}.SZ`
+}
+
+async function buildEastmoneyPayload(
+  marketSymbol: Extract<NormalizedMarketSymbol, { market: 'cn' | 'hk' }>,
+): Promise<ProfitLinePayload> {
+  const financialData = await fetchEastmoneyQuarters(marketSymbol)
+  const quarters = financialData.quarters
+
+  if (quarters.length < 4) {
+    throw new ProfitLineDataError('可用 EPS 数据少于 4 个，无法绘制利润线', 404)
+  }
+
+  const yahooSymbol = toRegionalYahooSymbol(marketSymbol)
+  const marketData = await fetchMarketData(yahooSymbol, quarters[0].date)
+  const points = buildQuarterPoints(quarters, marketData.prices)
+
+  return {
+    symbol:
+      marketSymbol.market === 'hk'
+        ? `${marketSymbol.symbol}.HK`
+        : marketSymbol.eastmoneyCode,
+    name: financialData.name,
+    market: marketSymbol.market,
+    currency: marketSymbol.currency,
+    points,
+    sources: {
+      eps: financialData.epsSource,
+      price: 'Yahoo Finance chart',
+    },
+    ttmMethod: financialData.ttmMethod,
+  }
+}
+
+function canonicalCacheSymbol(marketSymbol: NormalizedMarketSymbol) {
+  if (marketSymbol.market === 'us') return marketSymbol.symbol
+  if (marketSymbol.market === 'hk') return `${marketSymbol.symbol}.HK`
+  return marketSymbol.eastmoneyCode
+}
+
+async function readRedisCache(key: string) {
+  try {
+    const redis = await getRedis()
+    return await readProfitLineCache<ProfitLinePayload>(redis, key)
+  } catch (error) {
+    console.warn('[profit-line] redis read skipped:', error)
+    return null
+  }
+}
+
+async function writeRedisCache(key: string, payload: ProfitLinePayload) {
+  try {
+    const redis = await getRedis()
+    await writeProfitLineCache(redis, key, payload)
+  } catch (error) {
+    console.warn('[profit-line] redis write skipped:', error)
+  }
+}
+
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const inputSymbol = searchParams.get('symbol') || ''
+  const symbol = inputSymbol.trim()
+
+  if (!symbol) return jsonError('请输入股票代码')
+
+  try {
+    const marketSymbol = normalizeMarketSymbol(symbol)
+    const cacheKey = buildProfitLineCacheKey(canonicalCacheSymbol(marketSymbol))
+    const cached = await readRedisCache(cacheKey)
+
+    if (cached) return jsonPayload(cached, 'HIT')
+
+    const payload =
+      marketSymbol.market === 'us'
+        ? await buildUsPayload(marketSymbol.symbol)
+        : await buildEastmoneyPayload(marketSymbol)
+
+    await writeRedisCache(cacheKey, payload)
+
+    return jsonPayload(payload, 'MISS')
+  } catch (error) {
+    if (error instanceof ProfitLineDataError) {
+      return jsonError(error.message, error.status)
+    }
+
+    console.error(error)
+    return jsonError('数据获取失败，请稍后重试', 502)
+  }
+}
