@@ -24,6 +24,49 @@ type ProfitLineData = {
   ttmMethod?: 'quarterly-rollup' | 'source-eps-ttm'
 }
 
+type ValuationExplanation = {
+  explanationType: string
+  title: string
+  body: string
+  impactDirection?: string | null
+  isRecurring?: boolean | null
+  confidence?: number | null
+}
+
+type CompanyValuationCard = {
+  id: string
+  symbol: string
+  market: string
+  title: string
+  currency: string | null
+  entryType: string
+  entryNote: string | null
+  metrics: {
+    asOfDate: string | null
+    price: number | null
+    ttmEps: number | null
+    ttmPe: number | null
+    profitLinePrice: number | null
+    referenceLinePrice: number | null
+    upsideToProfitLine: number | null
+    upsideToReferenceLine: number | null
+  }
+  exploration: {
+    summary: string | null
+    thesis: string | null
+    score: number | null
+  }
+  tags: string[]
+  profitQuality: '正常' | '需调整' | '待确认'
+  primaryExplanation: ValuationExplanation | null
+  explanations: ValuationExplanation[]
+}
+
+type CompanyValuationPayload = {
+  entries: CompanyValuationCard[]
+  current: CompanyValuationCard | null
+}
+
 type LoadState = 'idle' | 'loading' | 'ready' | 'error'
 
 const currencyFormatter = new Intl.NumberFormat('en-US', {
@@ -39,6 +82,12 @@ function formatNumber(value: number | null | undefined, digits = 2) {
 function pct(value: number | null | undefined) {
   if (value === null || value === undefined || Number.isNaN(value)) return '-'
   return `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`
+}
+
+function qualityColor(value: CompanyValuationCard['profitQuality'] | undefined) {
+  if (value === '需调整') return 'text-[#dc2626]'
+  if (value === '正常') return 'text-[#16a34a]'
+  return 'text-[#8a4b20]'
 }
 
 function getPreparedPoints(data: ProfitLineData | null, profitMultiple: number) {
@@ -131,6 +180,8 @@ export default function ProfitLinePage() {
   const [profitMultiple, setProfitMultiple] = useState(15)
   const [referenceMultiple, setReferenceMultiple] = useState(30)
   const [data, setData] = useState<ProfitLineData | null>(null)
+  const [valuationEntries, setValuationEntries] = useState<CompanyValuationCard[]>([])
+  const [currentValuation, setCurrentValuation] = useState<CompanyValuationCard | null>(null)
   const [state, setState] = useState<LoadState>('idle')
   const [error, setError] = useState('')
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodType>('all')
@@ -172,6 +223,15 @@ export default function ProfitLinePage() {
     setSubmittedSymbol(cleanSymbol)
 
     try {
+      const valuationRequest = fetch(
+        `/api/company-valuation?symbol=${encodeURIComponent(cleanSymbol)}`,
+        { cache: 'no-store' },
+      )
+        .then(async (response) => {
+          if (!response.ok) return null
+          return (await response.json()) as CompanyValuationPayload
+        })
+        .catch(() => null)
       const response = await fetch(
         `/api/profit-line?symbol=${encodeURIComponent(cleanSymbol)}`,
         { cache: 'no-store' },
@@ -183,9 +243,13 @@ export default function ProfitLinePage() {
       }
 
       setData(payload)
+      const valuationPayload = await valuationRequest
+      setValuationEntries(valuationPayload?.entries || [])
+      setCurrentValuation(valuationPayload?.current || null)
       setState('ready')
     } catch (requestError) {
       setData(null)
+      setCurrentValuation(null)
       setState('error')
       setError(
         requestError instanceof Error ? requestError.message : '数据获取失败',
@@ -444,7 +508,64 @@ export default function ProfitLinePage() {
           </form>
         </div>
 
-        <div className='grid gap-3 lg:grid-cols-[minmax(0,1fr)_320px]'>
+        <div className='grid gap-3 lg:grid-cols-[240px_minmax(0,1fr)_320px]'>
+          <nav className='rounded-md border border-[#d8cfbd] bg-[#fffaf1] p-3 lg:max-h-[calc(100vh-140px)] lg:overflow-auto'>
+            <div className='mb-3 flex items-center justify-between gap-2'>
+              <h2 className='text-sm font-black text-[#211d18]'>公司入口</h2>
+              <span className='rounded bg-[#f0ebe0] px-2 py-1 text-xs font-bold text-[#8a4b20]'>
+                {valuationEntries.length}
+              </span>
+            </div>
+
+            {valuationEntries.length === 0 ? (
+              <div className='rounded bg-[#f0ebe0] px-3 py-4 text-sm leading-6 text-[#706758]'>
+                暂无 AI 探索结果。后续定时任务写入数据库后会显示在这里。
+              </div>
+            ) : (
+              <div className='space-y-2'>
+                {valuationEntries.map((entry) => {
+                  const active =
+                    entry.symbol === currentValuation?.symbol ||
+                    entry.symbol === data?.symbol
+
+                  return (
+                    <button
+                      key={entry.id}
+                      className={`w-full rounded-md border px-3 py-3 text-left transition ${
+                        active
+                          ? 'border-[#2563eb] bg-[#eff6ff]'
+                          : 'border-[#e3d9c8] bg-[#fffaf1] hover:border-[#c7bca8]'
+                      }`}
+                      type='button'
+                      onClick={() => {
+                        setSymbolInput(entry.symbol)
+                        fetchData(entry.symbol)
+                      }}
+                    >
+                      <div className='flex items-start justify-between gap-2'>
+                        <div className='min-w-0'>
+                          <div className='truncate text-sm font-black text-[#211d18]'>
+                            {entry.title}
+                          </div>
+                          <div className='mt-1 text-xs font-semibold text-[#706758]'>
+                            {entry.symbol}
+                          </div>
+                        </div>
+                        <span className={`shrink-0 text-xs font-black ${qualityColor(entry.profitQuality)}`}>
+                          {entry.profitQuality}
+                        </span>
+                      </div>
+                      <div className='mt-2 flex items-center justify-between text-xs text-[#706758]'>
+                        <span>PE {formatNumber(entry.metrics.ttmPe)}</span>
+                        <span>{entry.exploration.score === null ? '-' : entry.exploration.score}</span>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </nav>
+
           <div className='min-h-[560px] rounded-md border border-[#d8cfbd] bg-[#fffaf1]'>
             <div className='flex flex-col gap-1 border-b border-[#e3d9c8] px-4 py-3 sm:flex-row sm:items-center sm:justify-between'>
               <div>
@@ -608,6 +729,54 @@ export default function ProfitLinePage() {
                   <span>100%</span>
                 </div>
               </div>
+            </div>
+
+            <div className='rounded-md border border-[#d8cfbd] bg-[#fffaf1] p-4'>
+              <div className='flex items-center justify-between gap-3'>
+                <div className='text-xs font-bold uppercase tracking-[0.12em] text-[#8a4b20]'>
+                  利润质量
+                </div>
+                <div className={`text-sm font-black ${qualityColor(currentValuation?.profitQuality)}`}>
+                  {currentValuation?.profitQuality || '待确认'}
+                </div>
+              </div>
+
+              <div className='mt-3 rounded bg-[#f0ebe0] px-3 py-3'>
+                <div className='text-sm font-bold text-[#211d18]'>
+                  {currentValuation?.primaryExplanation?.title || '暂无利润/股价解释'}
+                </div>
+                <p className='mt-2 text-sm leading-6 text-[#5d5548]'>
+                  {currentValuation?.primaryExplanation?.body ||
+                    'AI 探索任务写入解释后，会在这里说明当前股价或利润是否由非经常性因素驱动。'}
+                </p>
+              </div>
+
+              {currentValuation?.explanations.length ? (
+                <div className='mt-3 space-y-2'>
+                  {currentValuation.explanations.slice(0, 3).map((explanation) => (
+                    <div
+                      key={`${explanation.explanationType}-${explanation.title}`}
+                      className='border-t border-[#e7dfcf] pt-2 text-sm'
+                    >
+                      <div className='flex items-center justify-between gap-2'>
+                        <span className='font-bold text-[#3a332b]'>
+                          {explanation.explanationType === 'profit'
+                            ? '利润'
+                            : explanation.explanationType === 'price'
+                              ? '股价'
+                              : '估值'}
+                        </span>
+                        <span className='text-xs text-[#706758]'>
+                          置信度 {explanation.confidence ?? '-'}
+                        </span>
+                      </div>
+                      <p className='mt-1 line-clamp-2 leading-6 text-[#5d5548]'>
+                        {explanation.body}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </div>
 
             <div className='rounded-md border border-[#d8cfbd] bg-[#fffaf1] p-4'>

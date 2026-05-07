@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -29,4 +29,151 @@ model LowCodeConfig {
   id   Int    @id @default(autoincrement())
   name String @default("website")
   json String
+}
+
+model Company {
+  id        String   @id @default(cuid())
+  symbol    String
+  market    String
+  exchange  String?
+  name      String
+  currency  String?
+  sector    String?
+  industry  String?
+  country   String?
+  website   String?
+  status    String   @default("active")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  explorations CompanyExploration[]
+  valuations   CompanyValuationSnapshot[]
+  explanations CompanyValuationExplanation[]
+  pageEntries  CompanyPageEntry[]
+
+  @@unique([market, symbol])
+  @@index([market])
+  @@index([sector])
+}
+
+model CompanyExplorationRun {
+  id          String    @id @default(cuid())
+  name        String?
+  marketScope String?
+  prompt      String
+  model       String?
+  status      String
+  startedAt   DateTime  @default(now())
+  finishedAt  DateTime?
+  error       String?
+
+  results CompanyExploration[]
+
+  @@index([status, startedAt])
+}
+
+model CompanyExploration {
+  id        String  @id @default(cuid())
+  companyId String
+  runId     String?
+
+  title      String
+  summary    String
+  thesis     String?
+  catalysts  String?
+  risks      String?
+  tags       String?
+  score      Int?
+  confidence Int?
+  sourceUrls String?
+  rawJson    String?
+
+  visibility String   @default("draft")
+  pinned     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  company Company                @relation(fields: [companyId], references: [id])
+  run     CompanyExplorationRun? @relation(fields: [runId], references: [id])
+
+  @@index([companyId, createdAt])
+  @@index([visibility, pinned, createdAt])
+  @@index([score])
+}
+
+model CompanyValuationSnapshot {
+  id        String   @id @default(cuid())
+  companyId String
+  asOfDate  DateTime
+
+  price                  Float?
+  marketCap              Float?
+  ttmEps                 Float?
+  normalizedTtmEps       Float?
+  ttmPe                  Float?
+  normalizedTtmPe        Float?
+  revenueTtm             Float?
+  profitTtm              Float?
+  normalizedProfitTtm    Float?
+  profitMultiple         Int?
+  referenceMultiple      Int?
+  profitLinePrice        Float?
+  referenceLinePrice     Float?
+  upsideToProfitLine     Float?
+  upsideToReferenceLine  Float?
+  nonRecurringProfit     Float?
+  profitQualityScore     Int?
+  profitQualitySummary   String?
+  source                 String?
+  rawJson                String?
+  createdAt              DateTime @default(now())
+
+  company      Company                       @relation(fields: [companyId], references: [id])
+  explanations CompanyValuationExplanation[]
+
+  @@index([companyId, asOfDate])
+  @@index([ttmPe])
+  @@index([profitQualityScore])
+}
+
+model CompanyValuationExplanation {
+  id                  String   @id @default(cuid())
+  companyId           String
+  valuationSnapshotId String?
+  explanationType     String
+  title               String
+  body                String
+  impactDirection     String?
+  impactAmount        Float?
+  isRecurring         Boolean?
+  sourceUrls          String?
+  confidence          Int?
+  authorType          String   @default("ai")
+  asOfDate            DateTime @default(now())
+  isCurrent           Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  company           Company                   @relation(fields: [companyId], references: [id])
+  valuationSnapshot CompanyValuationSnapshot? @relation(fields: [valuationSnapshotId], references: [id])
+
+  @@index([companyId, explanationType, isCurrent])
+  @@index([valuationSnapshotId])
+}
+
+model CompanyPageEntry {
+  id        String   @id @default(cuid())
+  companyId String
+  entryType String
+  title     String?
+  note      String?
+  sortOrder Int      @default(0)
+  visible   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@index([visible, sortOrder])
+  @@index([entryType])
 }
