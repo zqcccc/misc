@@ -62,9 +62,12 @@ type CompanyValuationCard = {
   explanations: ValuationExplanation[]
 }
 
-type CompanyValuationPayload = {
+type CompanyValuationListPayload = {
   entries: CompanyValuationCard[]
-  current: CompanyValuationCard | null
+}
+
+type CompanyValuationDetailPayload = {
+  current: CompanyValuationCard
 }
 
 type LoadState = 'idle' | 'loading' | 'ready' | 'error'
@@ -214,48 +217,64 @@ export default function ProfitLinePage() {
     return periods.map((p) => calculatePeriodStats(data.points, p))
   }, [data])
 
-  const fetchData = useCallback(async (symbol: string) => {
-    const cleanSymbol = symbol.trim().toUpperCase()
-    if (!cleanSymbol) return
-
-    setState('loading')
-    setError('')
-    setSubmittedSymbol(cleanSymbol)
-
+  const fetchEntries = useCallback(async () => {
     try {
-      const valuationRequest = fetch(
-        `/api/company-valuation?symbol=${encodeURIComponent(cleanSymbol)}`,
-        { cache: 'no-store' },
-      )
-        .then(async (response) => {
-          if (!response.ok) return null
-          return (await response.json()) as CompanyValuationPayload
-        })
-        .catch(() => null)
-      const response = await fetch(
-        `/api/profit-line?symbol=${encodeURIComponent(cleanSymbol)}`,
-        { cache: 'no-store' },
-      )
-      const payload = await response.json()
-
-      if (!response.ok) {
-        throw new Error(payload?.message || '数据获取失败')
-      }
-
-      setData(payload)
-      const valuationPayload = await valuationRequest
-      setValuationEntries(valuationPayload?.entries || [])
-      setCurrentValuation(valuationPayload?.current || null)
-      setState('ready')
-    } catch (requestError) {
-      setData(null)
-      setCurrentValuation(null)
-      setState('error')
-      setError(
-        requestError instanceof Error ? requestError.message : '数据获取失败',
-      )
+      const response = await fetch('/api/company-valuation', {
+        cache: 'no-store',
+      })
+      if (!response.ok) return
+      const payload = (await response.json()) as CompanyValuationListPayload
+      setValuationEntries(payload.entries || [])
+    } catch {
+      // 列表加载失败不阻塞主流程
     }
   }, [])
+
+  const fetchData = useCallback(
+    async (symbol: string) => {
+      const cleanSymbol = symbol.trim().toUpperCase()
+      if (!cleanSymbol) return
+
+      setState('loading')
+      setError('')
+      setSubmittedSymbol(cleanSymbol)
+
+      try {
+        const detailRequest = fetch(
+          `/api/company-valuation/${encodeURIComponent(cleanSymbol)}`,
+          { cache: 'no-store' },
+        )
+          .then(async (response) => {
+            if (!response.ok) return null
+            return (await response.json()) as CompanyValuationDetailPayload
+          })
+          .catch(() => null)
+
+        const response = await fetch(
+          `/api/profit-line?symbol=${encodeURIComponent(cleanSymbol)}`,
+          { cache: 'no-store' },
+        )
+        const payload = await response.json()
+
+        if (!response.ok) {
+          throw new Error(payload?.message || '数据获取失败')
+        }
+
+        setData(payload)
+        const detailPayload = await detailRequest
+        setCurrentValuation(detailPayload?.current || null)
+        setState('ready')
+      } catch (requestError) {
+        setData(null)
+        setCurrentValuation(null)
+        setState('error')
+        setError(
+          requestError instanceof Error ? requestError.message : '数据获取失败',
+        )
+      }
+    },
+    [],
+  )
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -263,9 +282,10 @@ export default function ProfitLinePage() {
   }
 
   useEffect(() => {
+    fetchEntries()
     const timer = window.setTimeout(() => fetchData('00700.HK'), 0)
     return () => window.clearTimeout(timer)
-  }, [fetchData])
+  }, [fetchEntries, fetchData])
 
   useEffect(() => {
     let disposed = false
