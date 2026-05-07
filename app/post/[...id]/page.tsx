@@ -6,9 +6,7 @@ import ReactCusdis from './Cusdis'
 
 export default async function Post(props: { params?: Promise<{ id?: string[] }> }) {
   if (!(await props.params)?.id) return <>not found</>
-  console.log('%c props.params?.id: ', 'font-size:12px;background-color: #9E9689;color:#fff;', (await props.params)?.id)
   const postData = await getPostData((await props.params)?.id || [])
-  console.log('postData.date: ', postData.date)
   const time = dayjs(postData.date || undefined)
   const changeTime = dayjs(postData.changeTime)
   const createTimeStr = time.format('YYYY-MM-DD')
@@ -35,10 +33,7 @@ export default async function Post(props: { params?: Promise<{ id?: string[] }> 
 }
 
 export async function generateStaticParams() {
-  // return await getAllPostIds()
-  const paths = await getAllPostIds()
-  console.log('paths: ', paths)
-  return paths
+  return await getAllPostIds()
 }
 
 export async function generateMetadata(props: any) {

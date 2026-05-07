@@ -16,6 +16,8 @@ const postsDirectory = path.join(process.cwd(), 'posts')
 
 const plusDirectory = path.join(process.cwd(), 'plusPosts')
 
+const postDirectories = [postsDirectory, plusDirectory]
+
 type Nested<T> = (T | null | Nested<T>)[] | T | null
 type NestedString = Nested<string>
 
@@ -91,19 +93,30 @@ export async function getAllPostIds() {
 }
 
 export async function getAllPost(dirPath = postsDirectory) {
-  const allPaths = await getAllPostsPath()
-  if (fs.existsSync(plusDirectory)) {
-    allPaths.push(...(await getAllPostsPath(plusDirectory)))
-  }
+  const allPaths =
+    dirPath === postsDirectory
+      ? (
+          await Promise.all(
+            postDirectories
+              .filter((directory) => fs.existsSync(directory))
+              .map((directory) => getAllPostsPath(directory))
+          )
+        ).flat()
+      : await getAllPostsPath(dirPath)
   const allPosts = await Promise.all(
     allPaths.map(async (filePath) => {
       return readFile(filePath).then((fileContent) => {
         const matterResult = matter(fileContent.toString())
+        const sourceDirectory = postDirectories.find(
+          (directory) =>
+            filePath === directory || filePath.startsWith(directory + path.sep)
+        )
+
         return {
           ...matterResult,
-          path: filePath.includes(postsDirectory)
-            ? path.relative(postsDirectory, filePath).split('.')[0]
-            : path.relative(plusDirectory, filePath).split('.')[0],
+          path: path
+            .relative(sourceDirectory || dirPath, filePath)
+            .replace(/\.md$/, ''),
         }
       })
     })
@@ -119,9 +132,11 @@ export async function getAllPost(dirPath = postsDirectory) {
 }
 
 export function getPostMeta(id: string[]) {
-  id[id.length - 1] = decodeURIComponent(id[id.length - 1]) + '.md'
-  const path1 = path.join(postsDirectory, ...id)
-  const path2 = path.join(plusDirectory, ...id)
+  const fileId = [...id]
+  fileId[fileId.length - 1] =
+    decodeURIComponent(fileId[fileId.length - 1]) + '.md'
+  const path1 = path.join(postsDirectory, ...fileId)
+  const path2 = path.join(plusDirectory, ...fileId)
   const fullPath = fs.existsSync(path1)
     ? path1
     : fs.existsSync(path2)
