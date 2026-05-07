@@ -4,6 +4,8 @@ import { getAllPostIds, getPostData, getPostMeta } from '../../api/post/lib'
 import Content from './content'
 import ReactCusdis from './Cusdis'
 
+export const dynamicParams = true
+
 export default async function Post(props: { params?: Promise<{ id?: string[] }> }) {
   if (!(await props.params)?.id) return <>not found</>
   const postData = await getPostData((await props.params)?.id || [])

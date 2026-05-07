@@ -1,14 +1,14 @@
 import dayjs from 'dayjs'
 import { Fragment } from 'react'
 import Link from 'next/link'
-import { getAllPost } from '../api/post/lib'
+import { getCachedAllPost } from '../api/post/lib'
 
-export const revalidate = 3600
+export const dynamic = 'force-dynamic'
 
 const DATE_FORMAT = 'MMMM DD, YYYY'
 
 export default async function Post() {
-  const posts = await getAllPost()
+  const posts = await getCachedAllPost()
 
   return (
     <main className='transition-all'>

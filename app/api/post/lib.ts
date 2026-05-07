@@ -1,5 +1,6 @@
 import fs from 'fs'
 import path from 'path'
+import { unstable_cache } from 'next/cache'
 import matter, { GrayMatterFile } from 'gray-matter'
 // import { remark } from 'remark'
 // import html from 'remark-html'
@@ -130,6 +131,12 @@ export async function getAllPost(dirPath = postsDirectory) {
   })
   return allPosts
 }
+
+export const getCachedAllPost = unstable_cache(
+  () => getAllPost(),
+  ['all-posts'],
+  { revalidate: 3600, tags: ['posts'] }
+)
 
 export function getPostMeta(id: string[]) {
   const fileId = [...id]
