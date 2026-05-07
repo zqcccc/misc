@@ -188,6 +188,7 @@ export default function ProfitLinePage() {
   const [state, setState] = useState<LoadState>('idle')
   const [error, setError] = useState('')
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodType>('all')
+  const [chartReady, setChartReady] = useState(false)
   const chartNode = useRef<HTMLDivElement | null>(null)
   const chartRef = useRef<any>(null)
 
@@ -299,6 +300,7 @@ export default function ProfitLinePage() {
       resizeChart = () => chartRef.current?.resize()
       window.addEventListener('resize', resizeChart)
       resizeChart()
+      setChartReady(true)
     })
 
     return () => {
@@ -306,6 +308,7 @@ export default function ProfitLinePage() {
       window.removeEventListener('resize', resizeChart)
       chartRef.current?.dispose?.()
       chartRef.current = null
+      setChartReady(false)
     }
   }, [])
 
@@ -484,6 +487,7 @@ export default function ProfitLinePage() {
       chartRef.current.clear()
     }
   }, [
+    chartReady,
     data?.currency,
     data?.points,
     preparedPoints,
