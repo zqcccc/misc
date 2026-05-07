@@ -1,171 +1,697 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { useMemoizedFn } from 'ahooks'
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-function getShare(id: string) {
-  return fetch('/api/share?id=' + id).then((res) => res.json())
+type ProfitPoint = {
+  date: string
+  quarter: string
+  eps: number
+  ttmEps: number | null
+  price: number | null
+  ttmPe: number | null
 }
 
-const prepareSeries = (data: any) => {
-  return [
-    {
-      data: data.pe.map((pe: number, index: number) => [
-        data.date[index],
-        pe > 0 ? pe : null,
-      ]),
-      name: data.name + ' pe',
-      smooth: true,
-      showSymbol: false,
-      yAxisIndex: 0, // 指定使用第一个y轴
-      type: 'line',
-    },
-    {
-      data: data.price.map((price: string, index: number) => [
-        data.date[index],
-        price,
-      ]),
-      name: data.name + ' price',
-      smooth: true,
-      showSymbol: false,
-      yAxisIndex: 1, // 指定使用第二个y轴
-      type: 'line',
-    },
-  ]
-}
-const option = {
-  tooltip: {
-    trigger: 'axis',
-    axisPointer: {
-      type: 'cross',
-      label: {
-        backgroundColor: '#6a7985',
-      },
-    },
-  },
-  xAxis: {
-    splitLine: {
-      show: false,
-    },
-    type: 'time',
-  },
-  yAxis: [
-    {
-      type: 'value',
-      name: 'PE(TTM)',
-      splitLine: {
-        show: false,
-      },
-    },
-    {
-      type: 'value',
-      name: 'Price',
-      splitLine: {
-        show: false,
-      },
-    },
-  ],
-  dataZoom: [
-    {
-      type: 'inside',
-      start: 70,
-      end: 100,
-    },
-    {
-      handleIcon:
-        'M8.7,3.3c-0.4-0.4-1-0.4-1.4,0L2.3,8.3c-0.4,0.4-0.4,1,0,1.4l1.1,1.1c0.4,0.4,1,0.4,1.4,0l4.3-4.3c0.4-0.4,0.4-1,0-1.4L8.7,3.3z M7.6,8.3L3.3,4l1.4-1.4l4.3,4.3L7.6,8.3z',
-      handleSize: '80%',
-      handleStyle: {
-        color: '#fff',
-        shadowBlur: 3,
-        shadowColor: 'rgba(0, 0, 0, 0.6)',
-        shadowOffsetX: 2,
-        shadowOffsetY: 2,
-      },
-    },
-  ],
+type ProfitLineData = {
+  symbol: string
+  name: string
+  market?: 'us' | 'cn' | 'hk'
+  currency: string
+  points: ProfitPoint[]
+  sources: {
+    eps: string
+    price: string
+  }
+  ttmMethod?: 'quarterly-rollup' | 'source-eps-ttm'
 }
 
-const seriesMap = new Map<string, any[]>()
+type LoadState = 'idle' | 'loading' | 'ready' | 'error'
 
-const PE = () => {
-  const [id, setId] = useState('sh600519')
-  const hasInit = useRef(false)
-  const charts = useRef<any>(null)
-  const [series, setSeries] = useState<any[]>([])
+const currencyFormatter = new Intl.NumberFormat('en-US', {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+})
 
-  const getData = useMemoizedFn(() => {
-    if (seriesMap.has(id)) {
-      return
+function formatNumber(value: number | null | undefined, digits = 2) {
+  if (value === null || value === undefined || Number.isNaN(value)) return '-'
+  return value.toFixed(digits)
+}
+
+function pct(value: number | null | undefined) {
+  if (value === null || value === undefined || Number.isNaN(value)) return '-'
+  return `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`
+}
+
+function getPreparedPoints(data: ProfitLineData | null, profitMultiple: number) {
+  if (!data) return []
+  return data.points.map((point) => {
+    const profitLine =
+      point.ttmEps === null ? null : Number((point.ttmEps * profitMultiple).toFixed(2))
+    const deviation =
+      point.price !== null && profitLine !== null && profitLine !== 0
+        ? ((point.price - profitLine) / profitLine) * 100
+        : null
+
+    return {
+      ...point,
+      profitLine,
+      deviation,
+      alert: point.price !== null && profitLine !== null && point.price < profitLine,
     }
-    getShare(id).then((data) => {
-      const newSeries = prepareSeries(data)
-      seriesMap.set(id, newSeries)
-      const nextSeries = series.concat(newSeries)
-      setSeries((s) => s.concat(newSeries))
-      charts.current?.setOption({
-        series: nextSeries,
-        legend: {
-          data: nextSeries.map((s) => s.name),
-        },
-      })
-    })
+  })
+}
+
+function calculatePePercentile(points: ProfitPoint[], currentPe: number | null): number | null {
+  if (currentPe === null || points.length === 0) return null
+
+  // 获取所有有效的 TTM PE 值
+  const validPes = points
+    .map((p) => p.ttmPe)
+    .filter((pe): pe is number => pe !== null && !Number.isNaN(pe))
+
+  if (validPes.length === 0) return null
+
+  // 计算百分位：小于等于当前值的占比
+  const countLessOrEqual = validPes.filter((pe) => pe <= currentPe).length
+  return Number(((countLessOrEqual / validPes.length) * 100).toFixed(1))
+}
+
+type PeriodType = 1 | 3 | 5 | 'all'
+
+interface PeriodStats {
+  period: PeriodType
+  label: string
+  avgPe: number | null
+  minPe: number | null
+  maxPe: number | null
+  count: number
+}
+
+function calculatePeriodStats(points: ProfitPoint[], period: PeriodType): PeriodStats {
+  const now = new Date()
+  const cutoffDate = period === 'all'
+    ? new Date(0)
+    : new Date(now.getFullYear() - period, now.getMonth(), now.getDate())
+
+  const filteredPoints = points.filter((p) => {
+    if (p.ttmPe === null || Number.isNaN(p.ttmPe)) return false
+    const pointDate = new Date(p.date)
+    return pointDate >= cutoffDate
   })
 
-  useEffect(() => {
-    if (hasInit.current) return
-    hasInit.current = true
+  const validPes = filteredPoints.map((p) => p.ttmPe as number)
 
-    let isMounted = true
+  if (validPes.length === 0) {
+    return {
+      period,
+      label: period === 'all' ? '全部' : `过去${period}年`,
+      avgPe: null,
+      minPe: null,
+      maxPe: null,
+      count: 0,
+    }
+  }
+
+  const avgPe = validPes.reduce((sum, pe) => sum + pe, 0) / validPes.length
+  const minPe = Math.min(...validPes)
+  const maxPe = Math.max(...validPes)
+
+  return {
+    period,
+    label: period === 'all' ? '全部' : `过去${period}年`,
+    avgPe: Number(avgPe.toFixed(2)),
+    minPe: Number(minPe.toFixed(2)),
+    maxPe: Number(maxPe.toFixed(2)),
+    count: validPes.length,
+  }
+}
+
+export default function ProfitLinePage() {
+  const [symbolInput, setSymbolInput] = useState('00700.HK')
+  const [submittedSymbol, setSubmittedSymbol] = useState('00700.HK')
+  const [profitMultiple, setProfitMultiple] = useState(15)
+  const [referenceMultiple, setReferenceMultiple] = useState(30)
+  const [data, setData] = useState<ProfitLineData | null>(null)
+  const [state, setState] = useState<LoadState>('idle')
+  const [error, setError] = useState('')
+  const [selectedPeriod, setSelectedPeriod] = useState<PeriodType>('all')
+  const chartNode = useRef<HTMLDivElement | null>(null)
+  const chartRef = useRef<any>(null)
+
+  const preparedPoints = useMemo(
+    () => getPreparedPoints(data, profitMultiple),
+    [data, profitMultiple],
+  )
+
+  const latest = [...preparedPoints]
+    .reverse()
+    .find((point) => point.price !== null && point.ttmEps !== null)
+  const alertCount = preparedPoints.filter((point) => point.alert).length
+
+  const pePercentile = useMemo(() => {
+    if (!data || !latest?.ttmPe) return null
+    return calculatePePercentile(data.points, latest.ttmPe)
+  }, [data, latest])
+
+  const periodStats = useMemo(() => {
+    if (!data) return null
+    return calculatePeriodStats(data.points, selectedPeriod)
+  }, [data, selectedPeriod])
+
+  const allPeriodStats = useMemo(() => {
+    if (!data) return []
+    const periods: PeriodType[] = [1, 3, 5, 'all']
+    return periods.map((p) => calculatePeriodStats(data.points, p))
+  }, [data])
+
+  const fetchData = useCallback(async (symbol: string) => {
+    const cleanSymbol = symbol.trim().toUpperCase()
+    if (!cleanSymbol) return
+
+    setState('loading')
+    setError('')
+    setSubmittedSymbol(cleanSymbol)
+
+    try {
+      const response = await fetch(
+        `/api/profit-line?symbol=${encodeURIComponent(cleanSymbol)}`,
+        { cache: 'no-store' },
+      )
+      const payload = await response.json()
+
+      if (!response.ok) {
+        throw new Error(payload?.message || '数据获取失败')
+      }
+
+      setData(payload)
+      setState('ready')
+    } catch (requestError) {
+      setData(null)
+      setState('error')
+      setError(
+        requestError instanceof Error ? requestError.message : '数据获取失败',
+      )
+    }
+  }, [])
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    fetchData(symbolInput)
+  }
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => fetchData('00700.HK'), 0)
+    return () => window.clearTimeout(timer)
+  }, [fetchData])
+
+  useEffect(() => {
+    let disposed = false
     let resizeChart = () => {}
 
-    import('echarts').then((ECharts) => {
-      if (!isMounted) return
-      const chartContainer = document.getElementById('pe') as HTMLDivElement | null
-      if (!chartContainer) return
-      const myChart = ECharts.init(chartContainer)
-      resizeChart = () => {
-        const containerWidth = chartContainer.clientWidth
-        const containerHeight = chartContainer.clientHeight
-        myChart.resize({
-          width: containerWidth,
-          height: containerHeight,
-        })
-      }
+    import('echarts').then((echarts) => {
+      if (disposed || !chartNode.current) return
+      chartRef.current = echarts.init(chartNode.current, undefined, {
+        renderer: 'canvas',
+      })
+      resizeChart = () => chartRef.current?.resize()
       window.addEventListener('resize', resizeChart)
-      myChart.setOption(option)
-      charts.current = myChart
-      getData()
+      resizeChart()
     })
 
     return () => {
-      isMounted = false
+      disposed = true
       window.removeEventListener('resize', resizeChart)
-      charts.current?.dispose?.()
+      chartRef.current?.dispose?.()
+      chartRef.current = null
     }
-  }, [getData])
+  }, [])
+
+  useEffect(() => {
+    if (!chartRef.current) return
+
+    const source = preparedPoints.map((point) => ({
+      ...point,
+      referenceLine:
+        point.ttmEps === null
+          ? null
+          : Number((point.ttmEps * referenceMultiple).toFixed(2)),
+    }))
+    const visible = source.filter(
+      (point) => point.price !== null && point.ttmEps !== null,
+    )
+
+    chartRef.current.setOption(
+      {
+        animationDuration: 360,
+        color: ['#2563eb', '#dc2626', '#16a34a', '#ef4444'],
+        backgroundColor: 'transparent',
+        grid: {
+          top: 42,
+          right: 44,
+          bottom: 58,
+          left: 54,
+          containLabel: true,
+        },
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: {
+            type: 'cross',
+          },
+          borderColor: '#d7d2c5',
+          backgroundColor: 'rgba(255, 252, 244, 0.96)',
+          textStyle: {
+            color: '#2d2a25',
+          },
+          formatter(params: any[]) {
+            const item = source[params?.[0]?.dataIndex]
+            if (!item) return ''
+            const pointPercentile = calculatePePercentile(data?.points || [], item.ttmPe)
+            const percentileText = pointPercentile === null ? '-' : `${pointPercentile}%`
+            const percentileColor = pointPercentile === null
+              ? '#9ca3af'
+              : pointPercentile <= 30
+                ? '#16a34a'
+                : pointPercentile >= 70
+                  ? '#dc2626'
+                  : '#8a4b20'
+            return [
+              `<strong>${item.quarter}</strong>`,
+              `股价：${item.price === null ? '-' : currencyFormatter.format(item.price)}`,
+              `TTM EPS：${formatNumber(item.ttmEps)}`,
+              `TTM PE：${formatNumber(item.ttmPe)}`,
+              `PE 历史百分位：<span style="color:${percentileColor};font-weight:600">${percentileText}</span>`,
+              `利润线偏差：${pct(item.deviation)}`,
+            ].join('<br/>')
+          },
+        },
+        legend: {
+          top: 6,
+          right: 12,
+          itemGap: 18,
+          textStyle: {
+            color: '#5b564b',
+          },
+        },
+        xAxis: {
+          type: 'category',
+          data: source.map((point) => point.quarter),
+          boundaryGap: false,
+          axisLine: {
+            lineStyle: {
+              color: '#c9c1b3',
+            },
+          },
+          axisLabel: {
+            color: '#675f52',
+            hideOverlap: true,
+          },
+        },
+        yAxis: {
+          type: 'value',
+          name: data?.currency || 'USD',
+          nameTextStyle: {
+            color: '#675f52',
+          },
+          axisLabel: {
+            color: '#675f52',
+          },
+          splitLine: {
+            lineStyle: {
+              color: '#e7dfcf',
+            },
+          },
+        },
+        dataZoom: [
+          {
+            type: 'inside',
+            start: 40,
+            end: 100,
+          },
+          {
+            type: 'slider',
+            height: 18,
+            bottom: 16,
+            borderColor: '#d7d0c3',
+            fillerColor: 'rgba(37, 99, 235, 0.12)',
+            handleStyle: {
+              color: '#2563eb',
+            },
+          },
+        ],
+        series: [
+          {
+            name: '股价',
+            type: 'line',
+            smooth: false,
+            showSymbol: true,
+            symbolSize: 6,
+            data: source.map((point) => point.price),
+            lineStyle: {
+              width: 3,
+              color: '#2563eb',
+            },
+            itemStyle: {
+              color: '#2563eb',
+            },
+          },
+          {
+            name: `${profitMultiple}x 利润线`,
+            type: 'line',
+            smooth: false,
+            showSymbol: false,
+            data: source.map((point) => point.profitLine),
+            lineStyle: {
+              width: 2,
+              type: 'dashed',
+              color: '#dc2626',
+            },
+          },
+          {
+            name: `${referenceMultiple}x 参考线`,
+            type: 'line',
+            smooth: false,
+            showSymbol: false,
+            data: source.map((point) => point.referenceLine),
+            lineStyle: {
+              width: 2,
+              type: 'dashed',
+              color: '#16a34a',
+            },
+          },
+          {
+            name: '低于利润线',
+            type: 'scatter',
+            symbolSize: 12,
+            data: source.map((point) => (point.alert ? point.price : null)),
+            itemStyle: {
+              color: '#ef4444',
+              borderColor: '#7f1d1d',
+              borderWidth: 2,
+            },
+            tooltip: {
+              show: false,
+            },
+          },
+        ],
+      },
+      true,
+    )
+
+    if (visible.length === 0 && state === 'ready') {
+      chartRef.current.clear()
+    }
+  }, [
+    data?.currency,
+    data?.points,
+    preparedPoints,
+    profitMultiple,
+    referenceMultiple,
+    state,
+  ])
 
   return (
-    <div className='w-full h-full min-h-screen flex flex-col justify-center items-center'>
-      <div className='flex flex-row justify-center items-center mb-3'>
-        <input
-          className='border-2 border-gray-300 h-10 px-5 pr-16 rounded-lg text-sm focus:outline-none'
-          name='search'
-          placeholder='Search'
-          value={id}
-          onChange={(e) => setId(e.target.value)}
-        />
-        <button
-          className='bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded border-solid ml-3'
-          onClick={getData}
-        >
-          Search
-        </button>
-      </div>
-      {/* <h1 className='text-3xl font-bold mb-3'>PE:</h1> */}
-      <div id='pe' className='w-full flex-1'></div>
-    </div>
+    <main className='min-h-screen bg-[#f8f3e9] text-[#28241d]'>
+      <section className='mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8'>
+        <div className='flex flex-col gap-4 border-b border-[#d8cfbd] pb-5 lg:flex-row lg:items-end lg:justify-between'>
+          <div>
+            <p className='text-sm font-semibold uppercase tracking-[0.18em] text-[#8a4b20]'>
+              Profit Line Lab
+            </p>
+            <h1 className='mt-2 text-3xl font-bold leading-tight text-[#211d18] sm:text-4xl'>
+              利润线 vs 股价
+            </h1>
+          </div>
+
+          <form
+            className='flex w-full flex-col gap-3 sm:flex-row lg:w-auto'
+            onSubmit={handleSubmit}
+          >
+            <label className='flex min-w-0 flex-1 flex-col gap-1 text-sm font-medium text-[#51493d] lg:w-64'>
+              股票代码
+              <input
+                className='h-11 rounded-md border border-[#cfc5b3] bg-[#fffaf1] px-3 text-base font-semibold uppercase text-[#211d18] outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/20'
+                value={symbolInput}
+                onChange={(event) => setSymbolInput(event.target.value)}
+                placeholder='AAPL / 600519 / 00700'
+              />
+            </label>
+            <button
+              className='h-11 rounded-md bg-[#1f2937] px-5 text-sm font-bold text-[#fffaf1] transition hover:bg-[#111827] disabled:cursor-not-allowed disabled:opacity-60 sm:self-end'
+              disabled={state === 'loading'}
+              type='submit'
+            >
+              {state === 'loading' ? '获取中' : '绘制'}
+            </button>
+          </form>
+        </div>
+
+        <div className='grid gap-3 lg:grid-cols-[minmax(0,1fr)_320px]'>
+          <div className='min-h-[560px] rounded-md border border-[#d8cfbd] bg-[#fffaf1]'>
+            <div className='flex flex-col gap-1 border-b border-[#e3d9c8] px-4 py-3 sm:flex-row sm:items-center sm:justify-between'>
+              <div>
+                <h2 className='text-lg font-bold'>
+                  {data ? `${data.symbol} · ${data.name}` : submittedSymbol}
+                </h2>
+                <p className='text-sm text-[#706758]'>
+                  {data?.ttmMethod === 'source-eps-ttm'
+                    ? 'TTM EPS 使用市场数据源提供值，线值随倍数实时更新。'
+                    : '单季 EPS 滚动 4 季生成 TTM EPS，线值随倍数实时更新。'}
+                </p>
+              </div>
+              <div className='text-sm font-semibold text-[#8a4b20]'>
+                {alertCount > 0 ? `${alertCount} 个季度低于利润线` : '无警示点'}
+              </div>
+            </div>
+
+            <div className='relative h-[500px]'>
+              <div ref={chartNode} className='h-full w-full' />
+              {state === 'loading' && (
+                <div className='absolute inset-0 grid place-items-center bg-[#fffaf1]/80 text-sm font-semibold text-[#51493d]'>
+                  正在获取季度 EPS 与股价...
+                </div>
+              )}
+              {state === 'error' && (
+                <div className='absolute inset-0 grid place-items-center bg-[#fffaf1] px-6 text-center'>
+                  <div>
+                    <p className='text-lg font-bold text-[#991b1b]'>无法绘制</p>
+                    <p className='mt-2 max-w-md text-sm text-[#675f52]'>{error}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <aside className='flex flex-col gap-3'>
+            <div className='rounded-md border border-[#d8cfbd] bg-[#fffaf1] p-4'>
+              <div className='flex items-center justify-between gap-3'>
+                <label
+                  className='text-sm font-bold text-[#3a332b]'
+                  htmlFor='profitMultiple'
+                >
+                  利润线倍数
+                </label>
+                <span className='tabular-nums text-xl font-black text-[#dc2626]'>
+                  {profitMultiple}x
+                </span>
+              </div>
+              <input
+                id='profitMultiple'
+                className='mt-4 w-full accent-[#dc2626]'
+                max='50'
+                min='5'
+                step='1'
+                type='range'
+                value={profitMultiple}
+                onChange={(event) => setProfitMultiple(Number(event.target.value))}
+              />
+            </div>
+
+            <div className='rounded-md border border-[#d8cfbd] bg-[#fffaf1] p-4'>
+              <div className='flex items-center justify-between gap-3'>
+                <label
+                  className='text-sm font-bold text-[#3a332b]'
+                  htmlFor='referenceMultiple'
+                >
+                  参考线倍数
+                </label>
+                <span className='tabular-nums text-xl font-black text-[#16a34a]'>
+                  {referenceMultiple}x
+                </span>
+              </div>
+              <input
+                id='referenceMultiple'
+                className='mt-4 w-full accent-[#16a34a]'
+                max='50'
+                min='5'
+                step='1'
+                type='range'
+                value={referenceMultiple}
+                onChange={(event) =>
+                  setReferenceMultiple(Number(event.target.value))
+                }
+              />
+            </div>
+
+            <div className='grid grid-cols-2 gap-3'>
+              <div className='rounded-md border border-[#d8cfbd] bg-[#fffaf1] p-4'>
+                <div className='text-xs font-bold uppercase tracking-[0.12em] text-[#8a4b20]'>
+                  最新股价
+                </div>
+                <div className='mt-2 text-2xl font-black tabular-nums'>
+                  {latest?.price === undefined
+                    ? '-'
+                    : currencyFormatter.format(latest.price || 0)}
+                </div>
+              </div>
+              <div className='rounded-md border border-[#d8cfbd] bg-[#fffaf1] p-4'>
+                <div className='text-xs font-bold uppercase tracking-[0.12em] text-[#8a4b20]'>
+                  TTM PE
+                </div>
+                <div className='mt-2 text-2xl font-black tabular-nums'>
+                  {formatNumber(latest?.ttmPe)}
+                </div>
+              </div>
+            </div>
+
+            <div className='rounded-md border border-[#d8cfbd] bg-[#fffaf1] p-4'>
+              <div className='flex items-center justify-between gap-3'>
+                <div className='text-xs font-bold uppercase tracking-[0.12em] text-[#8a4b20]'>
+                  PE 历史百分位
+                </div>
+                <div
+                  className={`text-sm font-semibold ${
+                    pePercentile === null
+                      ? 'text-[#9ca3af]'
+                      : pePercentile <= 30
+                        ? 'text-[#16a34a]'
+                        : pePercentile >= 70
+                          ? 'text-[#dc2626]'
+                          : 'text-[#8a4b20]'
+                  }`}
+                >
+                  {pePercentile === null
+                    ? '-'
+                    : pePercentile <= 30
+                      ? '低估'
+                      : pePercentile >= 70
+                        ? '高估'
+                        : '合理'}
+                </div>
+              </div>
+              <div className='mt-2'>
+                <div className='flex items-baseline gap-1'>
+                  <span className='text-3xl font-black tabular-nums text-[#211d18]'>
+                    {pePercentile === null ? '-' : `${pePercentile}%`}
+                  </span>
+                  <span className='text-sm text-[#706758]'>
+                    {pePercentile !== null && `(${data?.points.filter((p) => p.ttmPe !== null).length || 0} 个季度)`}
+                  </span>
+                </div>
+                <div className='mt-2 h-2 w-full rounded-full bg-[#e7dfcf] overflow-hidden'>
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${
+                      pePercentile === null
+                        ? 'bg-[#9ca3af]'
+                        : pePercentile <= 30
+                          ? 'bg-[#16a34a]'
+                          : pePercentile >= 70
+                            ? 'bg-[#dc2626]'
+                            : 'bg-[#8a4b20]'
+                    }`}
+                    style={{
+                      width: pePercentile === null ? '0%' : `${pePercentile}%`,
+                    }}
+                  />
+                </div>
+                <div className='mt-1 flex justify-between text-xs text-[#9ca3af]'>
+                  <span>0%</span>
+                  <span>50%</span>
+                  <span>100%</span>
+                </div>
+              </div>
+            </div>
+
+            <div className='rounded-md border border-[#d8cfbd] bg-[#fffaf1] p-4'>
+              <div className='text-xs font-bold uppercase tracking-[0.12em] text-[#8a4b20]'>
+                历史平均 PE
+              </div>
+
+              <div className='mt-3 flex gap-1 rounded-md bg-[#e7dfcf] p-1'>
+                {([1, 3, 5, 'all'] as PeriodType[]).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setSelectedPeriod(p)}
+                    className={`flex-1 rounded px-2 py-1 text-xs font-semibold transition ${
+                      selectedPeriod === p
+                        ? 'bg-[#fffaf1] text-[#211d18] shadow-sm'
+                        : 'text-[#706758] hover:text-[#211d18]'
+                    }`}
+                  >
+                    {p === 'all' ? '全部' : `${p}年`}
+                  </button>
+                ))}
+              </div>
+
+              <div className='mt-4'>
+                <div className='flex items-baseline gap-2'>
+                  <span className='text-3xl font-black tabular-nums text-[#211d18]'>
+                    {periodStats?.avgPe === null ? '-' : formatNumber(periodStats?.avgPe)}
+                  </span>
+                  <span className='text-sm text-[#706758]'>
+                    {periodStats && periodStats.count > 0 && `(${periodStats.count} 个季度)`}
+                  </span>
+                </div>
+
+                <div className='mt-3 grid grid-cols-2 gap-3 text-sm'>
+                  <div className='rounded bg-[#f0ebe0] px-3 py-2'>
+                    <div className='text-xs text-[#9ca3af]'>最低</div>
+                    <div className='mt-1 font-bold text-[#16a34a]'>
+                      {periodStats?.minPe === null ? '-' : formatNumber(periodStats?.minPe)}
+                    </div>
+                  </div>
+                  <div className='rounded bg-[#f0ebe0] px-3 py-2'>
+                    <div className='text-xs text-[#9ca3af]'>最高</div>
+                    <div className='mt-1 font-bold text-[#dc2626]'>
+                      {periodStats?.maxPe === null ? '-' : formatNumber(periodStats?.maxPe)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className='mt-4 border-t border-[#e7dfcf] pt-3'>
+                <div className='text-xs text-[#9ca3af] mb-2'>各时段对比</div>
+                <div className='space-y-1.5'>
+                  {allPeriodStats.map((stats) => (
+                    <div key={stats.period} className='flex items-center justify-between text-sm'>
+                      <span className='text-[#706758]'>{stats.label}</span>
+                      <span className={`font-semibold tabular-nums ${
+                        stats.avgPe === null
+                          ? 'text-[#9ca3af]'
+                          : stats.avgPe < (periodStats?.avgPe || 0)
+                            ? 'text-[#16a34a]'
+                            : stats.avgPe > (periodStats?.avgPe || 0)
+                              ? 'text-[#dc2626]'
+                              : 'text-[#211d18]'
+                      }`}>
+                        {stats.avgPe === null ? '-' : formatNumber(stats.avgPe)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className='rounded-md border border-[#d8cfbd] bg-[#fffaf1] p-4 text-sm leading-6 text-[#5d5548]'>
+              <p>
+                数据源：{data?.sources.eps || 'SEC companyfacts'} /{' '}
+                {data?.sources.price || 'Yahoo Finance chart'}。
+              </p>
+              <p className='mt-2'>
+                红色高亮点表示当季股价低于当前利润线倍数对应价格。
+              </p>
+            </div>
+          </aside>
+        </div>
+      </section>
+    </main>
   )
 }
-
-export default PE

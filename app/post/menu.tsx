@@ -13,6 +13,9 @@ const Menu = () => {
         <Link href="/tools">Tools</Link>
       </li>
       <li>
+        <Link href='/pe'>Profit Line</Link>
+      </li>
+      <li>
         <Link href='/vmess'>Vmess(deprecated)</Link>
       </li>
       <li>
