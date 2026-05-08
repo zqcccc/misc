@@ -1,6 +1,7 @@
 'use client'
 
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { buildChartSource } from './chart-data'
 
 type ProfitPoint = {
   date: string
@@ -17,11 +18,17 @@ type ProfitLineData = {
   market?: 'us' | 'cn' | 'hk'
   currency: string
   points: ProfitPoint[]
+  latestPrice?: {
+    date: string
+    price: number
+  } | null
   sources: {
     eps: string
     price: string
   }
   ttmMethod?: 'quarterly-rollup' | 'source-eps-ttm'
+  epsCurrency?: string
+  fxRate?: number
 }
 
 type ValuationExplanation = {
@@ -88,9 +95,15 @@ function pct(value: number | null | undefined) {
 }
 
 function qualityColor(value: CompanyValuationCard['profitQuality'] | undefined) {
-  if (value === '需调整') return 'text-[#dc2626]'
-  if (value === '正常') return 'text-[#16a34a]'
-  return 'text-[#8a4b20]'
+  if (value === '需调整') return 'text-rose-500 dark:text-rose-400'
+  if (value === '正常') return 'text-emerald-600 dark:text-emerald-400'
+  return 'text-amber-700 dark:text-amber-400'
+}
+
+function Skeleton({ className = '' }: { className?: string }) {
+  return (
+    <div className={`animate-pulse rounded-md bg-gray-200 dark:bg-[#1e2435] ${className}`} />
+  )
 }
 
 function getPreparedPoints(data: ProfitLineData | null, profitMultiple: number) {
@@ -112,17 +125,28 @@ function getPreparedPoints(data: ProfitLineData | null, profitMultiple: number) 
   })
 }
 
-function calculatePePercentile(points: ProfitPoint[], currentPe: number | null): number | null {
+function calculatePePercentile(
+  points: ProfitPoint[],
+  currentPe: number | null,
+  period: PeriodType = 'all',
+): number | null {
   if (currentPe === null || points.length === 0) return null
 
-  // 获取所有有效的 TTM PE 值
+  const now = new Date()
+  const cutoffDate = period === 'all'
+    ? new Date(0)
+    : new Date(now.getFullYear() - period, now.getMonth(), now.getDate())
+
   const validPes = points
-    .map((p) => p.ttmPe)
-    .filter((pe): pe is number => pe !== null && !Number.isNaN(pe))
+    .filter((p) => {
+      if (p.ttmPe === null || Number.isNaN(p.ttmPe)) return false
+      const pointDate = new Date(p.date)
+      return pointDate >= cutoffDate
+    })
+    .map((p) => p.ttmPe as number)
 
   if (validPes.length === 0) return null
 
-  // 计算百分位：小于等于当前值的占比
   const countLessOrEqual = validPes.filter((pe) => pe <= currentPe).length
   return Number(((countLessOrEqual / validPes.length) * 100).toFixed(1))
 }
@@ -186,26 +210,48 @@ export default function ProfitLinePage() {
   const [valuationEntries, setValuationEntries] = useState<CompanyValuationCard[]>([])
   const [currentValuation, setCurrentValuation] = useState<CompanyValuationCard | null>(null)
   const [state, setState] = useState<LoadState>('idle')
+  const [entriesLoading, setEntriesLoading] = useState(true)
   const [error, setError] = useState('')
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodType>('all')
   const [chartReady, setChartReady] = useState(false)
   const chartNode = useRef<HTMLDivElement | null>(null)
   const chartRef = useRef<any>(null)
 
+  const dataLoading = state === 'idle' || state === 'loading'
+
   const preparedPoints = useMemo(
     () => getPreparedPoints(data, profitMultiple),
     [data, profitMultiple],
   )
 
-  const latest = [...preparedPoints]
+  const latestQuarterPoint = [...preparedPoints]
     .reverse()
     .find((point) => point.price !== null && point.ttmEps !== null)
+  const latestMarketPrice = data?.latestPrice?.price ?? latestQuarterPoint?.price ?? null
+  const latestMarketDate = data?.latestPrice?.date ?? latestQuarterPoint?.date ?? null
+  const currentPe =
+    latestMarketPrice !== null &&
+    latestQuarterPoint?.ttmEps !== null &&
+    latestQuarterPoint?.ttmEps !== undefined &&
+    latestQuarterPoint.ttmEps > 0
+      ? Number((latestMarketPrice / latestQuarterPoint.ttmEps).toFixed(2))
+      : (latestQuarterPoint?.ttmPe ?? null)
   const alertCount = preparedPoints.filter((point) => point.alert).length
 
-  const pePercentile = useMemo(() => {
-    if (!data || !latest?.ttmPe) return null
-    return calculatePePercentile(data.points, latest.ttmPe)
-  }, [data, latest])
+  const pePercentileAll = useMemo(() => {
+    if (!data || currentPe === null) return null
+    return calculatePePercentile(data.points, currentPe, 'all')
+  }, [currentPe, data])
+
+  const pePercentile3Y = useMemo(() => {
+    if (!data || currentPe === null) return null
+    return calculatePePercentile(data.points, currentPe, 3)
+  }, [currentPe, data])
+
+  const pePercentile5Y = useMemo(() => {
+    if (!data || currentPe === null) return null
+    return calculatePePercentile(data.points, currentPe, 5)
+  }, [currentPe, data])
 
   const periodStats = useMemo(() => {
     if (!data) return null
@@ -219,6 +265,7 @@ export default function ProfitLinePage() {
   }, [data])
 
   const fetchEntries = useCallback(async () => {
+    setEntriesLoading(true)
     try {
       const response = await fetch('/api/company-valuation', {
         cache: 'no-store',
@@ -228,6 +275,8 @@ export default function ProfitLinePage() {
       setValuationEntries(payload.entries || [])
     } catch {
       // 列表加载失败不阻塞主流程
+    } finally {
+      setEntriesLoading(false)
     }
   }, [])
 
@@ -315,21 +364,35 @@ export default function ProfitLinePage() {
   useEffect(() => {
     if (!chartRef.current) return
 
-    const source = preparedPoints.map((point) => ({
-      ...point,
-      referenceLine:
-        point.ttmEps === null
-          ? null
-          : Number((point.ttmEps * referenceMultiple).toFixed(2)),
-    }))
+    const isDark = document.documentElement.classList.contains('dark')
+
+    const source = buildChartSource(
+      preparedPoints,
+      data?.latestPrice,
+      profitMultiple,
+      referenceMultiple,
+    )
     const visible = source.filter(
       (point) => point.price !== null && point.ttmEps !== null,
     )
 
+    const axisLabelColor = isDark ? '#64748b' : '#94a3b8'
+    const splitLineColor = isDark ? 'rgba(255,255,255,0.04)' : '#f1f5f9'
+    const axisLineColor = isDark ? 'rgba(255,255,255,0.06)' : '#e2e8f0'
+    const legendColor = isDark ? '#94a3b8' : '#64748b'
+    const tooltipBg = isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.98)'
+    const tooltipBorder = isDark ? 'rgba(255,255,255,0.08)' : '#e2e8f0'
+    const tooltipText = isDark ? '#e2e8f0' : '#1e293b'
+    const dataZoomBorder = isDark ? 'rgba(255,255,255,0.06)' : '#e2e8f0'
+    const dataZoomFiller = isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)'
+    const dataZoomHandle = isDark ? '#3b82f6' : '#3b82f6'
+
     chartRef.current.setOption(
       {
         animationDuration: 360,
-        color: ['#2563eb', '#dc2626', '#16a34a', '#ef4444'],
+        color: isDark
+          ? ['#60a5fa', '#f87171', '#4ade80', '#fbbf24', '#f87171']
+          : ['#3b82f6', '#ef4444', '#22c55e', '#f59e0b', '#ef4444'],
         backgroundColor: 'transparent',
         grid: {
           top: 42,
@@ -342,32 +405,39 @@ export default function ProfitLinePage() {
           trigger: 'axis',
           axisPointer: {
             type: 'cross',
+            crossStyle: {
+              color: isDark ? '#6b7280' : '#9ca3af',
+            },
           },
-          borderColor: '#d7d2c5',
-          backgroundColor: 'rgba(255, 252, 244, 0.96)',
+          borderColor: tooltipBorder,
+          backgroundColor: tooltipBg,
           textStyle: {
-            color: '#2d2a25',
+            color: tooltipText,
           },
           formatter(params: any[]) {
             const item = source[params?.[0]?.dataIndex]
             if (!item) return ''
-            const pointPercentile = calculatePePercentile(data?.points || [], item.ttmPe)
-            const percentileText = pointPercentile === null ? '-' : `${pointPercentile}%`
-            const percentileColor = pointPercentile === null
-              ? '#9ca3af'
-              : pointPercentile <= 30
-                ? '#16a34a'
-                : pointPercentile >= 70
-                  ? '#dc2626'
-                  : '#8a4b20'
+            const pointPercentileAll = calculatePePercentile(data?.points || [], item.ttmPe, 'all')
+            const pointPercentile3Y = calculatePePercentile(data?.points || [], item.ttmPe, 3)
+            const pointPercentile5Y = calculatePePercentile(data?.points || [], item.ttmPe, 5)
+            const getPercentileColor = (val: number | null) => {
+              if (val === null) return isDark ? '#64748b' : '#94a3b8'
+              if (val <= 30) return isDark ? '#4ade80' : '#22c55e'
+              if (val >= 70) return isDark ? '#f87171' : '#ef4444'
+              return isDark ? '#fbbf24' : '#d97706'
+            }
+            const getPercentileText = (val: number | null) => val === null ? '-' : `${val}%`
             return [
               `<strong>${item.quarter}</strong>`,
               `股价：${item.price === null ? '-' : currencyFormatter.format(item.price)}`,
               `TTM EPS：${formatNumber(item.ttmEps)}`,
-              `TTM PE：${formatNumber(item.ttmPe)}`,
-              `PE 历史百分位：<span style="color:${percentileColor};font-weight:600">${percentileText}</span>`,
+              item.epsSourceQuarter ? `TTM EPS 来源：${item.epsSourceQuarter}` : null,
+              `TTM PE：${formatNumber(item.ttmPe)}${item.isLatestPrice ? '（按最新价重算）' : ''}`,
+              `PE 历史百分位（全部）：<span style="color:${getPercentileColor(pointPercentileAll)};font-weight:600">${getPercentileText(pointPercentileAll)}</span>`,
+              ...(pointPercentile3Y !== null ? [`PE 历史百分位（3年）：<span style="color:${getPercentileColor(pointPercentile3Y)};font-weight:600">${getPercentileText(pointPercentile3Y)}</span>`] : []),
+              ...(pointPercentile5Y !== null ? [`PE 历史百分位（5年）：<span style="color:${getPercentileColor(pointPercentile5Y)};font-weight:600">${getPercentileText(pointPercentile5Y)}</span>`] : []),
               `利润线偏差：${pct(item.deviation)}`,
-            ].join('<br/>')
+            ].filter(Boolean).join('<br/>')
           },
         },
         legend: {
@@ -375,20 +445,20 @@ export default function ProfitLinePage() {
           right: 12,
           itemGap: 18,
           textStyle: {
-            color: '#5b564b',
+            color: legendColor,
           },
         },
         xAxis: {
           type: 'category',
-          data: source.map((point) => point.quarter),
+          data: source.map((point) => point.displayLabel),
           boundaryGap: false,
           axisLine: {
             lineStyle: {
-              color: '#c9c1b3',
+              color: axisLineColor,
             },
           },
           axisLabel: {
-            color: '#675f52',
+            color: axisLabelColor,
             hideOverlap: true,
           },
         },
@@ -396,14 +466,14 @@ export default function ProfitLinePage() {
           type: 'value',
           name: data?.currency || 'USD',
           nameTextStyle: {
-            color: '#675f52',
+            color: axisLabelColor,
           },
           axisLabel: {
-            color: '#675f52',
+            color: axisLabelColor,
           },
           splitLine: {
             lineStyle: {
-              color: '#e7dfcf',
+              color: splitLineColor,
             },
           },
         },
@@ -417,10 +487,10 @@ export default function ProfitLinePage() {
             type: 'slider',
             height: 18,
             bottom: 16,
-            borderColor: '#d7d0c3',
-            fillerColor: 'rgba(37, 99, 235, 0.12)',
+            borderColor: dataZoomBorder,
+            fillerColor: dataZoomFiller,
             handleStyle: {
-              color: '#2563eb',
+              color: dataZoomHandle,
             },
           },
         ],
@@ -433,11 +503,11 @@ export default function ProfitLinePage() {
             symbolSize: 6,
             data: source.map((point) => point.price),
             lineStyle: {
-              width: 3,
-              color: '#2563eb',
+              width: 2.5,
+              color: isDark ? '#60a5fa' : '#3b82f6',
             },
             itemStyle: {
-              color: '#2563eb',
+              color: isDark ? '#60a5fa' : '#3b82f6',
             },
           },
           {
@@ -447,9 +517,9 @@ export default function ProfitLinePage() {
             showSymbol: false,
             data: source.map((point) => point.profitLine),
             lineStyle: {
-              width: 2,
+              width: 1.5,
               type: 'dashed',
-              color: '#dc2626',
+              color: isDark ? '#f87171' : '#ef4444',
             },
           },
           {
@@ -459,9 +529,9 @@ export default function ProfitLinePage() {
             showSymbol: false,
             data: source.map((point) => point.referenceLine),
             lineStyle: {
-              width: 2,
+              width: 1.5,
               type: 'dashed',
-              color: '#16a34a',
+              color: isDark ? '#4ade80' : '#22c55e',
             },
           },
           {
@@ -470,9 +540,23 @@ export default function ProfitLinePage() {
             symbolSize: 12,
             data: source.map((point) => (point.alert ? point.price : null)),
             itemStyle: {
-              color: '#ef4444',
-              borderColor: '#7f1d1d',
-              borderWidth: 2,
+              color: isDark ? '#f87171' : '#ef4444',
+              borderColor: isDark ? '#b91c1c' : '#991b1b',
+              borderWidth: 1.5,
+            },
+            tooltip: {
+              show: false,
+            },
+          },
+          {
+            name: '最新价',
+            type: 'scatter',
+            symbolSize: 14,
+            data: source.map((point) => (point.isLatestPrice ? point.price : null)),
+            itemStyle: {
+              color: isDark ? '#fbbf24' : '#f59e0b',
+              borderColor: isDark ? '#fde68a' : '#92400e',
+              borderWidth: 1.5,
             },
             tooltip: {
               show: false,
@@ -489,6 +573,7 @@ export default function ProfitLinePage() {
   }, [
     chartReady,
     data?.currency,
+    data?.latestPrice,
     data?.points,
     preparedPoints,
     profitMultiple,
@@ -497,14 +582,14 @@ export default function ProfitLinePage() {
   ])
 
   return (
-    <main className='min-h-screen bg-[#f8f3e9] text-[#28241d]'>
-      <section className='mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8'>
-        <div className='flex flex-col gap-4 border-b border-[#d8cfbd] pb-5 lg:flex-row lg:items-end lg:justify-between'>
+    <main className='bg-[#f4f6f9] text-gray-800 dark:bg-[#0b0f1a] dark:text-gray-100 transition-colors duration-300'>
+      <section className='mx-auto flex w-full max-w-[1400px] flex-col gap-4 px-6 py-5'>
+        <header className='flex flex-col gap-4 pb-4 lg:flex-row lg:items-end lg:justify-between'>
           <div>
-            <p className='text-sm font-semibold uppercase tracking-[0.18em] text-[#8a4b20]'>
+            <p className='text-[10px] font-bold text-gray-400 tracking-[0.2em] uppercase dark:text-blue-400/60'>
               Profit Line Lab
             </p>
-            <h1 className='mt-2 text-3xl font-bold leading-tight text-[#211d18] sm:text-4xl'>
+            <h1 className='mt-1 text-2xl font-bold leading-tight text-gray-900 tracking-tight dark:text-white'>
               利润线 vs 股价
             </h1>
           </div>
@@ -513,52 +598,93 @@ export default function ProfitLinePage() {
             className='flex w-full flex-col gap-3 sm:flex-row lg:w-auto'
             onSubmit={handleSubmit}
           >
-            <label className='flex min-w-0 flex-1 flex-col gap-1 text-sm font-medium text-[#51493d] lg:w-64'>
-              股票代码
+            <div className='relative lg:w-[280px]'>
+              <svg className='absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                <path d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' />
+              </svg>
               <input
-                className='h-11 rounded-md border border-[#cfc5b3] bg-[#fffaf1] px-3 text-base font-semibold uppercase text-[#211d18] outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/20'
+                className='h-10 w-full rounded-lg bg-gray-50 pl-10 pr-4 text-sm font-medium uppercase text-gray-900 outline-none transition placeholder-gray-400 focus:bg-white focus:ring-2 focus:ring-blue-500/20 dark:bg-[#141824] dark:text-gray-100 dark:placeholder-gray-600 dark:focus:bg-[#1a1f2e] dark:focus:ring-blue-500/10'
                 value={symbolInput}
                 onChange={(event) => setSymbolInput(event.target.value)}
-                placeholder='AAPL / 600519 / 00700'
+                placeholder='搜索代码'
               />
-            </label>
+            </div>
             <button
-              className='h-11 rounded-md bg-[#1f2937] px-5 text-sm font-bold text-[#fffaf1] transition hover:bg-[#111827] disabled:cursor-not-allowed disabled:opacity-60 sm:self-end'
+              className='group h-10 rounded-lg border-0 bg-blue-600 px-5 text-sm font-medium text-white transition hover:bg-blue-500 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-600 dark:hover:bg-blue-500 dark:shadow-lg dark:shadow-blue-600/20 sm:self-end'
               disabled={state === 'loading'}
               type='submit'
             >
-              {state === 'loading' ? '获取中' : '绘制'}
+              <span className='inline-flex items-center gap-2'>
+                {state === 'loading' ? (
+                  <svg className='h-4 w-4 animate-spin' viewBox='0 0 24 24' fill='none'>
+                    <circle className='opacity-25' cx='12' cy='12' r='10' stroke='currentColor' strokeWidth='4' />
+                    <path className='opacity-75' fill='currentColor' d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z' />
+                  </svg>
+                ) : (
+                  <svg className='h-4 w-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                    <path d='M7 11l5-5m0 0l5 5m-5-5v12' strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' />
+                  </svg>
+                )}
+                {state === 'loading' ? '获取中' : '绘制'}
+              </span>
             </button>
           </form>
-        </div>
+        </header>
 
-        <div className='grid gap-3 lg:grid-cols-[240px_minmax(0,1fr)_320px]'>
-          <nav className='rounded-md border border-[#d8cfbd] bg-[#fffaf1] p-3 lg:max-h-[calc(100vh-140px)] lg:overflow-auto'>
-            <div className='mb-3 flex items-center justify-between gap-2'>
-              <h2 className='text-sm font-black text-[#211d18]'>公司入口</h2>
-              <span className='rounded bg-[#f0ebe0] px-2 py-1 text-xs font-bold text-[#8a4b20]'>
-                {valuationEntries.length}
-              </span>
+        <div className='grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)_320px]'>
+          <nav className='rounded-xl bg-white shadow-sm dark:bg-[#111520] dark:shadow-none overflow-hidden lg:max-h-[calc(100vh-140px)] lg:overflow-auto'>
+            <div className='flex items-center justify-between px-4 py-3 border-b border-gray-50 dark:border-white/[0.04]'>
+              <h2 className='text-xs font-semibold text-gray-500 uppercase tracking-wider dark:text-gray-400'>公司入口</h2>
+              {entriesLoading ? (
+                <Skeleton className='h-5 w-8' />
+              ) : (
+                <span className='bg-gray-100 text-gray-500 text-[10px] px-1.5 py-0.5 rounded font-semibold dark:bg-white/[0.06] dark:text-gray-500'>
+                  {valuationEntries.length}
+                </span>
+              )}
             </div>
 
-            {valuationEntries.length === 0 ? (
-              <div className='rounded bg-[#f0ebe0] px-3 py-4 text-sm leading-6 text-[#706758]'>
-                暂无 AI 探索结果。后续定时任务写入数据库后会显示在这里。
+            <div className='p-1.5 space-y-1'>
+            {entriesLoading ? (
+              <div className='space-y-0.5'>
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className='p-3 rounded-lg'>
+                    <div className='flex items-start justify-between gap-2'>
+                      <div className='min-w-0 flex-1'>
+                        <Skeleton className='h-4 w-3/4' />
+                        <Skeleton className='mt-1.5 h-3 w-1/2' />
+                      </div>
+                      <Skeleton className='h-3 w-8' />
+                    </div>
+                    <div className='mt-1.5 flex items-center justify-between'>
+                      <Skeleton className='h-3 w-12' />
+                      <Skeleton className='h-3 w-6' />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : valuationEntries.length === 0 ? (
+              <div className='px-3 py-6 text-sm leading-6 text-gray-400 dark:text-gray-600 text-center'>
+                暂无数据
               </div>
             ) : (
-              <div className='space-y-2'>
+              <div className='space-y-0.5'>
                 {valuationEntries.map((entry) => {
                   const active =
                     entry.symbol === currentValuation?.symbol ||
                     entry.symbol === data?.symbol
 
+                  const avatarColors = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#06b6d4', '#f97316', '#ef4444']
+                  const colorIndex = entry.title.charCodeAt(0) % avatarColors.length
+                  const avatarChar = entry.title.charAt(0)
+
                   return (
                     <button
                       key={entry.id}
-                      className={`w-full rounded-md border px-3 py-3 text-left transition ${
+                      className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-150 bg-transparent border-0 text-left ${
                         active
-                          ? 'border-[#2563eb] bg-[#eff6ff]'
-                          : 'border-[#e3d9c8] bg-[#fffaf1] hover:border-[#c7bca8]'
+                          ? 'bg-blue-50 dark:bg-[#141824]'
+                          : 'hover:bg-gray-50 dark:hover:bg-white/[0.02]'
                       }`}
                       type='button'
                       onClick={() => {
@@ -566,81 +692,119 @@ export default function ProfitLinePage() {
                         fetchData(entry.symbol)
                       }}
                     >
-                      <div className='flex items-start justify-between gap-2'>
-                        <div className='min-w-0'>
-                          <div className='truncate text-sm font-black text-[#211d18]'>
+                      <div className='flex items-center gap-3'>
+                        <div className='w-7 h-7 rounded-md text-white flex items-center justify-center text-[11px] font-semibold shrink-0' style={{ backgroundColor: avatarColors[colorIndex] }}>
+                          {avatarChar}
+                        </div>
+                        <div className='min-w-0 text-left'>
+                          <div className={`truncate text-[13px] font-medium ${
+                            active
+                              ? 'text-gray-900 dark:text-white'
+                              : 'text-gray-700 dark:text-gray-300'
+                          }`}>
                             {entry.title}
                           </div>
-                          <div className='mt-1 text-xs font-semibold text-[#706758]'>
-                            {entry.symbol}
+                          <div className='flex items-center gap-2 mt-0.5'>
+                            <span className='text-[11px] text-gray-400 dark:text-gray-600'>
+                              {entry.symbol}
+                            </span>
+                            <span className='text-[11px] text-gray-400 dark:text-gray-600'>
+                              PE {formatNumber(entry.metrics.ttmPe)}
+                            </span>
                           </div>
                         </div>
-                        <span className={`shrink-0 text-xs font-black ${qualityColor(entry.profitQuality)}`}>
+                      </div>
+                      <div className='text-right flex flex-col items-end gap-1'>
+                        <span className={`text-[10px] font-semibold ${qualityColor(entry.profitQuality)}`}>
                           {entry.profitQuality}
                         </span>
-                      </div>
-                      <div className='mt-2 flex items-center justify-between text-xs text-[#706758]'>
-                        <span>PE {formatNumber(entry.metrics.ttmPe)}</span>
-                        <span>{entry.exploration.score === null ? '-' : entry.exploration.score}</span>
+                        <span className='text-xs font-semibold text-gray-600 dark:text-gray-400 tabular-nums'>
+                          {entry.exploration.score === null ? '-' : entry.exploration.score}
+                        </span>
                       </div>
                     </button>
                   )
                 })}
               </div>
             )}
+            </div>
           </nav>
 
-          <div className='min-h-[560px] rounded-md border border-[#d8cfbd] bg-[#fffaf1]'>
-            <div className='flex flex-col gap-1 border-b border-[#e3d9c8] px-4 py-3 sm:flex-row sm:items-center sm:justify-between'>
+          <div className='rounded-xl bg-white shadow-sm dark:bg-[#0e1220] dark:shadow-none flex flex-col overflow-hidden relative p-5'>
+            <div className='flex justify-between items-start mb-5'>
               <div>
-                <h2 className='text-lg font-bold'>
+                <h2 className='text-lg font-bold text-gray-900 dark:text-white'>
                   {data ? `${data.symbol} · ${data.name}` : submittedSymbol}
                 </h2>
-                <p className='text-sm text-[#706758]'>
+                <p className='text-[11px] text-gray-400 mt-1 dark:text-gray-600'>
                   {data?.ttmMethod === 'source-eps-ttm'
-                    ? 'TTM EPS 使用市场数据源提供值，线值随倍数实时更新。'
-                    : '单季 EPS 滚动 4 季生成 TTM EPS，线值随倍数实时更新。'}
+                    ? 'TTM EPS 使用市场数据源提供值，线值随倍数实时更新'
+                    : '单季 EPS 滚动 4 季生成 TTM EPS，线值随倍数实时更新'}
                 </p>
               </div>
-              <div className='text-sm font-semibold text-[#8a4b20]'>
-                {alertCount > 0 ? `${alertCount} 个季度低于利润线` : '无警示点'}
-              </div>
+              {dataLoading ? (
+                <Skeleton className='h-5 w-28' />
+              ) : (
+                <div className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                  alertCount > 0
+                    ? 'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400'
+                    : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400'
+                }`}>
+                  {alertCount > 0 ? `${alertCount} 个季度低于利润线` : '无警示点'}
+                </div>
+              )}
             </div>
 
-            <div className='relative h-[500px]'>
+            <div className='relative h-[420px]'>
               <div ref={chartNode} className='h-full w-full' />
               {state === 'loading' && (
-                <div className='absolute inset-0 grid place-items-center bg-[#fffaf1]/80 text-sm font-semibold text-[#51493d]'>
-                  正在获取季度 EPS 与股价...
+                <div className='absolute inset-0 grid place-items-center bg-white/80 backdrop-blur-sm dark:bg-[#0b0f1a]/80'>
+                  <div className='flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400'>
+                    <svg className='h-5 w-5 animate-spin' viewBox='0 0 24 24' fill='none'>
+                      <circle className='opacity-25' cx='12' cy='12' r='10' stroke='currentColor' strokeWidth='4' />
+                      <path className='opacity-75' fill='currentColor' d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z' />
+                    </svg>
+                    正在获取数据...
+                  </div>
+                </div>
+              )}
+              {state === 'idle' && (
+                <div className='absolute inset-0 grid place-items-center bg-white/60 backdrop-blur-sm dark:bg-[#0b0f1a]/60'>
+                  <span className='text-sm text-gray-400 dark:text-gray-600'>准备加载...</span>
                 </div>
               )}
               {state === 'error' && (
-                <div className='absolute inset-0 grid place-items-center bg-[#fffaf1] px-6 text-center'>
+                <div className='absolute inset-0 grid place-items-center bg-white px-6 text-center dark:bg-[#0b0f1a]'>
                   <div>
-                    <p className='text-lg font-bold text-[#991b1b]'>无法绘制</p>
-                    <p className='mt-2 max-w-md text-sm text-[#675f52]'>{error}</p>
+                    <div className='mx-auto w-10 h-10 rounded-full bg-rose-50 dark:bg-rose-500/10 flex items-center justify-center mb-3'>
+                      <svg className='w-5 h-5 text-rose-500' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                        <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z' />
+                      </svg>
+                    </div>
+                    <p className='text-base font-semibold text-rose-600 dark:text-rose-400'>无法绘制</p>
+                    <p className='mt-1.5 max-w-sm text-sm text-gray-500 dark:text-gray-500'>{error}</p>
                   </div>
                 </div>
               )}
             </div>
           </div>
 
-          <aside className='flex flex-col gap-3'>
-            <div className='rounded-md border border-[#d8cfbd] bg-[#fffaf1] p-4'>
+          <aside className='flex flex-col gap-3 shrink-0 overflow-y-auto pr-1'>
+            <div className='rounded-xl bg-white p-4 shadow-sm dark:bg-[#111520]'>
               <div className='flex items-center justify-between gap-3'>
                 <label
-                  className='text-sm font-bold text-[#3a332b]'
+                  className='text-xs font-medium text-gray-500 dark:text-gray-400'
                   htmlFor='profitMultiple'
                 >
                   利润线倍数
                 </label>
-                <span className='tabular-nums text-xl font-black text-[#dc2626]'>
+                <span className='text-lg font-bold text-blue-600 dark:text-blue-400 tabular-nums'>
                   {profitMultiple}x
                 </span>
               </div>
               <input
                 id='profitMultiple'
-                className='mt-4 w-full accent-[#dc2626]'
+                className='mt-3 w-full h-1.5 rounded-full appearance-none cursor-pointer bg-gray-200 dark:bg-[#1e2435] accent-blue-500 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-500 [&::-webkit-slider-thumb]:shadow-sm [&::-moz-range-thumb]:w-3.5 [&::-moz-range-thumb]:h-3.5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-blue-500 [&::-moz-range-thumb]:border-0'
                 max='50'
                 min='5'
                 step='1'
@@ -650,21 +814,21 @@ export default function ProfitLinePage() {
               />
             </div>
 
-            <div className='rounded-md border border-[#d8cfbd] bg-[#fffaf1] p-4'>
+            <div className='rounded-xl bg-white p-4 shadow-sm dark:bg-[#111520]'>
               <div className='flex items-center justify-between gap-3'>
                 <label
-                  className='text-sm font-bold text-[#3a332b]'
+                  className='text-xs font-medium text-gray-500 dark:text-gray-400'
                   htmlFor='referenceMultiple'
                 >
                   参考线倍数
                 </label>
-                <span className='tabular-nums text-xl font-black text-[#16a34a]'>
+                <span className='text-lg font-bold text-emerald-600 dark:text-emerald-400 tabular-nums'>
                   {referenceMultiple}x
                 </span>
               </div>
               <input
                 id='referenceMultiple'
-                className='mt-4 w-full accent-[#16a34a]'
+                className='mt-3 w-full h-1.5 rounded-full appearance-none cursor-pointer bg-gray-200 dark:bg-[#1e2435] accent-emerald-500 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-emerald-500 [&::-webkit-slider-thumb]:shadow-sm [&::-moz-range-thumb]:w-3.5 [&::-moz-range-thumb]:h-3.5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-emerald-500 [&::-moz-range-thumb]:border-0'
                 max='50'
                 min='5'
                 step='1'
@@ -677,124 +841,219 @@ export default function ProfitLinePage() {
             </div>
 
             <div className='grid grid-cols-2 gap-3'>
-              <div className='rounded-md border border-[#d8cfbd] bg-[#fffaf1] p-4'>
-                <div className='text-xs font-bold uppercase tracking-[0.12em] text-[#8a4b20]'>
-                  最新股价
-                </div>
-                <div className='mt-2 text-2xl font-black tabular-nums'>
-                  {latest?.price === undefined
-                    ? '-'
-                    : currencyFormatter.format(latest.price || 0)}
-                </div>
+              <div className='rounded-xl bg-white p-4 shadow-sm dark:bg-[#111520]'>
+                <div className='text-[11px] text-gray-400 dark:text-gray-600 mb-1'>最新价</div>
+                {dataLoading ? (
+                  <Skeleton className='mt-2 h-7 w-20' />
+                ) : (
+                  <>
+                    <div className='text-lg font-bold text-gray-900 dark:text-white tabular-nums'>
+                      {latestMarketPrice === null
+                        ? '-'
+                        : currencyFormatter.format(latestMarketPrice)}
+                    </div>
+                    <div className='text-[10px] text-gray-400 mt-0.5 dark:text-gray-600'>
+                      {latestMarketDate ? `截至 ${latestMarketDate}` : '-'}
+                    </div>
+                  </>
+                )}
               </div>
-              <div className='rounded-md border border-[#d8cfbd] bg-[#fffaf1] p-4'>
-                <div className='text-xs font-bold uppercase tracking-[0.12em] text-[#8a4b20]'>
-                  TTM PE
-                </div>
-                <div className='mt-2 text-2xl font-black tabular-nums'>
-                  {formatNumber(latest?.ttmPe)}
-                </div>
+              <div className='rounded-xl bg-white p-4 shadow-sm dark:bg-[#111520]'>
+                <div className='text-[11px] text-gray-400 dark:text-gray-600 mb-1'>TTM PE</div>
+                {dataLoading ? (
+                  <Skeleton className='mt-2 h-7 w-16' />
+                ) : (
+                  <div className='text-lg font-bold text-gray-900 dark:text-white tabular-nums'>
+                    {formatNumber(currentPe)}
+                  </div>
+                )}
               </div>
             </div>
 
-            <div className='rounded-md border border-[#d8cfbd] bg-[#fffaf1] p-4'>
+            <div className='rounded-xl bg-white p-4 shadow-sm dark:bg-[#111520]'>
               <div className='flex items-center justify-between gap-3'>
-                <div className='text-xs font-bold uppercase tracking-[0.12em] text-[#8a4b20]'>
-                  PE 历史百分位
-                </div>
-                <div
-                  className={`text-sm font-semibold ${
-                    pePercentile === null
-                      ? 'text-[#9ca3af]'
-                      : pePercentile <= 30
-                        ? 'text-[#16a34a]'
-                        : pePercentile >= 70
-                          ? 'text-[#dc2626]'
-                          : 'text-[#8a4b20]'
-                  }`}
-                >
-                  {pePercentile === null
-                    ? '-'
-                    : pePercentile <= 30
-                      ? '低估'
-                      : pePercentile >= 70
-                        ? '高估'
-                        : '合理'}
-                </div>
-              </div>
-              <div className='mt-2'>
-                <div className='flex items-baseline gap-1'>
-                  <span className='text-3xl font-black tabular-nums text-[#211d18]'>
-                    {pePercentile === null ? '-' : `${pePercentile}%`}
-                  </span>
-                  <span className='text-sm text-[#706758]'>
-                    {pePercentile !== null && `(${data?.points.filter((p) => p.ttmPe !== null).length || 0} 个季度)`}
-                  </span>
-                </div>
-                <div className='mt-2 h-2 w-full rounded-full bg-[#e7dfcf] overflow-hidden'>
+                <span className='text-xs font-medium text-gray-500 dark:text-gray-400'>PE 历史百分位</span>
+                {dataLoading ? (
+                  <Skeleton className='h-5 w-10' />
+                ) : (
                   <div
-                    className={`h-full rounded-full transition-all duration-500 ${
-                      pePercentile === null
-                        ? 'bg-[#9ca3af]'
-                        : pePercentile <= 30
-                          ? 'bg-[#16a34a]'
-                          : pePercentile >= 70
-                            ? 'bg-[#dc2626]'
-                            : 'bg-[#8a4b20]'
+                    className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                      pePercentileAll === null
+                        ? 'bg-gray-100 text-gray-400 dark:bg-[#1e2435] dark:text-gray-600'
+                        : pePercentileAll <= 30
+                          ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400'
+                          : pePercentileAll >= 70
+                            ? 'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400'
+                            : 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400'
                     }`}
-                    style={{
-                      width: pePercentile === null ? '0%' : `${pePercentile}%`,
-                    }}
-                  />
-                </div>
-                <div className='mt-1 flex justify-between text-xs text-[#9ca3af]'>
-                  <span>0%</span>
-                  <span>50%</span>
-                  <span>100%</span>
-                </div>
+                  >
+                    {pePercentileAll === null
+                      ? '-'
+                      : pePercentileAll <= 30
+                        ? '低估'
+                        : pePercentileAll >= 70
+                          ? '高估'
+                          : '合理'}
+                  </div>
+                )}
               </div>
+              {dataLoading ? (
+                <div className='mt-3'>
+                  <div className='flex items-baseline gap-1'>
+                    <Skeleton className='h-8 w-16' />
+                    <Skeleton className='h-3 w-14' />
+                  </div>
+                  <Skeleton className='mt-2 h-1.5 w-full rounded-full' />
+                </div>
+              ) : (
+                <div className='mt-3'>
+                  <div className='flex items-baseline gap-2'>
+                    <span className='text-2xl font-bold text-gray-900 dark:text-white tabular-nums'>
+                      {pePercentileAll === null ? '-' : `${pePercentileAll}%`}
+                    </span>
+                    <span className='text-[11px] text-gray-400 dark:text-gray-600'>
+                      {pePercentileAll !== null && `${data?.points.filter((p) => p.ttmPe !== null).length || 0} 个季度`}
+                    </span>
+                  </div>
+                  <div className='mt-3 w-full h-1.5 bg-gray-100 rounded-full relative overflow-hidden dark:bg-[#1e2435]'>
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        pePercentileAll === null
+                          ? 'bg-gray-300 dark:bg-gray-700'
+                          : pePercentileAll <= 30
+                            ? 'bg-emerald-500'
+                            : pePercentileAll >= 70
+                              ? 'bg-rose-500'
+                              : 'bg-amber-500'
+                      }`}
+                      style={{
+                        width: pePercentileAll === null ? '0%' : `${pePercentileAll}%`,
+                      }}
+                    />
+                  </div>
+                  <div className='flex justify-between text-[10px] text-gray-300 mt-1.5 dark:text-gray-700'>
+                    <span>0%</span>
+                    <span>50%</span>
+                    <span>100%</span>
+                  </div>
+
+                  {pePercentile3Y !== null && (
+                    <div className='mt-3 pt-3 border-t border-gray-50 dark:border-white/[0.04]'>
+                      <div className='flex items-center justify-between text-[11px]'>
+                        <span className='text-gray-400 dark:text-gray-600'>最近 3 年</span>
+                        <span className={`font-semibold tabular-nums ${
+                          pePercentile3Y <= 30
+                            ? 'text-emerald-600 dark:text-emerald-400'
+                            : pePercentile3Y >= 70
+                              ? 'text-rose-600 dark:text-rose-400'
+                              : 'text-amber-600 dark:text-amber-400'
+                        }`}>
+                          {pePercentile3Y}%
+                        </span>
+                      </div>
+                      <div className='mt-1.5 w-full h-1 bg-gray-100 rounded-full overflow-hidden dark:bg-[#1e2435]'>
+                        <div
+                          className={`h-full rounded-full ${
+                            pePercentile3Y <= 30
+                              ? 'bg-emerald-500'
+                              : pePercentile3Y >= 70
+                                ? 'bg-rose-500'
+                                : 'bg-amber-500'
+                          }`}
+                          style={{ width: `${pePercentile3Y}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {pePercentile5Y !== null && (
+                    <div className='mt-3 pt-3 border-t border-gray-50 dark:border-white/[0.04]'>
+                      <div className='flex items-center justify-between text-[11px]'>
+                        <span className='text-gray-400 dark:text-gray-600'>最近 5 年</span>
+                        <span className={`font-semibold tabular-nums ${
+                          pePercentile5Y <= 30
+                            ? 'text-emerald-600 dark:text-emerald-400'
+                            : pePercentile5Y >= 70
+                              ? 'text-rose-600 dark:text-rose-400'
+                              : 'text-amber-600 dark:text-amber-400'
+                        }`}>
+                          {pePercentile5Y}%
+                        </span>
+                      </div>
+                      <div className='mt-1.5 w-full h-1 bg-gray-100 rounded-full overflow-hidden dark:bg-[#1e2435]'>
+                        <div
+                          className={`h-full rounded-full ${
+                            pePercentile5Y <= 30
+                              ? 'bg-emerald-500'
+                              : pePercentile5Y >= 70
+                                ? 'bg-rose-500'
+                                : 'bg-amber-500'
+                          }`}
+                          style={{ width: `${pePercentile5Y}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
-            <div className='rounded-md border border-[#d8cfbd] bg-[#fffaf1] p-4'>
+            <div className='rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 p-4 dark:from-blue-500/[0.06] dark:to-indigo-500/[0.04]'>
               <div className='flex items-center justify-between gap-3'>
-                <div className='text-xs font-bold uppercase tracking-[0.12em] text-[#8a4b20]'>
-                  利润质量
-                </div>
-                <div className={`text-sm font-black ${qualityColor(currentValuation?.profitQuality)}`}>
-                  {currentValuation?.profitQuality || '待确认'}
-                </div>
+                <span className='text-xs font-medium text-gray-600 dark:text-gray-400'>利润质量</span>
+                {dataLoading ? (
+                  <Skeleton className='h-5 w-12' />
+                ) : (
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                    currentValuation?.profitQuality === '正常'
+                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400'
+                      : currentValuation?.profitQuality === '需调整'
+                        ? 'bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400'
+                        : 'bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400'
+                  }`}>
+                    {currentValuation?.profitQuality || '待确认'}
+                  </span>
+                )}
               </div>
 
-              <div className='mt-3 rounded bg-[#f0ebe0] px-3 py-3'>
-                <div className='text-sm font-bold text-[#211d18]'>
-                  {currentValuation?.primaryExplanation?.title || '暂无利润/股价解释'}
+              {dataLoading ? (
+                <div className='mt-3 rounded-lg bg-white/60 px-3 py-3 dark:bg-[#111520]'>
+                  <Skeleton className='h-4 w-2/3' />
+                  <Skeleton className='mt-2 h-4 w-full' />
+                  <Skeleton className='mt-1 h-4 w-4/5' />
                 </div>
-                <p className='mt-2 text-sm leading-6 text-[#5d5548]'>
-                  {currentValuation?.primaryExplanation?.body ||
-                    'AI 探索任务写入解释后，会在这里说明当前股价或利润是否由非经常性因素驱动。'}
-                </p>
-              </div>
+              ) : (
+                <div className='mt-3'>
+                  <div className='text-[13px] font-semibold text-gray-800 mb-1.5 dark:text-gray-200'>
+                    {currentValuation?.primaryExplanation?.title || '暂无预测/股价解释'}
+                  </div>
+                  <p className='text-[11px] text-gray-500 leading-relaxed dark:text-gray-500'>
+                    {currentValuation?.primaryExplanation?.body ||
+                      'AI 搜索任务导入解释后，会在这里说明当前股价估值判断是否由非经常性损益驱动。'}
+                  </p>
+                </div>
+              )}
 
-              {currentValuation?.explanations.length ? (
+              {!dataLoading && currentValuation?.explanations.length ? (
                 <div className='mt-3 space-y-2'>
                   {currentValuation.explanations.slice(0, 3).map((explanation) => (
                     <div
                       key={`${explanation.explanationType}-${explanation.title}`}
-                      className='border-t border-[#e7dfcf] pt-2 text-sm'
+                      className='border-t border-blue-100/60 pt-2 dark:border-white/[0.04]'
                     >
                       <div className='flex items-center justify-between gap-2'>
-                        <span className='font-bold text-[#3a332b]'>
+                        <span className='text-xs font-medium text-gray-600 dark:text-gray-400'>
                           {explanation.explanationType === 'profit'
                             ? '利润'
                             : explanation.explanationType === 'price'
                               ? '股价'
                               : '估值'}
                         </span>
-                        <span className='text-xs text-[#706758]'>
+                        <span className='text-[10px] text-gray-400 dark:text-gray-600'>
                           置信度 {explanation.confidence ?? '-'}
                         </span>
                       </div>
-                      <p className='mt-1 line-clamp-2 leading-6 text-[#5d5548]'>
+                      <p className='mt-1 line-clamp-2 leading-5 text-[11px] text-gray-500 dark:text-gray-500'>
                         {explanation.body}
                       </p>
                     </div>
@@ -803,20 +1062,18 @@ export default function ProfitLinePage() {
               ) : null}
             </div>
 
-            <div className='rounded-md border border-[#d8cfbd] bg-[#fffaf1] p-4'>
-              <div className='text-xs font-bold uppercase tracking-[0.12em] text-[#8a4b20]'>
-                历史平均 PE
-              </div>
+            <div className='rounded-xl bg-white p-4 shadow-sm dark:bg-[#111520]'>
+              <span className='text-xs font-medium text-gray-500 dark:text-gray-400'>历史平均 PE</span>
 
-              <div className='mt-3 flex gap-1 rounded-md bg-[#e7dfcf] p-1'>
+              <div className='mt-3 flex gap-1 rounded-lg bg-gray-100 p-0.5 dark:bg-[#141824]'>
                 {([1, 3, 5, 'all'] as PeriodType[]).map((p) => (
                   <button
                     key={p}
                     onClick={() => setSelectedPeriod(p)}
-                    className={`flex-1 rounded px-2 py-1 text-xs font-semibold transition ${
+                    className={`flex-1 rounded-md px-2 py-1.5 text-[11px] font-semibold transition-all bg-transparent border-0 cursor-pointer ${
                       selectedPeriod === p
-                        ? 'bg-[#fffaf1] text-[#211d18] shadow-sm'
-                        : 'text-[#706758] hover:text-[#211d18]'
+                        ? 'bg-white text-gray-900 shadow-sm dark:bg-[#1e2435] dark:text-white'
+                        : 'text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300'
                     }`}
                   >
                     {p === 'all' ? '全部' : `${p}年`}
@@ -824,62 +1081,101 @@ export default function ProfitLinePage() {
                 ))}
               </div>
 
-              <div className='mt-4'>
-                <div className='flex items-baseline gap-2'>
-                  <span className='text-3xl font-black tabular-nums text-[#211d18]'>
-                    {periodStats?.avgPe === null ? '-' : formatNumber(periodStats?.avgPe)}
-                  </span>
-                  <span className='text-sm text-[#706758]'>
-                    {periodStats && periodStats.count > 0 && `(${periodStats.count} 个季度)`}
-                  </span>
-                </div>
-
-                <div className='mt-3 grid grid-cols-2 gap-3 text-sm'>
-                  <div className='rounded bg-[#f0ebe0] px-3 py-2'>
-                    <div className='text-xs text-[#9ca3af]'>最低</div>
-                    <div className='mt-1 font-bold text-[#16a34a]'>
-                      {periodStats?.minPe === null ? '-' : formatNumber(periodStats?.minPe)}
-                    </div>
+              {dataLoading ? (
+                <div className='mt-4'>
+                  <div className='flex items-baseline gap-2'>
+                    <Skeleton className='h-8 w-16' />
+                    <Skeleton className='h-3 w-14' />
                   </div>
-                  <div className='rounded bg-[#f0ebe0] px-3 py-2'>
-                    <div className='text-xs text-[#9ca3af]'>最高</div>
-                    <div className='mt-1 font-bold text-[#dc2626]'>
-                      {periodStats?.maxPe === null ? '-' : formatNumber(periodStats?.maxPe)}
+                  <div className='mt-3 grid grid-cols-2 gap-2'>
+                    <div className='rounded-lg bg-gray-50 px-3 py-2 dark:bg-[#0e1220]'>
+                      <Skeleton className='h-3 w-8' />
+                      <Skeleton className='mt-1 h-4 w-12' />
+                    </div>
+                    <div className='rounded-lg bg-gray-50 px-3 py-2 dark:bg-[#0e1220]'>
+                      <Skeleton className='h-3 w-8' />
+                      <Skeleton className='mt-1 h-4 w-12' />
                     </div>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div className='mt-4'>
+                  <div className='flex items-baseline gap-2'>
+                    <span className='text-2xl font-bold text-gray-900 dark:text-white tabular-nums'>
+                      {periodStats?.avgPe === null ? '-' : formatNumber(periodStats?.avgPe)}
+                    </span>
+                    <span className='text-[11px] text-gray-400 dark:text-gray-600'>
+                      {periodStats && periodStats.count > 0 && `${periodStats.count} 个季度`}
+                    </span>
+                  </div>
 
-              <div className='mt-4 border-t border-[#e7dfcf] pt-3'>
-                <div className='text-xs text-[#9ca3af] mb-2'>各时段对比</div>
-                <div className='space-y-1.5'>
-                  {allPeriodStats.map((stats) => (
-                    <div key={stats.period} className='flex items-center justify-between text-sm'>
-                      <span className='text-[#706758]'>{stats.label}</span>
-                      <span className={`font-semibold tabular-nums ${
-                        stats.avgPe === null
-                          ? 'text-[#9ca3af]'
-                          : stats.avgPe < (periodStats?.avgPe || 0)
-                            ? 'text-[#16a34a]'
-                            : stats.avgPe > (periodStats?.avgPe || 0)
-                              ? 'text-[#dc2626]'
-                              : 'text-[#211d18]'
-                      }`}>
-                        {stats.avgPe === null ? '-' : formatNumber(stats.avgPe)}
-                      </span>
+                  <div className='mt-3 grid grid-cols-2 gap-2 text-sm'>
+                    <div className='rounded-lg bg-gray-50 px-3 py-2 dark:bg-[#0e1220]'>
+                      <div className='text-[11px] text-gray-400 dark:text-gray-600'>最低</div>
+                      <div className='mt-0.5 font-bold text-emerald-600 dark:text-emerald-400 tabular-nums'>
+                        {periodStats?.minPe === null ? '-' : formatNumber(periodStats?.minPe)}
+                      </div>
                     </div>
-                  ))}
+                    <div className='rounded-lg bg-gray-50 px-3 py-2 dark:bg-[#0e1220]'>
+                      <div className='text-[11px] text-gray-400 dark:text-gray-600'>最高</div>
+                      <div className='mt-0.5 font-bold text-rose-600 dark:text-rose-400 tabular-nums'>
+                        {periodStats?.maxPe === null ? '-' : formatNumber(periodStats?.maxPe)}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {dataLoading ? (
+                <div className='mt-4 border-t border-gray-50 pt-3 dark:border-white/[0.04]'>
+                  <Skeleton className='mb-2 h-3 w-16' />
+                  <div className='space-y-1.5'>
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <div key={i} className='flex items-center justify-between'>
+                        <Skeleton className='h-4 w-14' />
+                        <Skeleton className='h-4 w-10' />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className='mt-4 border-t border-gray-50 pt-3 dark:border-white/[0.04]'>
+                  <div className='text-[11px] text-gray-400 mb-2 dark:text-gray-600'>各时段对比</div>
+                  <div className='space-y-1.5'>
+                    {allPeriodStats.map((stats) => (
+                      <div key={stats.period} className='flex items-center justify-between text-[13px]'>
+                        <span className='text-gray-500 dark:text-gray-500'>{stats.label}</span>
+                        <span className={`font-semibold tabular-nums ${
+                          stats.avgPe === null
+                            ? 'text-gray-300 dark:text-gray-700'
+                            : stats.avgPe < (periodStats?.avgPe || 0)
+                              ? 'text-emerald-600 dark:text-emerald-400'
+                              : stats.avgPe > (periodStats?.avgPe || 0)
+                                ? 'text-rose-600 dark:text-rose-400'
+                                : 'text-gray-900 dark:text-white'
+                        }`}>
+                          {stats.avgPe === null ? '-' : formatNumber(stats.avgPe)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
-            <div className='rounded-md border border-[#d8cfbd] bg-[#fffaf1] p-4 text-sm leading-6 text-[#5d5548]'>
+            <div className='rounded-xl bg-white p-4 text-[11px] leading-5 text-gray-400 shadow-sm dark:bg-[#0e1220] dark:text-gray-600'>
               <p>
                 数据源：{data?.sources.eps || 'SEC companyfacts'} /{' '}
-                {data?.sources.price || 'Yahoo Finance chart'}。
+                {data?.sources.price || 'Yahoo Finance chart'}
               </p>
-              <p className='mt-2'>
-                红色高亮点表示当季股价低于当前利润线倍数对应价格。
+              {data?.epsCurrency && data?.fxRate && (
+                <p className='mt-0.5'>
+                  EPS 币种转换：{data.epsCurrency} → {data.currency}（汇率{' '}
+                  {data.fxRate.toFixed(4)}）
+                </p>
+              )}
+              <p className='mt-0.5'>
+                红色高亮点表示当季股价低于当前利润线倍数对应价格
               </p>
             </div>
           </aside>

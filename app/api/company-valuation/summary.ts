@@ -19,6 +19,7 @@ export type CompanyValuationCardInput = {
     currency?: string | null
   }
   entry?: {
+    id: string
     entryType: string
     title?: string | null
     note?: string | null
@@ -127,7 +128,7 @@ export function buildCompanyValuationCard(
   const latestValuation = input.latestValuation
 
   return {
-    id: input.company.id,
+    id: input.entry?.id || input.company.id,
     symbol: input.company.symbol,
     market: input.company.market,
     title: input.entry?.title || input.company.name,

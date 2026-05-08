@@ -1,6 +1,7 @@
 import * as assert from 'node:assert/strict'
 import {
   buildQuarterPoints,
+  latestDailyPrice,
   normalizeMarketSymbol,
   pickEastmoneyEpsRows,
 } from '../app/api/profit-line/market-data'
@@ -64,3 +65,12 @@ assert.equal(points[2].ttmEps, null)
 assert.equal(points[3].ttmEps, 10)
 assert.equal(points[4].ttmEps, 14)
 assert.equal(points[4].ttmPe, 3.57)
+
+assert.deepEqual(
+  latestDailyPrice([
+    { date: '2025-03-31', close: 50 },
+    { date: '2026-05-06', close: 61.234 },
+    { date: '2026-05-02', close: 59 },
+  ]),
+  { date: '2026-05-06', price: 61.23 },
+)
