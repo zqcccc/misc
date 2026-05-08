@@ -39,6 +39,7 @@ const card = buildCompanyValuationCard({
     currency: 'HKD',
   },
   entry: {
+    id: 'entry_1',
     entryType: 'discovered',
     title: null,
     note: 'AI 近期发现',

@@ -94,12 +94,12 @@ export function StatsPanel({
             </div>
           ) : (
             <div className='mt-3'>
-              <div className='text-[13px] font-semibold text-gray-800 mb-1 dark:text-gray-200'>
-                {currentValuation?.primaryExplanation?.title || '暂无预测/股价解释'}
-              </div>
-              <p className='text-[11px] text-gray-500 leading-relaxed dark:text-gray-500 line-clamp-2'>
-                {currentValuation?.primaryExplanation?.body ||
-                  'AI 搜索任务导入解释后，会在这里说明当前股价估值判断是否由非经常性损益驱动。'}
+              <p className='text-[11px] text-gray-500 leading-relaxed dark:text-gray-500'>
+                {currentValuation?.profitQuality === '正常'
+                  ? '当前利润主要由经常性业务驱动，估值判断可靠性较高。'
+                  : currentValuation?.profitQuality === '需调整'
+                    ? '利润包含非经常性损益，估值判断需要结合调整后的利润来看。'
+                    : '暂无利润质量分析数据，建议结合财报自行判断利润可持续性。'}
               </p>
             </div>
           )}

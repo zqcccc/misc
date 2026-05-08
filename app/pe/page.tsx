@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { PeriodType } from './types'
 import {
   useProfitLineData,
@@ -17,6 +17,7 @@ import {
   ChartPanel,
   StatsPanel,
   ControlPanel,
+  ExplanationsPanel,
 } from './components'
 
 export default function ProfitLinePage() {
@@ -28,8 +29,24 @@ export default function ProfitLinePage() {
   const [filterQuality, setFilterQuality] = useState<'全部' | '正常' | '需调整' | '待确认'>('全部')
 
   const { submittedSymbol, data, state, error, fetchData } = useProfitLineData(symbolInput)
-  const currentValuation = useValuationDetail(submittedSymbol, state)
-  const { valuationEntries, entriesLoading, fetchEntries } = useValuationEntries()
+  const { valuationEntries, entriesLoading, entriesLoadingMore, totalCount, hasMore, fetchEntries, loadMore } = useValuationEntries()
+
+  const selectedEntry = useMemo(() => {
+    return (
+      valuationEntries.find((e) => {
+        if (e.symbol === symbolInput) return true
+        const entryBase = e.symbol.replace(/\.(SH|SZ|HK)$/i, '')
+        const inputBase = symbolInput.replace(/\.(SH|SZ|HK)$/i, '')
+        return entryBase === inputBase
+      }) || null
+    )
+  }, [valuationEntries, symbolInput])
+
+  const { currentValuation, setCurrentValuation } = useValuationDetail(
+    submittedSymbol,
+    state,
+    selectedEntry,
+  )
   const { chartNode, chartRef, chartReady } = useChart()
 
   const {
@@ -64,9 +81,13 @@ export default function ProfitLinePage() {
   const handleSelectCompany = useCallback(
     (symbol: string) => {
       setSymbolInput(symbol)
+      const entry = valuationEntries.find((e) => e.symbol === symbol)
+      if (entry) {
+        setCurrentValuation(entry)
+      }
       fetchData(symbol)
     },
-    [fetchData],
+    [fetchData, valuationEntries, setCurrentValuation],
   )
 
   useEffect(() => {
@@ -90,13 +111,16 @@ export default function ProfitLinePage() {
           <CompanySidebar
             entries={filteredEntries}
             entriesLoading={entriesLoading}
-            totalCount={valuationEntries.length}
+            entriesLoadingMore={entriesLoadingMore}
+            totalCount={totalCount}
             currentSymbol={data?.symbol}
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
             filterQuality={filterQuality}
             setFilterQuality={setFilterQuality}
             onSelect={handleSelectCompany}
+            onLoadMore={loadMore}
+            hasMore={hasMore}
           />
 
           <div className='flex flex-col gap-5'>
@@ -118,6 +142,11 @@ export default function ProfitLinePage() {
               selectedPeriod={selectedPeriod}
               setSelectedPeriod={setSelectedPeriod}
               periodStats={periodStats}
+            />
+
+            <ExplanationsPanel
+              currentValuation={currentValuation}
+              dataLoading={dataLoading}
             />
           </div>
 

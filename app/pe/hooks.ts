@@ -54,8 +54,16 @@ export function useProfitLineData(symbolInput: string) {
   return { submittedSymbol, data, state, error, fetchData }
 }
 
-export function useValuationDetail(symbol: string, state: LoadState) {
-  const [currentValuation, setCurrentValuation] = useState<CompanyValuationCard | null>(null)
+export function useValuationDetail(
+  symbol: string,
+  state: LoadState,
+  initialValuation?: CompanyValuationCard | null,
+) {
+  const [currentValuation, setCurrentValuation] = useState<CompanyValuationCard | null>(
+    initialValuation ?? null,
+  )
+
+  const lastLoadedSymbolRef = useRef<string>('')
 
   useEffect(() => {
     if (state !== 'loading') return
@@ -69,19 +77,67 @@ export function useValuationDetail(symbol: string, state: LoadState) {
         return (await response.json()) as CompanyValuationDetailPayload
       })
       .then((payload) => {
-        setCurrentValuation(payload?.current || null)
+        if (payload?.current) {
+          setCurrentValuation(payload.current)
+          lastLoadedSymbolRef.current = cleanSymbol
+        }
       })
       .catch(() => {
-        setCurrentValuation(null)
+        // 静默失败，保留已有数据
       })
   }, [symbol, state])
 
-  return currentValuation
+  return { currentValuation, setCurrentValuation }
 }
 
 export function useValuationEntries() {
   const [valuationEntries, setValuationEntries] = useState<CompanyValuationCard[]>([])
   const [entriesLoading, setEntriesLoading] = useState(true)
+  const [entriesLoadingMore, setEntriesLoadingMore] = useState(false)
+  const [totalCount, setTotalCount] = useState(0)
+  const [hasMore, setHasMore] = useState(true)
+  const [currentPage, setCurrentPage] = useState(1)
+  const loadingRef = useRef(false)
+
+  const loadPage = useCallback(async (page: number, append = false) => {
+    if (loadingRef.current) return
+    loadingRef.current = true
+
+    if (page === 1) {
+      setEntriesLoading(true)
+    } else {
+      setEntriesLoadingMore(true)
+    }
+
+    try {
+      const response = await fetch(`/api/company-valuation?page=${page}`, {
+        cache: 'no-store',
+      })
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`)
+      }
+      const payload = (await response.json()) as CompanyValuationListPayload
+
+      setValuationEntries((prev) => {
+        if (!append) return payload.entries || []
+        const existingIds = new Set(prev.map((e) => e.id))
+        const newEntries = (payload.entries || []).filter((e) => !existingIds.has(e.id))
+        return [...prev, ...newEntries]
+      })
+      setTotalCount(payload.total || 0)
+      setHasMore(payload.hasMore || false)
+      setCurrentPage(payload.page || page)
+    } catch {
+      // 列表加载失败不阻塞主流程
+    } finally {
+      loadingRef.current = false
+      if (page === 1) {
+        setEntriesLoading(false)
+      } else {
+        setEntriesLoadingMore(false)
+      }
+    }
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -89,13 +145,16 @@ export function useValuationEntries() {
     async function load() {
       setEntriesLoading(true)
       try {
-        const response = await fetch('/api/company-valuation', {
+        const response = await fetch('/api/company-valuation?page=1', {
           cache: 'no-store',
         })
         if (!response.ok) return
         const payload = (await response.json()) as CompanyValuationListPayload
         if (!cancelled) {
           setValuationEntries(payload.entries || [])
+          setTotalCount(payload.total || 0)
+          setHasMore(payload.hasMore || false)
+          setCurrentPage(payload.page || 1)
         }
       } catch {
         // 列表加载失败不阻塞主流程
@@ -113,22 +172,15 @@ export function useValuationEntries() {
   }, [])
 
   const fetchEntries = useCallback(async () => {
-    setEntriesLoading(true)
-    try {
-      const response = await fetch('/api/company-valuation', {
-        cache: 'no-store',
-      })
-      if (!response.ok) return
-      const payload = (await response.json()) as CompanyValuationListPayload
-      setValuationEntries(payload.entries || [])
-    } catch {
-      // 列表加载失败不阻塞主流程
-    } finally {
-      setEntriesLoading(false)
-    }
-  }, [])
+    await loadPage(1, false)
+  }, [loadPage])
 
-  return { valuationEntries, entriesLoading, fetchEntries }
+  const loadMore = useCallback(async () => {
+    if (entriesLoadingMore || !hasMore) return
+    await loadPage(currentPage + 1, true)
+  }, [loadPage, currentPage, entriesLoadingMore, hasMore])
+
+  return { valuationEntries, entriesLoading, entriesLoadingMore, totalCount, hasMore, fetchEntries, loadMore }
 }
 
 export function useChart() {

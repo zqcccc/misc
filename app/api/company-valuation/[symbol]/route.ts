@@ -25,6 +25,24 @@ function canonicalCompanySymbol(input: string) {
   }
 }
 
+function canonicalCompanySymbolVariants(input: string) {
+  const normalized = normalizeMarketSymbol(input)
+  if (normalized.market === 'hk') {
+    const hkSymbol = `${normalized.symbol}.HK`
+    return [
+      { market: normalized.market, symbol: hkSymbol },
+      { market: normalized.market, symbol: normalized.symbol },
+    ]
+  }
+  if (normalized.market === 'cn') {
+    return [
+      { market: normalized.market, symbol: normalized.eastmoneyCode },
+      { market: normalized.market, symbol: normalized.symbol },
+    ]
+  }
+  return [{ market: normalized.market, symbol: normalized.symbol }]
+}
+
 const companyInclude = {
   valuations: {
     orderBy: [{ asOfDate: 'desc' as const }, { createdAt: 'desc' as const }],
@@ -55,15 +73,19 @@ export async function GET(
     )
   }
 
-  const currentSymbol = canonicalCompanySymbol(cleanSymbol)
+  const symbolVariants = canonicalCompanySymbolVariants(cleanSymbol)
 
   try {
-    const company = await prisma.company.findUnique({
-      where: {
-        market_symbol: currentSymbol,
-      },
-      include: companyInclude,
-    })
+    let company = null
+    for (const variant of symbolVariants) {
+      company = await prisma.company.findUnique({
+        where: {
+          market_symbol: variant,
+        },
+        include: companyInclude,
+      })
+      if (company) break
+    }
 
     if (!company) {
       return NextResponse.json(
