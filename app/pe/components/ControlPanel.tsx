@@ -32,7 +32,7 @@ export function ControlPanel({
       <div className='rounded-xl bg-white p-4 shadow-sm dark:bg-[#111520]'>
         <div className='flex items-center justify-between gap-3'>
           <label
-            className='text-xs font-medium text-gray-500 dark:text-gray-400'
+            className='text-xs font-medium text-gray-600 dark:text-gray-300'
             htmlFor='profitMultiple'
           >
             利润线倍数
@@ -56,7 +56,7 @@ export function ControlPanel({
       <div className='rounded-xl bg-white p-4 shadow-sm dark:bg-[#111520]'>
         <div className='flex items-center justify-between gap-3'>
           <label
-            className='text-xs font-medium text-gray-500 dark:text-gray-400'
+            className='text-xs font-medium text-gray-600 dark:text-gray-300'
             htmlFor='referenceMultiple'
           >
             参考线倍数
@@ -81,7 +81,7 @@ export function ControlPanel({
 
       <div className='grid grid-cols-2 gap-3'>
         <div className='rounded-xl bg-white p-4 shadow-sm dark:bg-[#111520]'>
-          <div className='text-[11px] text-gray-400 dark:text-gray-600 mb-1'>最新价</div>
+          <div className='text-[11px] text-gray-500 dark:text-gray-500 mb-1'>最新价</div>
           {dataLoading ? (
             <Skeleton className='mt-2 h-7 w-20' />
           ) : (
@@ -91,14 +91,14 @@ export function ControlPanel({
                   ? '-'
                   : currencyFormatter.format(latestMarketPrice)}
               </div>
-              <div className='text-[10px] text-gray-400 mt-0.5 dark:text-gray-600'>
+              <div className='text-[10px] text-gray-500 mt-0.5 dark:text-gray-500'>
                 {latestMarketDate ? `截至 ${latestMarketDate}` : '-'}
               </div>
             </>
           )}
         </div>
         <div className='rounded-xl bg-white p-4 shadow-sm dark:bg-[#111520]'>
-          <div className='text-[11px] text-gray-400 dark:text-gray-600 mb-1'>TTM PE</div>
+          <div className='text-[11px] text-gray-500 dark:text-gray-500 mb-1'>TTM PE</div>
           {dataLoading ? (
             <Skeleton className='mt-2 h-7 w-16' />
           ) : (
@@ -109,7 +109,7 @@ export function ControlPanel({
         </div>
       </div>
 
-      <div className='rounded-xl bg-white p-4 text-[11px] leading-5 text-gray-400 shadow-sm dark:bg-[#0e1220] dark:text-gray-600'>
+      <div className='rounded-xl bg-white p-4 text-[11px] leading-5 text-gray-500 shadow-sm dark:bg-[#0e1220] dark:text-gray-500'>
         <p>
           数据源：{data?.sources.eps || 'SEC companyfacts'} /{' '}
           {data?.sources.price || 'Yahoo Finance chart'}

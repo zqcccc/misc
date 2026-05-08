@@ -11,6 +11,7 @@ import {
 } from './types'
 import { getPreparedPoints, calculatePePercentile, calculatePeriodStats } from './calculations'
 import { buildChartSource } from './chart-data'
+import { mergeCompanyValuationDetail } from './valuation-merge'
 
 export function useProfitLineData(symbolInput: string) {
   const [submittedSymbol, setSubmittedSymbol] = useState('00700.HK')
@@ -63,13 +64,13 @@ export function useValuationDetail(
     initialValuation ?? null,
   )
 
-  const lastLoadedSymbolRef = useRef<string>('')
-
   useEffect(() => {
     if (state !== 'loading') return
 
     const cleanSymbol = symbol.trim().toUpperCase()
     if (!cleanSymbol) return
+
+    let cancelled = false
 
     fetch(`/api/company-valuation/${encodeURIComponent(cleanSymbol)}`, { cache: 'no-store' })
       .then(async (response) => {
@@ -77,21 +78,20 @@ export function useValuationDetail(
         return (await response.json()) as CompanyValuationDetailPayload
       })
       .then((payload) => {
+        if (cancelled) return
         if (payload?.current) {
           setCurrentValuation((prev) => {
-            if (!prev) return payload.current
-            return {
-              ...payload.current,
-              entryType: prev.entryType,
-              entryNote: prev.entryNote,
-            }
+            return mergeCompanyValuationDetail(prev, payload.current)
           })
-          lastLoadedSymbolRef.current = cleanSymbol
         }
       })
       .catch(() => {
         // 静默失败，保留已有数据
       })
+
+    return () => {
+      cancelled = true
+    }
   }, [symbol, state])
 
   return { currentValuation, setCurrentValuation }
@@ -253,6 +253,19 @@ export function useChartOptions(
     const visible = source.filter(
       (point) => point.price !== null && point.ttmEps !== null,
     )
+    const balanceCurrency = data?.balanceCurrency || data?.currency || 'USD'
+    const toHundredMillion = (value: number | null | undefined) => {
+      return value == null || Number.isNaN(value)
+        ? null
+        : Number((value / 100_000_000).toFixed(2))
+    }
+    const formatBalanceValue = (value: number | null | undefined) => {
+      if (value == null || Number.isNaN(value)) return '-'
+      return `${new Intl.NumberFormat('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(value / 100_000_000)} 亿 ${balanceCurrency}`
+    }
 
     const axisLabelColor = isDark ? '#64748b' : '#94a3b8'
     const splitLineColor = isDark ? 'rgba(255,255,255,0.04)' : '#f1f5f9'
@@ -269,12 +282,12 @@ export function useChartOptions(
       {
         animationDuration: 360,
         color: isDark
-          ? ['#60a5fa', '#f87171', '#4ade80', '#fbbf24', '#f87171']
-          : ['#3b82f6', '#ef4444', '#22c55e', '#f59e0b', '#ef4444'],
+          ? ['#60a5fa', '#f87171', '#4ade80', '#2dd4bf', '#fb923c', '#a78bfa', '#fbbf24', '#f87171']
+          : ['#3b82f6', '#ef4444', '#22c55e', '#14b8a6', '#f97316', '#8b5cf6', '#f59e0b', '#ef4444'],
         backgroundColor: 'transparent',
         grid: {
-          top: 42,
-          right: 44,
+          top: 86,
+          right: 72,
           bottom: 58,
           left: 54,
           containLabel: true,
@@ -311,6 +324,9 @@ export function useChartOptions(
               `TTM EPS：${item.ttmEps === null || item.ttmEps === undefined || Number.isNaN(item.ttmEps) ? '-' : item.ttmEps.toFixed(2)}`,
               item.epsSourceQuarter ? `TTM EPS 来源：${item.epsSourceQuarter}` : null,
               `TTM PE：${item.ttmPe === null || item.ttmPe === undefined || Number.isNaN(item.ttmPe) ? '-' : item.ttmPe.toFixed(2)}${item.isLatestPrice ? '（按最新价重算）' : ''}`,
+              `股东权益：${formatBalanceValue(item.shareholderEquity)}`,
+              `负债：${formatBalanceValue(item.liabilities)}`,
+              `现金：${formatBalanceValue(item.cash)}`,
               `PE 历史百分位（全部）：<span style="color:${getPercentileColor(pointPercentileAll)};font-weight:600">${getPercentileText(pointPercentileAll)}</span>`,
               ...(pointPercentile3Y !== null ? [`PE 历史百分位（3年）：<span style="color:${getPercentileColor(pointPercentile3Y)};font-weight:600">${getPercentileText(pointPercentile3Y)}</span>`] : []),
               ...(pointPercentile5Y !== null ? [`PE 历史百分位（5年）：<span style="color:${getPercentileColor(pointPercentile5Y)};font-weight:600">${getPercentileText(pointPercentile5Y)}</span>`] : []),
@@ -319,17 +335,27 @@ export function useChartOptions(
           },
         },
         legend: {
-          top: 6,
-          right: 12,
-          itemGap: 18,
+          type: 'scroll',
+          top: 2,
+          left: 8,
+          right: 8,
+          height: 30,
+          itemGap: 12,
+          itemWidth: 14,
+          itemHeight: 8,
           textStyle: {
+            color: legendColor,
+          },
+          pageIconColor: isDark ? '#64748b' : '#94a3b8',
+          pageIconInactiveColor: isDark ? '#334155' : '#cbd5e1',
+          pageTextStyle: {
             color: legendColor,
           },
         },
         xAxis: {
           type: 'category',
           data: source.map((point) => point.displayLabel),
-          boundaryGap: false,
+          boundaryGap: true,
           axisLine: {
             lineStyle: {
               color: axisLineColor,
@@ -340,21 +366,36 @@ export function useChartOptions(
             hideOverlap: true,
           },
         },
-        yAxis: {
-          type: 'value',
-          name: data?.currency || 'USD',
-          nameTextStyle: {
-            color: axisLabelColor,
-          },
-          axisLabel: {
-            color: axisLabelColor,
-          },
-          splitLine: {
-            lineStyle: {
-              color: splitLineColor,
+        yAxis: [
+          {
+            type: 'value',
+            name: data?.currency || 'USD',
+            nameTextStyle: {
+              color: axisLabelColor,
+            },
+            axisLabel: {
+              color: axisLabelColor,
+            },
+            splitLine: {
+              lineStyle: {
+                color: splitLineColor,
+              },
             },
           },
-        },
+          {
+            type: 'value',
+            name: `资产负债（亿 ${balanceCurrency}）`,
+            nameTextStyle: {
+              color: axisLabelColor,
+            },
+            axisLabel: {
+              color: axisLabelColor,
+            },
+            splitLine: {
+              show: false,
+            },
+          },
+        ],
         dataZoom: [
           {
             type: 'inside',
@@ -376,6 +417,7 @@ export function useChartOptions(
           {
             name: '股价',
             type: 'line',
+            yAxisIndex: 0,
             smooth: false,
             showSymbol: true,
             symbolSize: 6,
@@ -391,6 +433,7 @@ export function useChartOptions(
           {
             name: `${profitMultiple}x 利润线`,
             type: 'line',
+            yAxisIndex: 0,
             smooth: false,
             showSymbol: false,
             data: source.map((point) => point.profitLine),
@@ -403,6 +446,7 @@ export function useChartOptions(
           {
             name: `${referenceMultiple}x 参考线`,
             type: 'line',
+            yAxisIndex: 0,
             smooth: false,
             showSymbol: false,
             data: source.map((point) => point.referenceLine),
@@ -413,8 +457,58 @@ export function useChartOptions(
             },
           },
           {
+            name: '股东权益',
+            type: 'bar',
+            yAxisIndex: 1,
+            barMaxWidth: 16,
+            barGap: '20%',
+            data: source.map((point) => toHundredMillion(point.shareholderEquity)),
+            itemStyle: {
+              color: isDark ? 'rgba(45, 212, 191, 0.55)' : 'rgba(20, 184, 166, 0.55)',
+              borderRadius: [3, 3, 0, 0],
+            },
+            emphasis: {
+              itemStyle: {
+                color: isDark ? '#2dd4bf' : '#14b8a6',
+              },
+            },
+          },
+          {
+            name: '负债',
+            type: 'bar',
+            yAxisIndex: 1,
+            barMaxWidth: 16,
+            data: source.map((point) => toHundredMillion(point.liabilities)),
+            itemStyle: {
+              color: isDark ? 'rgba(251, 146, 60, 0.52)' : 'rgba(249, 115, 22, 0.5)',
+              borderRadius: [3, 3, 0, 0],
+            },
+            emphasis: {
+              itemStyle: {
+                color: isDark ? '#fb923c' : '#f97316',
+              },
+            },
+          },
+          {
+            name: '现金',
+            type: 'bar',
+            yAxisIndex: 1,
+            barMaxWidth: 16,
+            data: source.map((point) => toHundredMillion(point.cash)),
+            itemStyle: {
+              color: isDark ? 'rgba(167, 139, 250, 0.5)' : 'rgba(139, 92, 246, 0.48)',
+              borderRadius: [3, 3, 0, 0],
+            },
+            emphasis: {
+              itemStyle: {
+                color: isDark ? '#a78bfa' : '#8b5cf6',
+              },
+            },
+          },
+          {
             name: '低于利润线',
             type: 'scatter',
+            yAxisIndex: 0,
             symbolSize: 12,
             data: source.map((point) => (point.alert ? point.price : null)),
             itemStyle: {
@@ -429,6 +523,7 @@ export function useChartOptions(
           {
             name: '最新价',
             type: 'scatter',
+            yAxisIndex: 0,
             symbolSize: 14,
             data: source.map((point) => (point.isLatestPrice ? point.price : null)),
             itemStyle: {
@@ -451,6 +546,7 @@ export function useChartOptions(
   }, [
     chartReady,
     data?.currency,
+    data?.balanceCurrency,
     data?.latestPrice,
     data?.points,
     preparedPoints,

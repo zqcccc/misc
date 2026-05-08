@@ -19,7 +19,7 @@ export function SearchHeader({ symbolInput, setSymbolInput, state, onSubmit }: S
   return (
     <header className='flex flex-col gap-4 pb-4 lg:flex-row lg:items-end lg:justify-between'>
       <div>
-        <p className='text-[10px] font-bold text-gray-400 tracking-[0.2em] uppercase dark:text-blue-400/60'>
+        <p className='text-[10px] font-bold text-gray-500 tracking-[0.2em] uppercase dark:text-blue-400/80'>
           Profit Line Lab
         </p>
         <h1 className='mt-1 text-2xl font-bold leading-tight text-gray-900 tracking-tight dark:text-white'>
@@ -32,7 +32,7 @@ export function SearchHeader({ symbolInput, setSymbolInput, state, onSubmit }: S
         onSubmit={handleSubmit}
       >
         <div className='relative lg:w-[280px]'>
-          <svg className='absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+          <svg className='absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
             <path d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' />
           </svg>
           <input

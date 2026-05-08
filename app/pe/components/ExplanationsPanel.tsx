@@ -28,8 +28,8 @@ export function ExplanationsPanel({ currentValuation, dataLoading }: Explanation
   return (
     <div className='rounded-xl bg-white p-4 shadow-sm dark:bg-[#111520]'>
       <div className='flex items-center justify-between gap-3'>
-        <span className='text-xs font-medium text-gray-500 dark:text-gray-400'>分析报告</span>
-        <span className='text-[10px] text-gray-400 dark:text-gray-600'>
+        <span className='text-xs font-medium text-gray-600 dark:text-gray-300'>分析报告</span>
+        <span className='text-[10px] text-gray-500 dark:text-gray-500'>
           {explanations.length} 条
         </span>
       </div>
@@ -45,7 +45,7 @@ export function ExplanationsPanel({ currentValuation, dataLoading }: Explanation
                 {typeLabelMap[explanation.explanationType] || explanation.explanationType}
               </span>
               {explanation.confidence !== null && explanation.confidence !== undefined && (
-                <span className='text-[10px] text-gray-400 dark:text-gray-600'>
+                <span className='text-[10px] text-gray-500 dark:text-gray-500'>
                   置信度 {explanation.confidence}
                 </span>
               )}
@@ -53,7 +53,7 @@ export function ExplanationsPanel({ currentValuation, dataLoading }: Explanation
             <div className='mt-1 text-[12px] font-medium text-gray-800 dark:text-gray-200'>
               {explanation.title}
             </div>
-            <p className='mt-1 leading-5 text-[11px] text-gray-500 dark:text-gray-500'>
+            <p className='mt-1 leading-5 text-[11px] text-gray-600 dark:text-gray-400'>
               {explanation.body}
             </p>
           </div>

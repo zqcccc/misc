@@ -28,14 +28,14 @@ export function StatsPanel({
       <div className='grid grid-cols-2 gap-3'>
         <div className='rounded-xl bg-white p-4 shadow-sm dark:bg-[#111520]'>
           <div className='flex items-center justify-between gap-3'>
-            <span className='text-xs font-medium text-gray-500 dark:text-gray-400'>PE 历史百分位</span>
+            <span className='text-xs font-medium text-gray-600 dark:text-gray-300'>PE 历史百分位</span>
             {dataLoading ? (
               <Skeleton className='h-5 w-10' />
             ) : (
               <div
                 className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
                   pePercentileAll === null
-                    ? 'bg-gray-100 text-gray-400 dark:bg-[#1e2435] dark:text-gray-600'
+                    ? 'bg-gray-100 text-gray-500 dark:bg-[#1e2435] dark:text-gray-500'
                     : pePercentileAll <= 30
                       ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400'
                       : pePercentileAll >= 70
@@ -63,7 +63,7 @@ export function StatsPanel({
                 <span className='text-2xl font-bold text-gray-900 dark:text-white tabular-nums'>
                   {pePercentileAll === null ? '-' : `${pePercentileAll}%`}
                 </span>
-                <span className='text-[11px] text-gray-400 dark:text-gray-600'>
+                <span className='text-[11px] text-gray-500 dark:text-gray-500'>
                   {pePercentileAll !== null && `${pointCount} 个季度`}
                 </span>
               </div>
@@ -73,7 +73,7 @@ export function StatsPanel({
 
         <div className='rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 p-4 dark:from-blue-500/[0.06] dark:to-indigo-500/[0.04]'>
           <div className='flex items-center justify-between gap-3'>
-            <span className='text-xs font-medium text-gray-600 dark:text-gray-400'>利润质量</span>
+            <span className='text-xs font-medium text-gray-600 dark:text-gray-300'>利润质量</span>
             {dataLoading ? (
               <Skeleton className='h-5 w-12' />
             ) : (
@@ -94,7 +94,7 @@ export function StatsPanel({
             </div>
           ) : (
             <div className='mt-3'>
-              <p className='text-[11px] text-gray-500 leading-relaxed dark:text-gray-500'>
+              <p className='text-[11px] text-gray-600 leading-relaxed dark:text-gray-400'>
                 {currentValuation?.profitQuality === '正常'
                   ? '当前利润主要由经常性业务驱动，估值判断可靠性较高。'
                   : currentValuation?.profitQuality === '需调整'
@@ -107,7 +107,7 @@ export function StatsPanel({
       </div>
 
       <div className='rounded-xl bg-white p-4 shadow-sm dark:bg-[#111520]'>
-        <span className='text-xs font-medium text-gray-500 dark:text-gray-400'>历史平均 PE</span>
+        <span className='text-xs font-medium text-gray-600 dark:text-gray-300'>历史平均 PE</span>
 
         <div className='mt-3 flex gap-1 rounded-lg bg-gray-100 p-0.5 dark:bg-[#141824]'>
           {([1, 3, 5, 'all'] as PeriodType[]).map((p) => (
@@ -117,7 +117,7 @@ export function StatsPanel({
               className={`flex-1 rounded-md px-2 py-1.5 text-[11px] font-semibold transition-all bg-transparent border-0 cursor-pointer ${
                 selectedPeriod === p
                   ? 'bg-white text-gray-900 shadow-sm dark:bg-[#1e2435] dark:text-white'
-                  : 'text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300'
+                  : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
               }`}
             >
               {p === 'all' ? '全部' : `${p}年`}
@@ -148,20 +148,20 @@ export function StatsPanel({
               <span className='text-2xl font-bold text-gray-900 dark:text-white tabular-nums'>
                 {periodStats?.avgPe === null ? '-' : formatNumber(periodStats?.avgPe)}
               </span>
-              <span className='text-[11px] text-gray-400 dark:text-gray-600'>
+              <span className='text-[11px] text-gray-500 dark:text-gray-500'>
                 {periodStats && periodStats.count > 0 && `${periodStats.count} 个季度`}
               </span>
             </div>
 
             <div className='mt-3 grid grid-cols-2 gap-2 text-sm'>
               <div className='rounded-lg bg-gray-50 px-3 py-2 dark:bg-[#0e1220]'>
-                <div className='text-[11px] text-gray-400 dark:text-gray-600'>最低</div>
+                <div className='text-[11px] text-gray-500 dark:text-gray-500'>最低</div>
                 <div className='mt-0.5 font-bold text-emerald-600 dark:text-emerald-400 tabular-nums'>
                   {periodStats?.minPe === null ? '-' : formatNumber(periodStats?.minPe)}
                 </div>
               </div>
               <div className='rounded-lg bg-gray-50 px-3 py-2 dark:bg-[#0e1220]'>
-                <div className='text-[11px] text-gray-400 dark:text-gray-600'>最高</div>
+                <div className='text-[11px] text-gray-500 dark:text-gray-500'>最高</div>
                 <div className='mt-0.5 font-bold text-rose-600 dark:text-rose-400 tabular-nums'>
                   {periodStats?.maxPe === null ? '-' : formatNumber(periodStats?.maxPe)}
                 </div>

@@ -29,7 +29,7 @@ export function ChartPanel({
           <h2 className='text-lg font-bold text-gray-900 dark:text-white'>
             {data ? `${data.symbol} · ${data.name}` : submittedSymbol}
           </h2>
-          <p className='text-[11px] text-gray-400 mt-1 dark:text-gray-600'>
+          <p className='text-[11px] text-gray-500 mt-1 dark:text-gray-500'>
             {data?.ttmMethod === 'source-eps-ttm'
               ? 'TTM EPS 使用市场数据源提供值，线值随倍数实时更新'
               : '单季 EPS 滚动 4 季生成 TTM EPS，线值随倍数实时更新'}
@@ -48,11 +48,11 @@ export function ChartPanel({
         )}
       </div>
 
-      <div className='relative h-[420px]'>
+      <div className='relative h-[460px]'>
         <div ref={chartNodeRef} className='h-full w-full' />
         {state === 'loading' && (
           <div className='absolute inset-0 grid place-items-center bg-white/80 backdrop-blur-sm dark:bg-[#0b0f1a]/80'>
-            <div className='flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400'>
+            <div className='flex items-center gap-3 text-sm text-gray-600 dark:text-gray-300'>
               <svg className='h-5 w-5 animate-spin' viewBox='0 0 24 24' fill='none'>
                 <circle className='opacity-25' cx='12' cy='12' r='10' stroke='currentColor' strokeWidth='4' />
                 <path className='opacity-75' fill='currentColor' d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z' />
@@ -63,7 +63,7 @@ export function ChartPanel({
         )}
         {state === 'idle' && (
           <div className='absolute inset-0 grid place-items-center bg-white/60 backdrop-blur-sm dark:bg-[#0b0f1a]/60'>
-            <span className='text-sm text-gray-400 dark:text-gray-600'>准备加载...</span>
+            <span className='text-sm text-gray-500 dark:text-gray-500'>准备加载...</span>
           </div>
         )}
         {state === 'error' && (
@@ -75,7 +75,7 @@ export function ChartPanel({
                 </svg>
               </div>
               <p className='text-base font-semibold text-rose-600 dark:text-rose-400'>无法绘制</p>
-              <p className='mt-1.5 max-w-sm text-sm text-gray-500 dark:text-gray-500'>{error}</p>
+              <p className='mt-1.5 max-w-sm text-sm text-gray-600 dark:text-gray-400'>{error}</p>
             </div>
           </div>
         )}

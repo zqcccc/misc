@@ -3,32 +3,18 @@ import { NextResponse } from 'next/server'
 import { buildCompanyValuationCard } from './summary'
 import {
   getCompanyValuationRedis,
-  buildCompanyValuationCacheKey,
-  buildCompanyValuationTotalKey,
   buildCompanyValuationAllKey,
   readCompanyValuationCache,
   writeCompanyValuationCache,
 } from './cache'
+import {
+  buildCompanyValuationWhere,
+  companyInclude,
+  companyValuationOrderBy,
+} from './query'
 
 const prisma = new PrismaClient()
 const PAGE_SIZE = 30
-
-const companyInclude = {
-  valuations: {
-    orderBy: [{ asOfDate: 'desc' as const }, { createdAt: 'desc' as const }],
-    take: 1,
-  },
-  explorations: {
-    where: { visibility: 'published' },
-    orderBy: [{ pinned: 'desc' as const }, { createdAt: 'desc' as const }],
-    take: 1,
-  },
-  explanations: {
-    where: { isCurrent: true },
-    orderBy: [{ asOfDate: 'desc' as const }, { createdAt: 'desc' as const }],
-    take: 8,
-  },
-}
 
 async function getAllSortedEntries(): Promise<ReturnType<typeof buildCompanyValuationCard>[]> {
   const redis = await getCompanyValuationRedis()
@@ -64,6 +50,37 @@ async function getAllSortedEntries(): Promise<ReturnType<typeof buildCompanyValu
   return sortedCards
 }
 
+async function getSearchPageEntries(search: string, page: number) {
+  const where = buildCompanyValuationWhere(search)
+  const start = (page - 1) * PAGE_SIZE
+
+  const [total, companies] = await Promise.all([
+    prisma.company.count({ where }),
+    prisma.company.findMany({
+      where,
+      include: companyInclude,
+      orderBy: companyValuationOrderBy,
+      skip: start,
+      take: PAGE_SIZE,
+    }),
+  ])
+
+  const entries = companies.map((company) =>
+    buildCompanyValuationCard({
+      company,
+      latestValuation: company.valuations[0] || null,
+      latestExploration: company.explorations[0] || null,
+      explanations: company.explanations,
+    }),
+  )
+
+  return {
+    entries,
+    total,
+    hasMore: start + entries.length < total,
+  }
+}
+
 function filterEntries(
   entries: ReturnType<typeof buildCompanyValuationCard>[],
   search?: string,
@@ -95,6 +112,18 @@ export async function GET(request: Request) {
     const page = pageParam ? Math.max(1, parseInt(pageParam, 10) || 1) : 1
     const search = searchParams.get('search') || undefined
     const quality = searchParams.get('quality') || undefined
+
+    if (search?.trim() && (!quality || quality === '全部')) {
+      const result = await getSearchPageEntries(search, page)
+
+      return NextResponse.json({
+        entries: result.entries,
+        total: result.total,
+        page,
+        pageSize: PAGE_SIZE,
+        hasMore: result.hasMore,
+      })
+    }
 
     const allEntries = await getAllSortedEntries()
     const filtered = filterEntries(allEntries, search, quality)

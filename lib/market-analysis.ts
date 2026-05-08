@@ -11,10 +11,19 @@ import type {
   IdempotentWriteInput,
   CrossMarketWriteInput,
 } from './market-analysis-types'
+import { invalidateCompanyValuationCache } from '../app/api/company-valuation/cache'
 
 export type { MarketType, EntryType, CompanyInput, PageEntryInput, ExplorationInput, ValuationSnapshotInput, ValuationExplanationInput, MarketAnalysisWriteInput, IdempotentWriteInput, CrossMarketWriteInput }
 
 const prisma = new PrismaClient()
+
+async function invalidateValuationCacheAfterWrite() {
+  try {
+    await invalidateCompanyValuationCache()
+  } catch (error) {
+    console.warn('[market-analysis] invalidate company valuation cache failed:', error)
+  }
+}
 
 // 跨市场 symbol 映射表（常见 A+H 股）
 //  key: groupId, value: { market: symbol }
@@ -350,6 +359,8 @@ export async function writeMarketAnalysis(input: MarketAnalysisWriteInput) {
     }
   }
 
+  await invalidateValuationCacheAfterWrite()
+
   return results
 }
 
@@ -395,6 +406,8 @@ export async function writeMarketAnalysisIdempotent(input: IdempotentWriteInput)
       }
     }
   }
+
+  await invalidateValuationCacheAfterWrite()
 
   return results
 }
@@ -485,6 +498,8 @@ export async function writeMarketAnalysisCrossMarket(input: CrossMarketWriteInpu
       }
     }
   }
+
+  await invalidateValuationCacheAfterWrite()
 
   return {
     ...primaryResult,

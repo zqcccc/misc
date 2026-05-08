@@ -8,6 +8,9 @@ export type ChartBasePoint = {
   profitLine: number | null
   deviation: number | null
   alert: boolean
+  shareholderEquity?: number | null
+  liabilities?: number | null
+  cash?: number | null
 }
 
 export type LatestPricePoint = {
@@ -70,6 +73,9 @@ export function buildChartSource(
       referenceLine,
       deviation,
       alert: profitLine !== null && latestPrice.price < profitLine,
+      shareholderEquity: null,
+      liabilities: null,
+      cash: null,
       isLatestPrice: true,
       displayLabel: latestPrice.date,
       epsSourceQuarter: latestQuarterPoint.quarter,
