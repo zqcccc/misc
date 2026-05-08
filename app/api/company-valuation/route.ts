@@ -26,7 +26,7 @@ export async function GET() {
     const entries = await prisma.companyPageEntry.findMany({
       where: { visible: true },
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
-      take: 30,
+      take: 500,
       include: {
         company: {
           include: companyInclude,

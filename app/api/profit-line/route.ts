@@ -7,6 +7,7 @@ import {
 } from './cache'
 import {
   buildQuarterPoints,
+  latestDailyPrice,
   normalizeMarketSymbol,
   pickEastmoneyEpsRows,
   type NormalizedMarketSymbol,
@@ -39,12 +40,15 @@ type ProfitLinePayload = {
   market: 'us' | 'cn' | 'hk'
   currency: string
   points: ReturnType<typeof buildQuarterPoints>
+  latestPrice: ReturnType<typeof latestDailyPrice>
   sources: {
     eps: string
     price: string
   }
   ttmMethod: 'quarterly-rollup' | 'source-eps-ttm'
   splitAdjusted?: boolean
+  epsCurrency?: string
+  fxRate?: number
 }
 
 const SEC_HEADERS = {
@@ -283,6 +287,7 @@ async function buildUsPayload(symbol: string): Promise<ProfitLinePayload> {
     market: 'us',
     currency: 'USD',
     points,
+    latestPrice: latestDailyPrice(marketData.prices),
     sources: {
       eps: 'SEC companyfacts',
       price: 'Yahoo Finance chart',
@@ -367,6 +372,86 @@ function toRegionalYahooSymbol(
     : `${marketSymbol.symbol}.SZ`
 }
 
+async function fetchCnyToHkdRate(): Promise<number> {
+  const url =
+    'https://query2.finance.yahoo.com/v8/finance/chart/CNYHKD=X?range=5d&interval=1d'
+  const data = await fetchJson<any>(url, {
+    headers: {
+      Accept: 'application/json',
+      'User-Agent':
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+    },
+    next: { revalidate: 60 * 60 * 6 },
+  })
+  const rate = data?.chart?.result?.[0]?.meta?.regularMarketPrice
+  if (typeof rate !== 'number' || !Number.isFinite(rate) || rate <= 0) {
+    throw new Error('无法获取 CNY/HKD 汇率')
+  }
+  return rate
+}
+
+type HkCompanyProfile = {
+  zqzl?: {
+    zqlx?: string
+    mgmz?: string
+  }
+  gszl?: {
+    zcd?: string
+  }
+}
+
+async function fetchHkCompanyProfile(symbol: string): Promise<HkCompanyProfile> {
+  const url = `http://f10.eastmoney.com/PC_HKF10/CompanyProfile/PageAjax?code=${symbol}`
+  try {
+    const data = await fetchJson<HkCompanyProfile>(url, {
+      headers: {
+        Accept: 'application/json',
+        Referer: 'http://f10.eastmoney.com/',
+        'User-Agent':
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+      },
+      next: { revalidate: 60 * 60 * 24 * 7 },
+    })
+    return data
+  } catch {
+    return {}
+  }
+}
+
+const HKD_EPS_STOCKS = new Set([
+  '00001',
+  '01038',
+  '01113',
+  '01929',
+  '01997',
+])
+
+function isEpsInCny(symbol: string, profile: HkCompanyProfile): boolean {
+  if (HKD_EPS_STOCKS.has(symbol)) {
+    return false
+  }
+
+  const zqlx = profile.zqzl?.zqlx
+  const zcd = profile.gszl?.zcd || ''
+
+  if (zqlx === 'H股' || zqlx === '红筹股') {
+    return true
+  }
+
+  if (zqlx === '非H股' && zcd.includes('中国') && !zcd.includes('Cayman')) {
+    return false
+  }
+
+  if (
+    zqlx === '非H股' &&
+    (zcd.includes('United Kingdom') || zcd.includes('英国'))
+  ) {
+    return false
+  }
+
+  return true
+}
+
 async function buildEastmoneyPayload(
   marketSymbol: Extract<NormalizedMarketSymbol, { market: 'cn' | 'hk' }>,
 ): Promise<ProfitLinePayload> {
@@ -377,9 +462,27 @@ async function buildEastmoneyPayload(
     throw new ProfitLineDataError('可用 EPS 数据少于 4 个，无法绘制利润线', 404)
   }
 
+  let epsCurrency: string | undefined
+  let fxRate: number | undefined
+  let convertedQuarters = quarters
+
+  if (marketSymbol.market === 'hk') {
+    const profile = await fetchHkCompanyProfile(marketSymbol.symbol)
+    if (isEpsInCny(marketSymbol.symbol, profile)) {
+      const rate = await fetchCnyToHkdRate()
+      epsCurrency = 'CNY'
+      fxRate = rate
+      convertedQuarters = quarters.map((q) => ({
+        ...q,
+        eps: q.eps * rate,
+        ttmEps: q.ttmEps != null ? q.ttmEps * rate : undefined,
+      }))
+    }
+  }
+
   const yahooSymbol = toRegionalYahooSymbol(marketSymbol)
   const marketData = await fetchMarketData(yahooSymbol, quarters[0].date)
-  const points = buildQuarterPoints(quarters, marketData.prices)
+  const points = buildQuarterPoints(convertedQuarters, marketData.prices)
 
   return {
     symbol:
@@ -390,11 +493,13 @@ async function buildEastmoneyPayload(
     market: marketSymbol.market,
     currency: marketSymbol.currency,
     points,
+    latestPrice: latestDailyPrice(marketData.prices),
     sources: {
       eps: financialData.epsSource,
       price: 'Yahoo Finance chart',
     },
     ttmMethod: financialData.ttmMethod,
+    ...(epsCurrency ? { epsCurrency, fxRate } : {}),
   }
 }
 

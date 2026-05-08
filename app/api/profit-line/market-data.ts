@@ -36,6 +36,11 @@ export type QuarterPoint = {
   ttmPe: number | null
 }
 
+export type LatestDailyPrice = {
+  date: string
+  price: number
+}
+
 export function normalizeMarketSymbol(input: string): NormalizedMarketSymbol {
   const raw = input.trim().toUpperCase()
   const compact = raw.replace(/\s+/g, '')
@@ -146,6 +151,20 @@ export function priceAtOrBefore(prices: DailyPrice[], date: string) {
     selected = price.close
   }
   return selected === null ? null : Number(selected.toFixed(2))
+}
+
+export function latestDailyPrice(prices: DailyPrice[]): LatestDailyPrice | null {
+  const latest = prices.reduce<DailyPrice | null>((selected, price) => {
+    if (!selected || price.date > selected.date) return price
+    return selected
+  }, null)
+
+  if (!latest) return null
+
+  return {
+    date: latest.date,
+    price: Number(latest.close.toFixed(2)),
+  }
 }
 
 export function buildQuarterPoints(
