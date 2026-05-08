@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { PeriodType } from './types'
 import {
   useProfitLineData,
@@ -9,7 +9,6 @@ import {
   useChart,
   useChartOptions,
   useDerivedData,
-  useFilteredEntries,
 } from './hooks'
 import {
   SearchHeader,
@@ -18,6 +17,7 @@ import {
   StatsPanel,
   ControlPanel,
   ExplanationsPanel,
+  NotePanel,
 } from './components'
 
 export default function ProfitLinePage() {
@@ -26,10 +26,27 @@ export default function ProfitLinePage() {
   const [referenceMultiple, setReferenceMultiple] = useState(30)
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodType>('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [filterQuality, setFilterQuality] = useState<'全部' | '正常' | '需调整' | '待确认'>('全部')
 
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchQuery(value)
+    if (searchTimerRef.current) {
+      clearTimeout(searchTimerRef.current)
+    }
+    searchTimerRef.current = setTimeout(() => {
+      setDebouncedSearch(value)
+    }, 300)
+  }, [])
+
+  const handleFilterChange = useCallback((value: '全部' | '正常' | '需调整' | '待确认') => {
+    setFilterQuality(value)
+  }, [])
+
   const { submittedSymbol, data, state, error, fetchData } = useProfitLineData(symbolInput)
-  const { valuationEntries, entriesLoading, entriesLoadingMore, totalCount, hasMore, fetchEntries, loadMore } = useValuationEntries()
+  const { valuationEntries, entriesLoading, entriesLoadingMore, totalCount, hasMore, fetchEntries, loadMore } = useValuationEntries(debouncedSearch, filterQuality)
 
   const selectedEntry = useMemo(() => {
     return (
@@ -58,8 +75,6 @@ export default function ProfitLinePage() {
     pePercentileAll,
     periodStats,
   } = useDerivedData(data, profitMultiple, selectedPeriod)
-
-  const filteredEntries = useFilteredEntries(valuationEntries, searchQuery, filterQuality)
 
   useChartOptions(
     data,
@@ -95,6 +110,14 @@ export default function ProfitLinePage() {
     return () => window.clearTimeout(timer)
   }, [fetchData])
 
+  useEffect(() => {
+    return () => {
+      if (searchTimerRef.current) {
+        clearTimeout(searchTimerRef.current)
+      }
+    }
+  }, [])
+
   const dataLoading = state === 'idle' || state === 'loading'
 
   return (
@@ -109,15 +132,15 @@ export default function ProfitLinePage() {
 
         <div className='grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)_320px]'>
           <CompanySidebar
-            entries={filteredEntries}
+            entries={valuationEntries}
             entriesLoading={entriesLoading}
             entriesLoadingMore={entriesLoadingMore}
             totalCount={totalCount}
             currentSymbol={data?.symbol}
             searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
+            setSearchQuery={handleSearchChange}
             filterQuality={filterQuality}
-            setFilterQuality={setFilterQuality}
+            setFilterQuality={handleFilterChange}
             onSelect={handleSelectCompany}
             onLoadMore={loadMore}
             hasMore={hasMore}
@@ -142,6 +165,11 @@ export default function ProfitLinePage() {
               selectedPeriod={selectedPeriod}
               setSelectedPeriod={setSelectedPeriod}
               periodStats={periodStats}
+            />
+
+            <NotePanel
+              currentValuation={currentValuation}
+              dataLoading={dataLoading}
             />
 
             <ExplanationsPanel

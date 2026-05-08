@@ -8,12 +8,20 @@ export type CompanyValuationRedis = {
   expire(key: string, seconds: number): Promise<unknown>
 }
 
-export function buildCompanyValuationCacheKey(page: number, pageSize: number) {
-  return `company-valuation:v1:page:${page}:size:${pageSize}`
+export function buildCompanyValuationCacheKey(page: number, pageSize: number, search?: string, quality?: string) {
+  const searchPart = search ? `:search:${search.toLowerCase().trim()}` : ''
+  const qualityPart = quality && quality !== '全部' ? `:quality:${quality}` : ''
+  return `company-valuation:v2:page:${page}:size:${pageSize}${searchPart}${qualityPart}`
 }
 
-export function buildCompanyValuationTotalKey() {
-  return 'company-valuation:v1:total'
+export function buildCompanyValuationTotalKey(search?: string, quality?: string) {
+  const searchPart = search ? `:search:${search.toLowerCase().trim()}` : ''
+  const qualityPart = quality && quality !== '全部' ? `:quality:${quality}` : ''
+  return `company-valuation:v2:total${searchPart}${qualityPart}`
+}
+
+export function buildCompanyValuationAllKey() {
+  return 'company-valuation:v2:all'
 }
 
 export async function readCompanyValuationCache<T>(

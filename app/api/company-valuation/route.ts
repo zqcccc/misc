@@ -5,6 +5,7 @@ import {
   getCompanyValuationRedis,
   buildCompanyValuationCacheKey,
   buildCompanyValuationTotalKey,
+  buildCompanyValuationAllKey,
   readCompanyValuationCache,
   writeCompanyValuationCache,
 } from './cache'
@@ -29,48 +30,26 @@ const companyInclude = {
   },
 }
 
-async function getTotalCount(): Promise<number> {
-  const redis = await getCompanyValuationRedis()
-  const totalKey = buildCompanyValuationTotalKey()
-
-  const cachedTotal = await readCompanyValuationCache<number>(redis, totalKey)
-  if (cachedTotal !== null) {
-    return cachedTotal
-  }
-
-  const count = await prisma.companyPageEntry.count({
-    where: { visible: true },
-  })
-
-  await writeCompanyValuationCache(redis, totalKey, count)
-  return count
-}
-
 async function getAllSortedEntries(): Promise<ReturnType<typeof buildCompanyValuationCard>[]> {
   const redis = await getCompanyValuationRedis()
-  const cacheKey = buildCompanyValuationCacheKey(0, PAGE_SIZE)
+  const cacheKey = buildCompanyValuationAllKey()
 
   const cached = await readCompanyValuationCache<{ entries: ReturnType<typeof buildCompanyValuationCard>[] }>(redis, cacheKey)
   if (cached) {
     return cached.entries
   }
 
-  const entries = await prisma.companyPageEntry.findMany({
+  const companies = await prisma.company.findMany({
     where: { visible: true },
-    include: {
-      company: {
-        include: companyInclude,
-      },
-    },
+    include: companyInclude,
   })
 
-  const cards = entries.map((entry) =>
+  const cards = companies.map((company) =>
     buildCompanyValuationCard({
-      company: entry.company,
-      entry,
-      latestValuation: entry.company.valuations[0] || null,
-      latestExploration: entry.company.explorations[0] || null,
-      explanations: entry.company.explanations,
+      company,
+      latestValuation: company.valuations[0] || null,
+      latestExploration: company.explorations[0] || null,
+      explanations: company.explanations,
     }),
   )
 
@@ -85,27 +64,51 @@ async function getAllSortedEntries(): Promise<ReturnType<typeof buildCompanyValu
   return sortedCards
 }
 
+function filterEntries(
+  entries: ReturnType<typeof buildCompanyValuationCard>[],
+  search?: string,
+  quality?: string,
+) {
+  let result = entries
+
+  if (quality && quality !== '全部') {
+    result = result.filter((e) => e.profitQuality === quality)
+  }
+
+  if (search && search.trim()) {
+    const query = search.toLowerCase().trim()
+    result = result.filter((e) => {
+      const matchTitle = e.title.toLowerCase().includes(query)
+      const matchSymbol = e.symbol.toLowerCase().includes(query)
+      const matchTags = e.tags.some((tag) => tag.toLowerCase().includes(query))
+      return matchTitle || matchSymbol || matchTags
+    })
+  }
+
+  return result
+}
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     const pageParam = searchParams.get('page')
     const page = pageParam ? Math.max(1, parseInt(pageParam, 10) || 1) : 1
+    const search = searchParams.get('search') || undefined
+    const quality = searchParams.get('quality') || undefined
 
-    const [allEntries, total] = await Promise.all([
-      getAllSortedEntries(),
-      getTotalCount(),
-    ])
+    const allEntries = await getAllSortedEntries()
+    const filtered = filterEntries(allEntries, search, quality)
 
     const start = (page - 1) * PAGE_SIZE
     const end = start + PAGE_SIZE
-    const pageEntries = allEntries.slice(start, end)
+    const pageEntries = filtered.slice(start, end)
 
     return NextResponse.json({
       entries: pageEntries,
-      total,
+      total: filtered.length,
       page,
       pageSize: PAGE_SIZE,
-      hasMore: end < total,
+      hasMore: end < filtered.length,
     })
   } catch (error) {
     console.error('[company-valuation] load failed:', error)

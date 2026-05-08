@@ -104,10 +104,9 @@ export async function GET() {
         },
         pageEntry: {
           required: false,
-          description: '页面入口配置，用于 PE 页面展示',
+          description: '页面展示配置，用于 PE 页面展示',
           fields: {
             entryType: '入口类型 (manual, ai-generated, analysis, research)',
-            title: '显示标题 (可选)',
             note: '备注说明 (可选)',
             sortOrder: '排序顺序 (可选, 默认 0)',
             visible: '是否可见 (可选, 默认 true)',
@@ -176,7 +175,6 @@ export async function GET() {
           },
           pageEntry: {
             entryType: 'ai-generated',
-            title: '新华保险分析',
           },
           exploration: {
             title: '新华保险投资价值分析',

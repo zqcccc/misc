@@ -44,7 +44,6 @@ export async function GET(request: NextRequest) {
           orderBy: [{ asOfDate: 'desc' }, { createdAt: 'desc' }],
           take: 8,
         },
-        pageEntries: true,
       },
     })
 
@@ -59,7 +58,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const hasPageEntry = company.pageEntries.length > 0
+    const isVisible = company.visible
     const hasPublishedExploration = company.explorations.length > 0
     const hasValuation = company.valuations.length > 0
     const hasExplanations = company.explanations.length > 0
@@ -73,7 +72,7 @@ export async function GET(request: NextRequest) {
 
     const result: any = {
       success: true,
-      pePageVisible: hasPageEntry,
+      pePageVisible: isVisible,
       company: {
         id: company.id,
         symbol: company.symbol,
@@ -82,11 +81,10 @@ export async function GET(request: NextRequest) {
         groupId: company.groupId,
       },
       dataStatus: {
-        hasPageEntry,
+        isVisible,
         hasPublishedExploration,
         hasValuation,
         hasExplanations,
-        pageEntriesCount: company.pageEntries.length,
         explorationsCount: company.explorations.length,
         valuationsCount: company.valuations.length,
         explanationsCount: company.explanations.length,
@@ -101,12 +99,12 @@ export async function GET(request: NextRequest) {
         primaryExplanation: card.primaryExplanation,
       },
       checkList: {
-        canShowInSidebar: hasPageEntry,
-        canShowValuationCard: hasPageEntry && hasValuation,
-        canShowExploration: hasPageEntry && hasPublishedExploration,
-        canShowExplanations: hasPageEntry && hasExplanations,
+        canShowInSidebar: isVisible,
+        canShowValuationCard: isVisible && hasValuation,
+        canShowExploration: isVisible && hasPublishedExploration,
+        canShowExplanations: isVisible && hasExplanations,
         fullyComplete:
-          hasPageEntry &&
+          isVisible &&
           hasPublishedExploration &&
           hasValuation &&
           hasExplanations,
@@ -151,7 +149,6 @@ export async function GET(request: NextRequest) {
             orderBy: [{ pinned: 'desc' }, { createdAt: 'desc' }],
             take: 1,
           },
-          pageEntries: true,
         },
       })
 
@@ -167,7 +164,7 @@ export async function GET(request: NextRequest) {
           symbol: related.symbol,
           market: related.market,
           name: related.name,
-          pePageVisible: related.pageEntries.length > 0,
+          pePageVisible: related.visible,
           hasExploration: related.explorations.length > 0,
           hasValuation: related.valuations.length > 0,
           pePagePreview: {
@@ -183,9 +180,9 @@ export async function GET(request: NextRequest) {
         groupId: company.groupId,
         totalMarkets: relatedCompanies.length + 1,
         visibleMarkets: [
-          ...(hasPageEntry ? [{ market: company.market, symbol: company.symbol }] : []),
+          ...(isVisible ? [{ market: company.market, symbol: company.symbol }] : []),
           ...relatedCompanies
-            .filter(c => c.pageEntries.length > 0)
+            .filter(c => c.visible)
             .map(c => ({ market: c.market, symbol: c.symbol })),
         ],
       }

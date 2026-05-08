@@ -78,7 +78,14 @@ export function useValuationDetail(
       })
       .then((payload) => {
         if (payload?.current) {
-          setCurrentValuation(payload.current)
+          setCurrentValuation((prev) => {
+            if (!prev) return payload.current
+            return {
+              ...payload.current,
+              entryType: prev.entryType,
+              entryNote: prev.entryNote,
+            }
+          })
           lastLoadedSymbolRef.current = cleanSymbol
         }
       })
@@ -90,7 +97,7 @@ export function useValuationDetail(
   return { currentValuation, setCurrentValuation }
 }
 
-export function useValuationEntries() {
+export function useValuationEntries(searchQuery: string, filterQuality: string) {
   const [valuationEntries, setValuationEntries] = useState<CompanyValuationCard[]>([])
   const [entriesLoading, setEntriesLoading] = useState(true)
   const [entriesLoadingMore, setEntriesLoadingMore] = useState(false)
@@ -98,6 +105,14 @@ export function useValuationEntries() {
   const [hasMore, setHasMore] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
   const loadingRef = useRef(false)
+
+  const buildUrl = useCallback((page: number) => {
+    const params = new URLSearchParams()
+    params.set('page', String(page))
+    if (searchQuery.trim()) params.set('search', searchQuery.trim())
+    if (filterQuality && filterQuality !== '全部') params.set('quality', filterQuality)
+    return `/api/company-valuation?${params.toString()}`
+  }, [searchQuery, filterQuality])
 
   const loadPage = useCallback(async (page: number, append = false) => {
     if (loadingRef.current) return
@@ -110,7 +125,7 @@ export function useValuationEntries() {
     }
 
     try {
-      const response = await fetch(`/api/company-valuation?page=${page}`, {
+      const response = await fetch(buildUrl(page), {
         cache: 'no-store',
       })
       if (!response.ok) {
@@ -137,7 +152,7 @@ export function useValuationEntries() {
         setEntriesLoadingMore(false)
       }
     }
-  }, [])
+  }, [buildUrl])
 
   useEffect(() => {
     let cancelled = false
@@ -145,7 +160,7 @@ export function useValuationEntries() {
     async function load() {
       setEntriesLoading(true)
       try {
-        const response = await fetch('/api/company-valuation?page=1', {
+        const response = await fetch(buildUrl(1), {
           cache: 'no-store',
         })
         if (!response.ok) return
@@ -169,7 +184,7 @@ export function useValuationEntries() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [buildUrl])
 
   const fetchEntries = useCallback(async () => {
     await loadPage(1, false)

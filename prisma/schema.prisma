@@ -45,18 +45,26 @@ model Company {
   website   String?
   status    String   @default("active")
   groupId   String?  // 关联同一公司在不同市场的记录，如 "新华保险"
+
+  // 页面展示相关字段（从 CompanyPageEntry 迁移过来）
+  entryType String   @default("manual")
+  entryNote String?
+  sortOrder Int      @default(0)
+  visible   Boolean  @default(true)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   explorations CompanyExploration[]
   valuations   CompanyValuationSnapshot[]
   explanations CompanyValuationExplanation[]
-  pageEntries  CompanyPageEntry[]
 
   @@unique([market, symbol])
   @@index([market])
   @@index([sector])
   @@index([groupId])
+  @@index([visible, sortOrder])
+  @@index([entryType])
 }
 
 model CompanyExplorationRun {
@@ -169,6 +177,8 @@ model CompanyValuationExplanation {
   @@index([companyId, runId])
 }
 
+// CompanyPageEntry 表已废弃，字段已迁移到 Company 表
+// 保留此模型定义用于历史数据迁移，迁移完成后可删除
 model CompanyPageEntry {
   id        String   @id @default(cuid())
   companyId String
@@ -179,8 +189,6 @@ model CompanyPageEntry {
   visible   Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  company Company @relation(fields: [companyId], references: [id])
 
   @@index([visible, sortOrder])
   @@index([entryType])
