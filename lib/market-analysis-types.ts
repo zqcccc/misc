@@ -14,6 +14,7 @@ export interface CompanyInput {
   industry?: string
   country?: string
   website?: string
+  groupId?: string  // 跨市场关联标识，如 "新华保险"
 }
 
 export interface PageEntryInput {
@@ -82,6 +83,16 @@ export interface MarketAnalysisWriteInput {
   explanations?: ValuationExplanationInput[]
 }
 
+export interface IdempotentWriteInput extends MarketAnalysisWriteInput {
+  runId: string
+}
+
+export interface CrossMarketWriteInput extends IdempotentWriteInput {
+  // 当分析涉及多市场时，提供其他市场的 symbol 信息
+  // 系统会自动同步 exploration 到关联的市场公司
+  syncToMarkets?: ('us' | 'hk' | 'a' | 'cn')[]
+}
+
 export interface WriteResult {
   success: boolean
   message?: string
@@ -106,5 +117,11 @@ export interface WriteResult {
       asOfDate: Date | string
     } | null
     explanationsCount: number
+    syncedCompanies?: {
+      market: string
+      symbol: string
+      companyId: string
+      explorationId: string
+    }[]
   }
 }
