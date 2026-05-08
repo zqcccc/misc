@@ -375,7 +375,7 @@ function getIndustryInsight(sector: string | null, industry: string | null, mark
 
 // ===== 估值分析引擎 =====
 
-function analyzeValuation(pe: number | null, upside: number | null, sector: string | null): {
+function analyzeValuation(pe: number | null): {
   level: string
   detail: string
   scoreImpact: number
@@ -397,14 +397,6 @@ function analyzeValuation(pe: number | null, upside: number | null, sector: stri
   }
 
   if (pe < 5) {
-    const isBankOrInsurance = (sector || '').includes('银行') || (sector || '').includes('保险')
-    if (isBankOrInsurance) {
-      return {
-        level: '极低估值',
-        detail: `当前PE仅${pe.toFixed(1)}倍，对于金融股而言处于历史极低水平。低估值反映了市场对资产质量、净息差压缩或经济下行风险的担忧。虽然分红率可能较高，但需警惕"价值陷阱"——若盈利持续下滑，低PE可能被高EPS下降所抵消。`,
-        scoreImpact: 5,
-      }
-    }
     return {
       level: '极度低估',
       detail: `当前PE仅${pe.toFixed(1)}倍，显著低于市场平均水平，甚至低于许多成熟行业的合理估值下限。这种极端低估值通常意味着市场认为公司面临严重的经营困境、行业衰退或治理问题。除非有明确的催化剂，否则低估值可能长期持续。`,
@@ -596,7 +588,7 @@ function generateProfessionalAnalysis(company: CompanyData): {
   const industryInsight = getIndustryInsight(sector, industry, market)
 
   // 估值分析
-  const valuationAnalysis = analyzeValuation(pe, upside, sector)
+  const valuationAnalysis = analyzeValuation(pe)
 
   // 价格位置分析
   const priceAnalysis = analyzePricePosition(price, profitLine, upside)
@@ -607,26 +599,13 @@ function generateProfessionalAnalysis(company: CompanyData): {
   // 计算综合评分
   let score = 50 + valuationAnalysis.scoreImpact + priceAnalysis.scoreImpact + qualityAnalysis.scoreImpact
 
-  // 行业调整
-  const sectorLower = (sector || '').toLowerCase()
-  if (sectorLower.includes('银行') || sectorLower.includes('保险')) {
-    score += 5 // 金融股低估值有防御价值
-  }
-  if (sectorLower.includes('地产') && upside !== null && upside < -50) {
-    score -= 10 // 地产股深度折价反映行业风险
-  }
-  if (sectorLower.includes('科技') && pe !== null && pe > 40) {
-    score -= 10 // 科技股高估值风险
-  }
-
   score = Math.round(Math.max(0, Math.min(100, score)))
 
-  // 置信度
+  // 置信度（仅基于数据完整度，不惩罚特定指标值）
   let confidence = 70
   if (pe === null) confidence -= 15
   if (profitLine === null) confidence -= 10
   if (profitQualityScore === null) confidence -= 10
-  if (profitQualityScore !== null && profitQualityScore < 40) confidence -= 10
   confidence = Math.round(Math.max(40, Math.min(95, confidence)))
 
   // 生成摘要（估值水平 + 未来展望 + 买入建议）

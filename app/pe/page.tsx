@@ -11,7 +11,6 @@ import {
   useDerivedData,
 } from './hooks'
 import {
-  SearchHeader,
   CompanySidebar,
   ChartPanel,
   StatsPanel,
@@ -19,6 +18,7 @@ import {
   ExplanationsPanel,
   NotePanel,
 } from './components'
+import { resolveCompanySearchSymbol } from './utils'
 
 export default function ProfitLinePage() {
   const [symbolInput, setSymbolInput] = useState('00700.HK')
@@ -46,7 +46,7 @@ export default function ProfitLinePage() {
   }, [])
 
   const { submittedSymbol, data, state, error, fetchData } = useProfitLineData(symbolInput)
-  const { valuationEntries, entriesLoading, entriesLoadingMore, totalCount, hasMore, fetchEntries, loadMore } = useValuationEntries(debouncedSearch, filterQuality)
+  const { valuationEntries, entriesLoading, entriesLoadingMore, totalCount, hasMore, loadMore } = useValuationEntries(debouncedSearch, filterQuality)
 
   const selectedEntry = useMemo(() => {
     return (
@@ -86,13 +86,6 @@ export default function ProfitLinePage() {
     chartRef,
   )
 
-  const handleFetchData = useCallback(
-    (symbol: string) => {
-      fetchData(symbol)
-    },
-    [fetchData],
-  )
-
   const handleSelectCompany = useCallback(
     (symbol: string) => {
       setSymbolInput(symbol)
@@ -104,6 +97,18 @@ export default function ProfitLinePage() {
     },
     [fetchData, valuationEntries, setCurrentValuation],
   )
+
+  const handleCompanySearchSubmit = useCallback(() => {
+    const nextSymbol = resolveCompanySearchSymbol(searchQuery, valuationEntries)
+    if (!nextSymbol) return
+
+    setSymbolInput(nextSymbol)
+    const entry = valuationEntries.find((e) => e.symbol === nextSymbol)
+    if (entry) {
+      setCurrentValuation(entry)
+    }
+    fetchData(nextSymbol)
+  }, [fetchData, searchQuery, valuationEntries, setCurrentValuation])
 
   useEffect(() => {
     const timer = window.setTimeout(() => fetchData('00700.HK'), 0)
@@ -123,12 +128,14 @@ export default function ProfitLinePage() {
   return (
     <main className='bg-[#f4f6f9] text-gray-800 dark:bg-[#0b0f1a] dark:text-gray-100 transition-colors duration-300'>
       <section className='mx-auto flex w-full max-w-[1400px] flex-col gap-4 px-6 py-5'>
-        <SearchHeader
-          symbolInput={symbolInput}
-          setSymbolInput={setSymbolInput}
-          state={state}
-          onSubmit={handleFetchData}
-        />
+        <header className='pb-4'>
+          <p className='text-[10px] font-bold text-gray-500 tracking-[0.2em] uppercase dark:text-blue-400/80'>
+            Profit Line Lab
+          </p>
+          <h1 className='mt-1 text-2xl font-bold leading-tight text-gray-900 tracking-tight dark:text-white'>
+            利润线 vs 股价
+          </h1>
+        </header>
 
         <div className='grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)_320px]'>
           <CompanySidebar
@@ -142,8 +149,10 @@ export default function ProfitLinePage() {
             filterQuality={filterQuality}
             setFilterQuality={handleFilterChange}
             onSelect={handleSelectCompany}
+            onSearchSubmit={handleCompanySearchSubmit}
             onLoadMore={loadMore}
             hasMore={hasMore}
+            searchLoading={state === 'loading'}
           />
 
           <div className='flex flex-col gap-5'>
