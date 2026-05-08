@@ -5,6 +5,9 @@ export type ProfitPoint = {
   ttmEps: number | null
   price: number | null
   ttmPe: number | null
+  shareholderEquity?: number | null
+  liabilities?: number | null
+  cash?: number | null
 }
 
 export type ProfitLineData = {
@@ -24,6 +27,7 @@ export type ProfitLineData = {
   ttmMethod?: 'quarterly-rollup' | 'source-eps-ttm'
   epsCurrency?: string
   fxRate?: number
+  balanceCurrency?: string
 }
 
 export type ValuationExplanation = {

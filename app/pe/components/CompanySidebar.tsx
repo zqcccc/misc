@@ -72,13 +72,13 @@ export function CompanySidebar({
           {entriesLoading ? (
             <Skeleton className='h-5 w-8' />
           ) : (
-            <span className='bg-gray-100 text-gray-500 text-[10px] px-1.5 py-0.5 rounded font-semibold dark:bg-white/[0.06] dark:text-gray-500'>
+            <span className='bg-gray-100 text-gray-600 text-[10px] px-1.5 py-0.5 rounded font-semibold dark:bg-white/[0.06] dark:text-gray-400'>
               {entries.length}/{totalCount}
             </span>
           )}
         </div>
         <div className='relative'>
-          <svg className='absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 dark:text-gray-600' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+          <svg className='absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500 dark:text-gray-500' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
             <path d='M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z' strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' />
           </svg>
           <input
@@ -166,10 +166,10 @@ export function CompanySidebar({
                           {entry.title}
                         </div>
                         <div className='flex items-center gap-2 mt-0.5'>
-                          <span className='text-[11px] text-gray-400 dark:text-gray-600'>
+                          <span className='text-[11px] text-gray-500 dark:text-gray-500'>
                             {entry.symbol}
                           </span>
-                          <span className='text-[11px] text-gray-400 dark:text-gray-600'>
+                          <span className='text-[11px] text-gray-500 dark:text-gray-500'>
                             PE {formatNumber(entry.metrics.ttmPe)}
                           </span>
                         </div>
@@ -179,13 +179,13 @@ export function CompanySidebar({
                       <span className={`text-[10px] font-semibold ${qualityColor(entry.profitQuality)}`}>
                         {entry.profitQuality}
                       </span>
-                      <span className='text-xs font-semibold text-gray-600 dark:text-gray-400 tabular-nums'>
+                      <span className='text-xs font-semibold text-gray-700 dark:text-gray-300 tabular-nums'>
                         {entry.exploration.score === null ? '-' : entry.exploration.score}
                       </span>
                     </div>
                   </div>
                   {entry.entryNote && (
-                    <div className='mt-1.5 ml-10 text-[10px] text-gray-400 dark:text-gray-500 line-clamp-1'>
+                    <div className='mt-1.5 ml-10 text-[10px] text-gray-500 dark:text-gray-400 line-clamp-1'>
                       {entry.entryNote}
                     </div>
                   )}
@@ -206,7 +206,7 @@ export function CompanySidebar({
               </div>
             )}
             {!hasMore && entries.length > 0 && !entriesLoadingMore && (
-              <div className='py-3 text-center text-[11px] text-gray-400 dark:text-gray-600'>
+              <div className='py-3 text-center text-[11px] text-gray-500 dark:text-gray-500'>
                 已加载全部 {totalCount} 条
               </div>
             )}

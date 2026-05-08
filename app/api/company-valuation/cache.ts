@@ -6,6 +6,8 @@ export type CompanyValuationRedis = {
   get(key: string): Promise<string | null>
   set(key: string, value: string): Promise<unknown>
   expire(key: string, seconds: number): Promise<unknown>
+  keys(pattern: string): Promise<string[]>
+  del(keys: string | string[]): Promise<number>
 }
 
 export function buildCompanyValuationCacheKey(page: number, pageSize: number, search?: string, quality?: string) {
@@ -22,6 +24,10 @@ export function buildCompanyValuationTotalKey(search?: string, quality?: string)
 
 export function buildCompanyValuationAllKey() {
   return 'company-valuation:v2:all'
+}
+
+export function buildCompanyValuationCachePattern() {
+  return 'company-valuation:v2:*'
 }
 
 export async function readCompanyValuationCache<T>(
@@ -49,5 +55,14 @@ export async function writeCompanyValuationCache(
 }
 
 export async function getCompanyValuationRedis(): Promise<CompanyValuationRedis> {
-  return getRedis()
+  return await getRedis() as unknown as CompanyValuationRedis
+}
+
+export async function invalidateCompanyValuationCache(
+  redis?: CompanyValuationRedis,
+) {
+  const client = redis || await getCompanyValuationRedis()
+  const keys = await client.keys(buildCompanyValuationCachePattern())
+  if (keys.length === 0) return 0
+  return client.del(keys)
 }

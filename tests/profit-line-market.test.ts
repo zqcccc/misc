@@ -37,7 +37,13 @@ assert.deepEqual(normalizeMarketSymbol('AAPL'), {
 
 const quarterlyRows = pickEastmoneyEpsRows(
   [
-    { REPORT_DATE: '2024-03-31 00:00:00', EPSJB: 1 },
+    {
+      REPORT_DATE: '2024-03-31 00:00:00',
+      EPSJB: 1,
+      TOTAL_PARENT_EQUITY: 100,
+      TOTAL_LIABILITIES: 40,
+      MONETARYFUNDS: 25,
+    },
     { REPORT_DATE: '2024-06-30 00:00:00', EPSJB: 2 },
     { REPORT_DATE: '2024-09-30 00:00:00', EPSJB: 3 },
     { REPORT_DATE: '2024-12-31 00:00:00', EPSJB: 4 },
@@ -49,6 +55,9 @@ const quarterlyRows = pickEastmoneyEpsRows(
 assert.equal(quarterlyRows.length, 5)
 assert.equal(quarterlyRows[0].date, '2024-03-31')
 assert.equal(quarterlyRows[0].eps, 1)
+assert.equal(quarterlyRows[0].shareholderEquity, 100)
+assert.equal(quarterlyRows[0].liabilities, 40)
+assert.equal(quarterlyRows[0].cash, 25)
 
 const points = buildQuarterPoints(
   quarterlyRows,
@@ -65,6 +74,9 @@ assert.equal(points[2].ttmEps, null)
 assert.equal(points[3].ttmEps, 10)
 assert.equal(points[4].ttmEps, 14)
 assert.equal(points[4].ttmPe, 3.57)
+assert.equal(points[0].shareholderEquity, 100)
+assert.equal(points[0].liabilities, 40)
+assert.equal(points[0].cash, 25)
 
 assert.deepEqual(
   latestDailyPrice([

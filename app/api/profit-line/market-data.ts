@@ -20,6 +20,9 @@ export type EpsRow = {
   ttmEps?: number
   name?: string
   currency?: string
+  shareholderEquity?: number | null
+  liabilities?: number | null
+  cash?: number | null
 }
 
 export type DailyPrice = {
@@ -34,6 +37,9 @@ export type QuarterPoint = {
   ttmEps: number | null
   price: number | null
   ttmPe: number | null
+  shareholderEquity: number | null
+  liabilities: number | null
+  cash: number | null
 }
 
 export type LatestDailyPrice = {
@@ -103,7 +109,7 @@ function quarterLabel(date: string) {
   return `${value.getUTCFullYear()} Q${quarter}`
 }
 
-function toNumber(value: unknown) {
+export function toNumber(value: unknown) {
   if (typeof value === 'number' && Number.isFinite(value)) return value
   if (typeof value === 'string' && value.trim() !== '') {
     const parsed = Number(value)
@@ -118,7 +124,7 @@ export function pickEastmoneyEpsRows(
   ttmField?: string,
 ) {
   return rows
-    .map((row) => {
+    .map((row): EpsRow | null => {
       const date =
         toDateString(row.REPORT_DATE) ||
         toDateString(row.STD_REPORT_DATE) ||
@@ -127,6 +133,15 @@ export function pickEastmoneyEpsRows(
       if (!date || eps === null) return null
 
       const ttmValue = ttmField ? toNumber(row[ttmField]) : null
+      const shareholderEquity = toNumber(
+        row.TOTAL_PARENT_EQUITY ?? row.PARENT_EQUITY ?? row.TOTAL_EQUITY,
+      )
+      const liabilities = toNumber(row.TOTAL_LIABILITIES ?? row.TOTAL_LIAB)
+      const cash = toNumber(
+        row.MONETARYFUNDS ??
+          row.CASH_CASH_EQUIVALENTS ??
+          row.CASH_AND_CASH_EQUIVALENTS,
+      )
       return {
         date,
         quarter: quarterLabel(date),
@@ -138,6 +153,9 @@ export function pickEastmoneyEpsRows(
           ? { name: row.SECURITY_NAME_ABBR }
           : {}),
         ...(typeof row.CURRENCY === 'string' ? { currency: row.CURRENCY } : {}),
+        shareholderEquity,
+        liabilities,
+        cash,
       } satisfies EpsRow
     })
     .filter((row): row is EpsRow => Boolean(row))
@@ -196,6 +214,9 @@ export function buildQuarterPoints(
       ttmEps,
       price,
       ttmPe,
+      shareholderEquity: quarter.shareholderEquity ?? null,
+      liabilities: quarter.liabilities ?? null,
+      cash: quarter.cash ?? null,
     }
   })
 }

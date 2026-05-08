@@ -12,6 +12,9 @@ const points: ChartBasePoint[] = [
     profitLine: 150,
     deviation: 33.3333,
     alert: false,
+    shareholderEquity: 1000,
+    liabilities: 400,
+    cash: 200,
   },
   {
     date: '2025-12-31',
@@ -23,6 +26,9 @@ const points: ChartBasePoint[] = [
     profitLine: 300,
     deviation: 100,
     alert: false,
+    shareholderEquity: 1200,
+    liabilities: 500,
+    cash: 250,
   },
 ]
 
@@ -45,6 +51,9 @@ assert.deepEqual(source.at(-1), {
   referenceLine: 600,
   deviation: 59.133333333333326,
   alert: false,
+  shareholderEquity: null,
+  liabilities: null,
+  cash: null,
   isLatestPrice: true,
   displayLabel: '2026-05-07',
   epsSourceQuarter: '2025 Q4',

@@ -10,6 +10,8 @@ import {
   latestDailyPrice,
   normalizeMarketSymbol,
   pickEastmoneyEpsRows,
+  toNumber,
+  type EpsRow,
   type NormalizedMarketSymbol,
 } from './market-data'
 
@@ -49,7 +51,13 @@ type ProfitLinePayload = {
   splitAdjusted?: boolean
   epsCurrency?: string
   fxRate?: number
+  balanceCurrency?: string
 }
+
+type RegionalMarketSymbol = Extract<
+  NormalizedMarketSymbol,
+  { market: 'cn' | 'hk' }
+>
 
 const SEC_HEADERS = {
   'User-Agent':
@@ -192,6 +200,56 @@ function pickQuarterlyEps(secFacts: any): Array<{
     .slice(-48)
 }
 
+function pickSecInstantFacts(secFacts: any, tags: string[]) {
+  const gaap = secFacts?.facts?.['us-gaap']
+  const tag = tags.find((name) => Array.isArray(gaap?.[name]?.units?.USD))
+  const facts = tag ? (gaap[tag].units.USD as SecFact[]) : []
+  const byEndDate = new Map<string, { value: number; rank: number }>()
+
+  facts.forEach((fact) => {
+    if (!fact.end || typeof fact.val !== 'number') return
+    if (!['10-Q', '10-K'].includes(fact.form || '')) return
+
+    const rank =
+      (fact.form === '10-Q' ? 2 : 1) +
+      (fact.filed ? new Date(fact.filed).getTime() / 10_000_000_000_000 : 0)
+    const existing = byEndDate.get(fact.end)
+    if (!existing || rank >= existing.rank) {
+      byEndDate.set(fact.end, {
+        value: Number(fact.val.toFixed(2)),
+        rank,
+      })
+    }
+  })
+
+  return new Map(
+    Array.from(byEndDate.entries()).map(([date, item]) => [date, item.value]),
+  )
+}
+
+function mergeUsBalanceMetrics<T extends { date: string }>(
+  quarters: T[],
+  secFacts: any,
+) {
+  const equityByDate = pickSecInstantFacts(secFacts, [
+    'StockholdersEquity',
+    'StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest',
+  ])
+  const liabilitiesByDate = pickSecInstantFacts(secFacts, ['Liabilities'])
+  const cashByDate = pickSecInstantFacts(secFacts, [
+    'CashAndCashEquivalentsAtCarryingValue',
+    'CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents',
+    'CashAndDueFromBanks',
+  ])
+
+  return quarters.map((quarter) => ({
+    ...quarter,
+    shareholderEquity: equityByDate.get(quarter.date) ?? null,
+    liabilities: liabilitiesByDate.get(quarter.date) ?? null,
+    cash: cashByDate.get(quarter.date) ?? null,
+  }))
+}
+
 function toUnixSeconds(date: string, dayOffset = 0) {
   const value = new Date(`${date}T00:00:00Z`)
   value.setUTCDate(value.getUTCDate() + dayOffset)
@@ -279,7 +337,8 @@ async function buildUsPayload(symbol: string): Promise<ProfitLinePayload> {
       eps: Number((quarter.eps / splitAdjustment).toFixed(4)),
     }
   })
-  const points = buildQuarterPoints(adjustedQuarters, marketData.prices)
+  const quartersWithBalance = mergeUsBalanceMetrics(adjustedQuarters, secFacts)
+  const points = buildQuarterPoints(quartersWithBalance, marketData.prices)
 
   return {
     symbol: company.ticker,
@@ -294,21 +353,148 @@ async function buildUsPayload(symbol: string): Promise<ProfitLinePayload> {
     },
     ttmMethod: 'quarterly-rollup',
     splitAdjusted: marketData.splits.length > 0,
+    balanceCurrency: 'USD',
+  }
+}
+
+type BalanceMetric = {
+  date: string
+  shareholderEquity: number | null
+  liabilities: number | null
+  cash: number | null
+  balanceCurrency?: string
+}
+
+function normalizeCurrencyCode(value: unknown) {
+  if (typeof value !== 'string') return undefined
+  if (/^[A-Z]{3}$/.test(value)) return value
+  if (value.includes('人民币')) return 'CNY'
+  if (value.includes('港')) return 'HKD'
+  if (value.includes('美元')) return 'USD'
+  return undefined
+}
+
+function mergeBalanceMetrics(quarters: EpsRow[], metrics: BalanceMetric[]) {
+  const byDate = new Map(metrics.map((metric) => [metric.date, metric]))
+  return quarters.map((quarter) => {
+    const metric = byDate.get(quarter.date)
+    return {
+      ...quarter,
+      shareholderEquity:
+        quarter.shareholderEquity ?? metric?.shareholderEquity ?? null,
+      liabilities: quarter.liabilities ?? metric?.liabilities ?? null,
+      cash: quarter.cash ?? metric?.cash ?? null,
+    }
+  })
+}
+
+async function fetchCnBalanceMetrics(
+  marketSymbol: RegionalMarketSymbol,
+): Promise<{ metrics: BalanceMetric[]; balanceCurrency?: string }> {
+  const data = await fetchEastmoneyJson<any>(
+    'https://datacenter.eastmoney.com/securities/api/data/v1/get',
+    {
+      reportName: 'RPT_F10_FINANCE_GBALANCE',
+      columns: 'ALL',
+      quoteColumns: '',
+      filter: `(SECUCODE="${marketSymbol.eastmoneyCode}")`,
+      pageNumber: '1',
+      pageSize: '200',
+      sortTypes: '-1',
+      sortColumns: 'REPORT_DATE',
+      source: 'HSF10',
+      client: 'PC',
+    },
+  )
+  const rawRows = data?.result?.data || []
+  const balanceCurrency = normalizeCurrencyCode(rawRows[0]?.CURRENCY)
+
+  return {
+    metrics: rawRows
+      .map((row: Record<string, unknown>) => {
+        const date = typeof row.REPORT_DATE === 'string'
+          ? row.REPORT_DATE.slice(0, 10)
+          : null
+        if (!date) return null
+        return {
+          date,
+          shareholderEquity: toNumber(
+            row.TOTAL_PARENT_EQUITY ?? row.TOTAL_EQUITY,
+          ),
+          liabilities: toNumber(row.TOTAL_LIABILITIES),
+          cash: toNumber(row.MONETARYFUNDS),
+          balanceCurrency,
+        }
+      })
+      .filter((row: BalanceMetric | null): row is BalanceMetric => Boolean(row)),
+    balanceCurrency,
+  }
+}
+
+async function fetchHkBalanceMetrics(
+  marketSymbol: RegionalMarketSymbol,
+): Promise<{ metrics: BalanceMetric[]; balanceCurrency?: string }> {
+  const data = await fetchEastmoneyJson<any>(
+    'https://datacenter.eastmoney.com/securities/api/data/v1/get',
+    {
+      reportName: 'RPT_HKF10_FN_BALANCE',
+      columns: 'ALL',
+      quoteColumns: '',
+      filter: `(SECUCODE="${marketSymbol.eastmoneyCode}.HK")`,
+      pageNumber: '1',
+      pageSize: '3000',
+      sortTypes: '-1',
+      sortColumns: 'STD_REPORT_DATE',
+      source: 'F10',
+      client: 'PC',
+    },
+  )
+  const rawRows = data?.result?.data || []
+  const balanceCurrency =
+    normalizeCurrencyCode(rawRows[0]?.CURRENCY_CODE) ||
+    normalizeCurrencyCode(rawRows[0]?.CURRENCY)
+  const byDate = new Map<string, BalanceMetric>()
+
+  rawRows.forEach((row: Record<string, unknown>) => {
+    const date =
+      typeof row.STD_REPORT_DATE === 'string'
+        ? row.STD_REPORT_DATE.slice(0, 10)
+        : null
+    if (!date) return
+
+    const metric = byDate.get(date) || {
+      date,
+      shareholderEquity: null,
+      liabilities: null,
+      cash: null,
+      balanceCurrency,
+    }
+    if (row.STD_ITEM_CODE === '004030999') {
+      metric.shareholderEquity = toNumber(row.AMOUNT)
+    }
+    if (row.STD_ITEM_CODE === '004025999') {
+      metric.liabilities = toNumber(row.AMOUNT)
+    }
+    if (row.STD_ITEM_CODE === '004002010') {
+      metric.cash = toNumber(row.AMOUNT)
+    }
+    byDate.set(date, metric)
+  })
+
+  return {
+    metrics: Array.from(byDate.values()),
+    balanceCurrency,
   }
 }
 
 async function fetchEastmoneyQuarters(
-  marketSymbol: Extract<NormalizedMarketSymbol, { market: 'cn' | 'hk' }>,
+  marketSymbol: RegionalMarketSymbol,
 ): Promise<{
   name: string
-  quarters: Array<{
-    date: string
-    quarter: string
-    eps: number
-    ttmEps?: number
-  }>
+  quarters: EpsRow[]
   ttmMethod: 'quarterly-rollup' | 'source-eps-ttm'
   epsSource: string
+  balanceCurrency?: string
 }> {
   if (marketSymbol.market === 'cn') {
     const data = await fetchEastmoneyJson<any>(
@@ -327,11 +513,18 @@ async function fetchEastmoneyQuarters(
       },
     )
     const rawRows = data?.result?.data || []
+    const balanceData = await fetchCnBalanceMetrics(marketSymbol)
+    const quarters = mergeBalanceMetrics(
+      pickEastmoneyEpsRows(rawRows, 'EPSJB').slice(-48),
+      balanceData.metrics,
+    )
+
     return {
       name: rawRows[0]?.SECURITY_NAME_ABBR || marketSymbol.symbol,
-      quarters: pickEastmoneyEpsRows(rawRows, 'EPSJB').slice(-48),
+      quarters,
       ttmMethod: 'quarterly-rollup',
       epsSource: 'Eastmoney A-share quarterly financial indicators',
+      balanceCurrency: balanceData.balanceCurrency,
     }
   }
 
@@ -352,16 +545,23 @@ async function fetchEastmoneyQuarters(
     },
   )
   const rawRows = data?.result?.data || []
+  const balanceData = await fetchHkBalanceMetrics(marketSymbol)
+  const quarters = mergeBalanceMetrics(
+    pickEastmoneyEpsRows(rawRows, 'BASIC_EPS', 'EPS_TTM').slice(-48),
+    balanceData.metrics,
+  )
+
   return {
     name: rawRows[0]?.SECURITY_NAME_ABBR || marketSymbol.symbol,
-    quarters: pickEastmoneyEpsRows(rawRows, 'BASIC_EPS', 'EPS_TTM').slice(-48),
+    quarters,
     ttmMethod: 'source-eps-ttm',
     epsSource: 'Eastmoney HK financial indicators',
+    balanceCurrency: balanceData.balanceCurrency,
   }
 }
 
 function toRegionalYahooSymbol(
-  marketSymbol: Extract<NormalizedMarketSymbol, { market: 'cn' | 'hk' }>,
+  marketSymbol: RegionalMarketSymbol,
 ) {
   if (marketSymbol.market === 'hk') {
     return `${Number(marketSymbol.symbol).toString().padStart(4, '0')}.HK`
@@ -453,7 +653,7 @@ function isEpsInCny(symbol: string, profile: HkCompanyProfile): boolean {
 }
 
 async function buildEastmoneyPayload(
-  marketSymbol: Extract<NormalizedMarketSymbol, { market: 'cn' | 'hk' }>,
+  marketSymbol: RegionalMarketSymbol,
 ): Promise<ProfitLinePayload> {
   const financialData = await fetchEastmoneyQuarters(marketSymbol)
   const quarters = financialData.quarters
@@ -500,6 +700,9 @@ async function buildEastmoneyPayload(
     },
     ttmMethod: financialData.ttmMethod,
     ...(epsCurrency ? { epsCurrency, fxRate } : {}),
+    ...(financialData.balanceCurrency
+      ? { balanceCurrency: financialData.balanceCurrency }
+      : {}),
   }
 }
 
