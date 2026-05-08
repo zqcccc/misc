@@ -121,33 +121,21 @@ export async function upsertPageEntry(
   companyId: string,
   input: PageEntryInput,
 ) {
-  const existingEntry = await prisma.companyPageEntry.findFirst({
-    where: {
-      companyId,
-      entryType: input.entryType,
-    },
+  const existingCompany = await prisma.company.findUnique({
+    where: { id: companyId },
   })
 
-  if (existingEntry) {
-    return prisma.companyPageEntry.update({
-      where: { id: existingEntry.id },
-      data: {
-        title: input.title,
-        note: input.note,
-        sortOrder: input.sortOrder ?? existingEntry.sortOrder,
-        visible: input.visible ?? existingEntry.visible,
-      },
-    })
+  if (!existingCompany) {
+    throw new Error(`Company not found: ${companyId}`)
   }
 
-  return prisma.companyPageEntry.create({
+  return prisma.company.update({
+    where: { id: companyId },
     data: {
-      companyId,
       entryType: input.entryType,
-      title: input.title,
-      note: input.note,
-      sortOrder: input.sortOrder ?? 0,
-      visible: input.visible ?? true,
+      entryNote: input.note,
+      sortOrder: input.sortOrder ?? existingCompany.sortOrder,
+      visible: input.visible ?? existingCompany.visible,
     },
   })
 }
@@ -530,7 +518,6 @@ export async function getCompanyByMarketSymbol(
         orderBy: [{ asOfDate: 'desc' }, { createdAt: 'desc' }],
         take: 8,
       },
-      pageEntries: true,
     },
   })
 }
@@ -548,7 +535,6 @@ export async function getCompanyGroupMembers(groupId: string) {
         orderBy: [{ pinned: 'desc' }, { createdAt: 'desc' }],
         take: 1,
       },
-      pageEntries: true,
     },
   })
 }

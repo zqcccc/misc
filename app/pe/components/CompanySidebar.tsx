@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useCallback, useEffect, useState } from 'react'
+import { useRef, useCallback, useState } from 'react'
 import { CompanyValuationCard } from '../types'
 import { formatNumber, qualityColor } from '../utils'
 import { Skeleton } from './Skeleton'
@@ -68,7 +68,7 @@ export function CompanySidebar({
     <nav className='rounded-xl bg-white shadow-sm dark:bg-[#111520] dark:shadow-none overflow-hidden lg:max-h-[calc(100vh-140px)] flex flex-col'>
       <div className='px-3 py-3 border-b border-gray-50 dark:border-white/[0.04] space-y-2 shrink-0'>
         <div className='flex items-center justify-between'>
-          <h2 className='text-xs font-semibold text-gray-500 uppercase tracking-wider dark:text-gray-400'>公司入口</h2>
+          <h2 className='text-xs font-semibold text-gray-500 uppercase tracking-wider dark:text-gray-400'>公司</h2>
           {entriesLoading ? (
             <Skeleton className='h-5 w-8' />
           ) : (
@@ -144,7 +144,7 @@ export function CompanySidebar({
               return (
                 <button
                   key={entry.id}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-150 bg-transparent border-0 text-left ${
+                  className={`w-full flex flex-col px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-150 bg-transparent border-0 text-left ${
                     active
                       ? 'bg-blue-50 dark:bg-[#141824]'
                       : 'hover:bg-gray-50 dark:hover:bg-white/[0.02]'
@@ -152,36 +152,43 @@ export function CompanySidebar({
                   type='button'
                   onClick={() => onSelect(entry.symbol)}
                 >
-                  <div className='flex items-center gap-3 min-w-0 flex-1'>
-                    <div className='w-7 h-7 rounded-md text-white flex items-center justify-center text-[11px] font-semibold shrink-0' style={{ backgroundColor: avatarColors[colorIndex] }}>
-                      {avatarChar}
+                  <div className='flex items-center justify-between w-full'>
+                    <div className='flex items-center gap-3 min-w-0 flex-1'>
+                      <div className='w-7 h-7 rounded-md text-white flex items-center justify-center text-[11px] font-semibold shrink-0' style={{ backgroundColor: avatarColors[colorIndex] }}>
+                        {avatarChar}
+                      </div>
+                      <div className='min-w-0'>
+                        <div className={`truncate overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-medium ${
+                          active
+                            ? 'text-gray-900 dark:text-white'
+                            : 'text-gray-700 dark:text-gray-300'
+                        }`}>
+                          {entry.title}
+                        </div>
+                        <div className='flex items-center gap-2 mt-0.5'>
+                          <span className='text-[11px] text-gray-400 dark:text-gray-600'>
+                            {entry.symbol}
+                          </span>
+                          <span className='text-[11px] text-gray-400 dark:text-gray-600'>
+                            PE {formatNumber(entry.metrics.ttmPe)}
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                    <div className='min-w-0'>
-                      <div className={`truncate overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-medium ${
-                        active
-                          ? 'text-gray-900 dark:text-white'
-                          : 'text-gray-700 dark:text-gray-300'
-                      }`}>
-                        {entry.title}
-                      </div>
-                      <div className='flex items-center gap-2 mt-0.5'>
-                        <span className='text-[11px] text-gray-400 dark:text-gray-600'>
-                          {entry.symbol}
-                        </span>
-                        <span className='text-[11px] text-gray-400 dark:text-gray-600'>
-                          PE {formatNumber(entry.metrics.ttmPe)}
-                        </span>
-                      </div>
+                    <div className='text-right flex flex-col items-end gap-1 shrink-0 ml-2'>
+                      <span className={`text-[10px] font-semibold ${qualityColor(entry.profitQuality)}`}>
+                        {entry.profitQuality}
+                      </span>
+                      <span className='text-xs font-semibold text-gray-600 dark:text-gray-400 tabular-nums'>
+                        {entry.exploration.score === null ? '-' : entry.exploration.score}
+                      </span>
                     </div>
                   </div>
-                  <div className='text-right flex flex-col items-end gap-1 shrink-0'>
-                    <span className={`text-[10px] font-semibold ${qualityColor(entry.profitQuality)}`}>
-                      {entry.profitQuality}
-                    </span>
-                    <span className='text-xs font-semibold text-gray-600 dark:text-gray-400 tabular-nums'>
-                      {entry.exploration.score === null ? '-' : entry.exploration.score}
-                    </span>
-                  </div>
+                  {entry.entryNote && (
+                    <div className='mt-1.5 ml-10 text-[10px] text-gray-400 dark:text-gray-500 line-clamp-1'>
+                      {entry.entryNote}
+                    </div>
+                  )}
                 </button>
               )
             })}

@@ -37,12 +37,8 @@ const card = buildCompanyValuationCard({
     market: 'hk',
     name: '腾讯控股',
     currency: 'HKD',
-  },
-  entry: {
-    id: 'entry_1',
     entryType: 'discovered',
-    title: null,
-    note: 'AI 近期发现',
+    entryNote: 'AI 近期发现',
   },
   latestValuation: {
     asOfDate: new Date('2026-03-31T00:00:00.000Z'),
@@ -66,6 +62,8 @@ const card = buildCompanyValuationCard({
 assert.equal(card.id, 'company_1')
 assert.equal(card.symbol, '00700.HK')
 assert.equal(card.title, '腾讯控股')
+assert.equal(card.entryType, 'discovered')
+assert.equal(card.entryNote, 'AI 近期发现')
 assert.equal(card.primaryExplanation?.title, '利润包含一次性处置收益')
 assert.equal(card.profitQuality, '需调整')
 assert.deepEqual(card.tags, ['互联网', '现金流'])

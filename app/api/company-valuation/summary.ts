@@ -17,13 +17,9 @@ export type CompanyValuationCardInput = {
     market: string
     name: string
     currency?: string | null
+    entryType?: string | null
+    entryNote?: string | null
   }
-  entry?: {
-    id: string
-    entryType: string
-    title?: string | null
-    note?: string | null
-  } | null
   latestValuation?: {
     asOfDate: Date | string
     price?: number | null
@@ -128,13 +124,13 @@ export function buildCompanyValuationCard(
   const latestValuation = input.latestValuation
 
   return {
-    id: input.entry?.id || input.company.id,
+    id: input.company.id,
     symbol: input.company.symbol,
     market: input.company.market,
-    title: input.entry?.title || input.company.name,
+    title: input.company.name,
     currency: input.company.currency || null,
-    entryType: input.entry?.entryType || 'manual',
-    entryNote: input.entry?.note || null,
+    entryType: input.company.entryType || 'manual',
+    entryNote: input.company.entryNote || null,
     metrics: {
       asOfDate: toDateString(latestValuation?.asOfDate),
       price: latestValuation?.price ?? null,
