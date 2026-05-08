@@ -66,6 +66,10 @@ export type CompanyValuationCard = {
 
 export type CompanyValuationListPayload = {
   entries: CompanyValuationCard[]
+  total: number
+  page: number
+  pageSize: number
+  hasMore: boolean
 }
 
 export type CompanyValuationDetailPayload = {

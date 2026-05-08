@@ -1,5 +1,6 @@
 'use client'
 
+import { useRef, useCallback, useEffect, useState } from 'react'
 import { CompanyValuationCard } from '../types'
 import { formatNumber, qualityColor } from '../utils'
 import { Skeleton } from './Skeleton'
@@ -7,6 +8,7 @@ import { Skeleton } from './Skeleton'
 interface CompanySidebarProps {
   entries: CompanyValuationCard[]
   entriesLoading: boolean
+  entriesLoadingMore: boolean
   totalCount: number
   currentSymbol: string | undefined
   searchQuery: string
@@ -14,13 +16,25 @@ interface CompanySidebarProps {
   filterQuality: '全部' | CompanyValuationCard['profitQuality']
   setFilterQuality: (value: '全部' | CompanyValuationCard['profitQuality']) => void
   onSelect: (symbol: string) => void
+  onLoadMore: () => void
+  hasMore: boolean
 }
 
 const avatarColors = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#06b6d4', '#f97316', '#ef4444']
 
+function LoadingSpinner() {
+  return (
+    <div className='py-3 flex justify-center items-center gap-2'>
+      <div className='w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin' />
+      <span className='text-[11px] text-gray-400 dark:text-gray-500'>加载中...</span>
+    </div>
+  )
+}
+
 export function CompanySidebar({
   entries,
   entriesLoading,
+  entriesLoadingMore,
   totalCount,
   currentSymbol,
   searchQuery,
@@ -28,10 +42,31 @@ export function CompanySidebar({
   filterQuality,
   setFilterQuality,
   onSelect,
+  onLoadMore,
+  hasMore,
 }: CompanySidebarProps) {
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const [loadError, setLoadError] = useState(false)
+
+  const handleScroll = useCallback(() => {
+    const container = scrollRef.current
+    if (!container || entriesLoading || entriesLoadingMore || !hasMore || loadError) return
+
+    const { scrollTop, scrollHeight, clientHeight } = container
+    if (scrollTop + clientHeight >= scrollHeight - 100) {
+      setLoadError(false)
+      onLoadMore()
+    }
+  }, [entriesLoading, entriesLoadingMore, hasMore, loadError, onLoadMore])
+
+  const handleRetry = useCallback(() => {
+    setLoadError(false)
+    onLoadMore()
+  }, [onLoadMore])
+
   return (
-    <nav className='rounded-xl bg-white shadow-sm dark:bg-[#111520] dark:shadow-none overflow-hidden lg:max-h-[calc(100vh-140px)] lg:overflow-auto'>
-      <div className='px-3 py-3 border-b border-gray-50 dark:border-white/[0.04] space-y-2'>
+    <nav className='rounded-xl bg-white shadow-sm dark:bg-[#111520] dark:shadow-none overflow-hidden lg:max-h-[calc(100vh-140px)] flex flex-col'>
+      <div className='px-3 py-3 border-b border-gray-50 dark:border-white/[0.04] space-y-2 shrink-0'>
         <div className='flex items-center justify-between'>
           <h2 className='text-xs font-semibold text-gray-500 uppercase tracking-wider dark:text-gray-400'>公司入口</h2>
           {entriesLoading ? (
@@ -71,7 +106,12 @@ export function CompanySidebar({
         </select>
       </div>
 
-      <div className='p-1.5 space-y-1'>
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className='p-1.5 space-y-1 overflow-y-auto flex-1'
+        style={{ maxHeight: 'calc(100vh - 260px)' }}
+      >
         {entriesLoading ? (
           <div className='space-y-0.5'>
             {Array.from({ length: 8 }).map((_, i) => (
@@ -145,6 +185,24 @@ export function CompanySidebar({
                 </button>
               )
             })}
+            {entriesLoadingMore && <LoadingSpinner />}
+            {loadError && (
+              <div className='py-3 text-center'>
+                <span className='text-[11px] text-red-400 dark:text-red-500'>加载失败，</span>
+                <button
+                  type='button'
+                  className='text-[11px] text-blue-500 hover:text-blue-600 underline'
+                  onClick={handleRetry}
+                >
+                  点击重试
+                </button>
+              </div>
+            )}
+            {!hasMore && entries.length > 0 && !entriesLoadingMore && (
+              <div className='py-3 text-center text-[11px] text-gray-400 dark:text-gray-600'>
+                已加载全部 {totalCount} 条
+              </div>
+            )}
           </div>
         )}
       </div>
