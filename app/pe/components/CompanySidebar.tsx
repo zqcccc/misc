@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useCallback, useState } from 'react'
+import { FormEvent, useRef, useCallback, useState } from 'react'
 import { CompanyValuationCard } from '../types'
 import { formatNumber, qualityColor } from '../utils'
 import { Skeleton } from './Skeleton'
@@ -16,8 +16,10 @@ interface CompanySidebarProps {
   filterQuality: '全部' | CompanyValuationCard['profitQuality']
   setFilterQuality: (value: '全部' | CompanyValuationCard['profitQuality']) => void
   onSelect: (symbol: string) => void
+  onSearchSubmit: () => void
   onLoadMore: () => void
   hasMore: boolean
+  searchLoading: boolean
 }
 
 const avatarColors = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#06b6d4', '#f97316', '#ef4444']
@@ -42,8 +44,10 @@ export function CompanySidebar({
   filterQuality,
   setFilterQuality,
   onSelect,
+  onSearchSubmit,
   onLoadMore,
   hasMore,
+  searchLoading,
 }: CompanySidebarProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [loadError, setLoadError] = useState(false)
@@ -64,6 +68,11 @@ export function CompanySidebar({
     onLoadMore()
   }, [onLoadMore])
 
+  const handleSubmit = useCallback((event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    onSearchSubmit()
+  }, [onSearchSubmit])
+
   return (
     <nav className='rounded-xl bg-white shadow-sm dark:bg-[#111520] dark:shadow-none overflow-hidden lg:max-h-[calc(100vh-140px)] flex flex-col'>
       <div className='px-3 py-3 border-b border-gray-50 dark:border-white/[0.04] space-y-2 shrink-0'>
@@ -77,17 +86,26 @@ export function CompanySidebar({
             </span>
           )}
         </div>
-        <div className='relative'>
-          <svg className='absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500 dark:text-gray-500' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-            <path d='M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z' strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' />
-          </svg>
-          <input
-            className='w-full h-8 pl-8 pr-3 text-[11px] rounded-md bg-gray-50 border-0 outline-none focus:bg-white focus:ring-1 focus:ring-blue-500/30 dark:bg-[#141824] dark:text-gray-300 dark:placeholder-gray-600 dark:focus:bg-[#1a1f2e] transition'
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder='搜索公司、代码、标签'
-          />
-        </div>
+        <form className='flex gap-1.5' onSubmit={handleSubmit}>
+          <div className='relative min-w-0 flex-1'>
+            <svg className='absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500 dark:text-gray-500' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+              <path d='M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z' strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' />
+            </svg>
+            <input
+              className='w-full h-8 pl-8 pr-3 text-[11px] rounded-md bg-gray-50 border-0 outline-none focus:bg-white focus:ring-1 focus:ring-blue-500/30 dark:bg-[#141824] dark:text-gray-300 dark:placeholder-gray-600 dark:focus:bg-[#1a1f2e] transition'
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder='搜索公司 / 代码'
+            />
+          </div>
+          <button
+            className='h-8 rounded-md bg-blue-600 px-2.5 text-[11px] font-medium text-white transition hover:bg-blue-500 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 disabled:cursor-not-allowed disabled:opacity-50 dark:shadow-blue-600/20'
+            disabled={searchLoading || !searchQuery.trim()}
+            type='submit'
+          >
+            {searchLoading ? '查找中' : '绘制'}
+          </button>
+        </form>
         <select
           className='w-full h-8 pl-2 pr-7 text-[11px] rounded-md bg-gray-50 border-0 outline-none appearance-none cursor-pointer dark:bg-[#141824] dark:text-gray-300 transition'
           value={filterQuality}
