@@ -25,7 +25,6 @@ export async function GET() {
   try {
     const entries = await prisma.companyPageEntry.findMany({
       where: { visible: true },
-      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
       take: 500,
       include: {
         company: {
@@ -44,7 +43,14 @@ export async function GET() {
       }),
     )
 
-    return NextResponse.json({ entries: cards })
+    const sortedCards = cards.sort((a, b) => {
+      const qualityOrder = { '正常': 0, '待确认': 1, '需调整': 2 }
+      const qualityDiff = qualityOrder[a.profitQuality] - qualityOrder[b.profitQuality]
+      if (qualityDiff !== 0) return qualityDiff
+      return (b.exploration.score ?? 0) - (a.exploration.score ?? 0)
+    })
+
+    return NextResponse.json({ entries: sortedCards })
   } catch (error) {
     console.error('[company-valuation] load failed:', error)
     return NextResponse.json(

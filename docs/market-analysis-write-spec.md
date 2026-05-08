@@ -2,7 +2,150 @@
 
 ## 概述
 
-本文档定义了外部 Agent 在完成市场分析后将数据写入数据库的标准流程。所有通过 Agent 分析产生的数据必须按照此规范写入，以确保数据能够正确地在 PE 页面展示。
+本文档定义了外部 Agent 在完成**人工分析**后将数据写入数据库的标准流程。
+
+**重要说明：这不是程序化数据接口！**
+- 本 API 仅供具备分析能力的 AI Agent 使用
+- 写入的数据应基于 Agent 对多维度信息的**综合判断**，而非简单的财务指标计算
+- 评分（score）应反映 Agent 对公司投资价值的**主观+客观综合评估**
+
+## Agent 分析要求
+
+### 什么情况下应该写入数据？
+
+Agent 在以下情况下应该调用本 API：
+1. 完成了对某家公司的**深度研究分析**
+2. 收集了**多维度信息**（财务数据、行业动态、竞争格局、管理层、宏观经济等）
+3. 形成了**明确的投资观点**（看多/看空/中性）
+4. 愿意为该观点承担**置信度评估**
+
+### 什么情况下不应该写入数据？
+
+以下情况**不应该**调用本 API：
+1. 仅获取了原始财务数据，未形成分析观点
+2. 仅做了简单的指标计算（如 PE、PB 排名）
+3. 没有阅读公司年报、研报、新闻等上下文信息
+4. 对公司所在行业缺乏基本了解
+
+### 分析前必须收集的上下文
+
+Agent 在给出评分和写入数据前，必须尽可能收集以下信息：
+
+#### 1. 财务数据（客观基础）
+- 最近 3-5 年的营收、利润、现金流趋势
+- 毛利率、净利率变化及原因
+- ROE、ROA 及其可持续性
+- 资产负债结构（有息负债、现金储备）
+- 资本开支与自由现金流
+
+#### 2. 行业与竞争（客观环境）
+- 行业增长阶段（成长期/成熟期/衰退期）
+- 公司在行业中的竞争地位（龙头/挑战者/ niche）
+- 主要竞争对手及差异化优势
+- 行业壁垒（技术、品牌、渠道、牌照）
+
+#### 3. 公司治理与管理层（主观判断）
+- 股权结构是否合理
+- 管理层历史业绩与诚信记录
+- 关联交易情况
+- 股东回报政策（分红、回购）
+
+#### 4. 催化剂与风险（前瞻性）
+- 未来 1-2 年的潜在催化剂
+- 主要风险因素（政策、技术替代、周期）
+- ESG 相关风险
+
+#### 5. 估值水平（市场定价）
+- 当前 PE/PB/PS 与历史区间对比
+- 与同业公司的估值对比
+- DCF 或股息贴现的合理价值区间
+
+## 评分标准规范
+
+### score 字段（投资吸引力评分）
+
+**范围**: 0-100
+
+**评分维度**（Agent 应综合考虑）：
+
+| 维度 | 权重建议 | 评估要点 |
+|------|---------|---------|
+| 财务健康度 | 20% | 盈利质量、现金流、负债率 |
+| 成长潜力 | 20% | 收入增长、市场份额、新业务 |
+| 竞争优势 | 20% | 护城河、定价权、品牌力 |
+| 估值吸引力 | 20% | 当前价格 vs 内在价值 |
+| 风险调整 | 20% | 政策风险、周期风险、治理风险 |
+
+**评分参考区间**：
+- **90-100**: 极度低估，罕见机会，强烈建议买入
+- **80-89**: 明显低估，具备安全边际，建议买入
+- **70-79**: 合理偏低，有一定吸引力，可考虑买入
+- **60-69**: 估值合理，持有观望
+- **50-59**: 略微高估，谨慎持有
+- **40-49**: 明显高估，建议减仓
+- **0-39**: 严重高估或基本面恶化，建议卖出
+
+**重要**：
+- 评分**不是**财务指标的简单加权平均
+- 评分应体现 Agent 的**综合判断**和**边际观点**
+- 同一公司在不同时间点，Agent 可能给出不同评分（基于新信息）
+
+### confidence 字段（分析置信度）
+
+**范围**: 0-100
+
+**置信度评估标准**：
+- **90-100**: 信息充分，逻辑清晰，高度确信
+  - 示例：茅台的品牌护城河，数据透明，观点明确
+- **70-89**: 信息较充分，但有少量不确定因素
+  - 示例：大部分蓝筹股的分析
+- **50-69**: 信息有限，存在较多假设
+  - 示例：新业务占比高的成长型公司
+- **30-49**: 信息不足，高度依赖推测
+  - 示例：刚上市的新股，或业务复杂多元的公司
+- **0-29**: 几乎无法判断，纯属猜测
+  - 不应写入数据
+
+## 数据如何在 PE 页面展示
+
+PE 页面（利润线 vs 股价）的数据展示逻辑如下：
+
+### 左侧公司列表（Sidebar）
+
+**数据来源**: `CompanyPageEntry` 表
+
+**展示条件**:
+- `pageEntry.visible = true`
+- 按 `sortOrder` 排序
+
+**展示内容**:
+- 公司名称（来自 `pageEntry.title` 或 `company.name`）
+- 股票代码（来自 `company.symbol`）
+- TTM PE（来自 `valuation.ttmPe`）
+- 利润质量状态（来自 `explanations` 分析）
+- 评分（来自 `exploration.score`）
+
+### 右侧估值卡片（Valuation Card）
+
+**数据来源**: `Company` + `CompanyValuationSnapshot` + `CompanyExploration` + `CompanyValuationExplanation`
+
+**展示内容**:
+- **估值指标**: price, ttmEps, ttmPe, profitLinePrice, referenceLinePrice
+- **分析摘要**: exploration.summary, exploration.thesis
+- **标签**: exploration.tags
+- **利润质量**: 基于 explanations 计算（正常/需调整/待确认）
+- **主要解释**: primaryExplanation（优先显示 profit 类型且 isRecurring=false 的说明）
+- **解释列表**: 最多显示 3 条 explanations
+
+### 数据关联关系
+
+```
+Company (公司基础信息)
+  ├── CompanyPageEntry (页面入口 - 控制是否在侧边栏显示)
+  ├── CompanyExploration (分析报告 - 显示摘要和评分)
+  ├── CompanyValuationSnapshot (估值快照 - 显示 PE 等指标)
+  └── CompanyValuationExplanation (估值解释 - 显示利润质量分析)
+```
 
 ## 数据写入流程
 
@@ -27,9 +170,60 @@
 
 为了在 PE 页面提供完整的用户体验，建议同时写入：
 
-- `valuation` - 估值快照数据
-- `exploration` - 分析报告内容
-- `explanations` - 估值解释说明
+- `valuation` - 估值快照数据（显示 PE、价格等）
+- `exploration` - 分析报告内容（显示摘要、评分、标签）
+- `explanations` - 估值解释说明（显示利润质量分析）
+
+## 幂等写入机制
+
+### 核心概念：runId
+
+为了防止重复写入和数据混乱，所有写入操作必须提供一个 **`runId`** 参数。
+
+**runId 的作用**:
+- 标识一次完整的分析任务
+- 相同的 `runId` 重复写入会**更新**已有记录，不会创建重复数据
+- 不同的 `runId` 会创建新的记录，保留历史版本
+
+**runId 生成规则**:
+```
+{agent-name}-{symbol}-{date}-{sequence}
+
+示例:
+- analysis-aapl-20260508-001
+- daily-report-600519-20260508-001
+- weekly-hk-00700-20260508-001
+```
+
+### 幂等写入行为
+
+| 数据类型 | 相同 runId | 不同 runId |
+|---------|-----------|-----------|
+| Company | 更新已有记录 | 更新已有记录（按 market+symbol 唯一） |
+| PageEntry | 更新已有记录（按 companyId+entryType） | 更新已有记录 |
+| Exploration | **更新**该 runId 下的记录 | **创建**新记录 |
+| ValuationSnapshot | **更新**该 runId 下的记录 | **创建**新记录 |
+| Explanation | **更新**该 runId+type 下的记录 | **创建**新记录 |
+
+### 为什么需要幂等写入？
+
+**场景 1: 网络超时重试**
+```
+Agent 调用写入 API → 网络超时 → Agent 重试 → 如果没有 runId，会产生重复数据
+```
+
+**场景 2: 定时任务**
+```
+每天 9:00 分析 AAPL → 写入 runId: daily-aapl-20260508
+如果任务失败重试 → 相同 runId 只会更新，不会重复
+```
+
+**场景 3: 多 Agent 协作**
+```
+Agent A 分析 AAPL → runId: analysis-aapl-001
+Agent B 分析 AAPL → runId: analysis-aapl-002
+→ 两个分析结果都保留，PE 页面展示最新的 published 记录
+```
 
 ## API 接口
 
@@ -41,6 +235,7 @@
 
 ```json
 {
+  "runId": "analysis-aapl-20260508-001",
   "company": {
     "symbol": "AAPL",
     "market": "us",
@@ -56,6 +251,7 @@
 
 ```json
 {
+  "runId": "analysis-moutai-20260508-001",
   "company": {
     "symbol": "600519",
     "market": "a",
@@ -160,7 +356,7 @@ PageEntry 是将公司添加到 PE 页面的关键！如果不写入此字段，
 | catalysts | string | ❌ | 催化剂/利好因素 |
 | risks | string | ❌ | 风险因素 |
 | tags | string[] | ❌ | 标签数组 |
-| score | number | ❌ | 评分 1-100 |
+| score | number | ❌ | 评分 1-100（Agent 综合判断） |
 | confidence | number | ❌ | 分析置信度 1-100 |
 | sourceUrls | string[] | ❌ | 数据来源链接 |
 | visibility | string | ❌ | 可见性：draft/published/archived |
@@ -227,15 +423,93 @@ PageEntry 是将公司添加到 PE 页面的关键！如果不写入此字段，
 }
 ```
 
+## 验证写入结果
+
+写入数据后，可以通过以下 API 验证数据是否正确，以及是否能在 PE 页面展示：
+
+**接口地址**: `GET /api/market-analysis/verify?symbol={symbol}&market={market}`
+
+### 验证响应示例
+
+```json
+{
+  "success": true,
+  "pePageVisible": true,
+  "company": {
+    "id": "cmabc123",
+    "symbol": "AAPL",
+    "market": "us",
+    "name": "Apple Inc."
+  },
+  "dataStatus": {
+    "hasPageEntry": true,
+    "hasPublishedExploration": true,
+    "hasValuation": true,
+    "hasExplanations": true,
+    "pageEntriesCount": 1,
+    "explorationsCount": 1,
+    "valuationsCount": 1,
+    "explanationsCount": 2
+  },
+  "pePagePreview": {
+    "title": "Apple 分析",
+    "entryType": "ai-generated",
+    "metrics": {
+      "asOfDate": "2026-05-08",
+      "price": 185.5,
+      "ttmEps": 6.5,
+      "ttmPe": 28.5,
+      "profitLinePrice": 195.0,
+      "referenceLinePrice": 260.0,
+      "upsideToProfitLine": 5.12,
+      "upsideToReferenceLine": 40.16
+    },
+    "exploration": {
+      "summary": "苹果是全球领先的科技公司...",
+      "thesis": "长期来看，苹果的品牌护城河...",
+      "score": 85
+    },
+    "tags": ["科技股", "长期投资"],
+    "profitQuality": "正常",
+    "primaryExplanation": {
+      "explanationType": "profit",
+      "title": "服务收入增长强劲",
+      "body": "服务收入同比增长 15%..."
+    }
+  },
+  "checkList": {
+    "canShowInSidebar": true,
+    "canShowValuationCard": true,
+    "canShowExploration": true,
+    "canShowExplanations": true,
+    "fullyComplete": true
+  }
+}
+```
+
+### 检查清单说明
+
+| 检查项 | 条件 | PE 页面效果 |
+|--------|------|------------|
+| canShowInSidebar | hasPageEntry | 公司出现在左侧列表 |
+| canShowValuationCard | hasPageEntry + hasValuation | 显示估值指标 |
+| canShowExploration | hasPageEntry + hasPublishedExploration | 显示分析摘要和评分 |
+| canShowExplanations | hasPageEntry + hasExplanations | 显示利润质量分析 |
+| fullyComplete | 以上全部满足 | 完整展示所有信息 |
+
 ## 常见问题
 
 ### Q: 分析后只写了 ShareInfo 没有写 Company 会怎样？
 
 A: 数据不会在 PE 页面展示。ShareInfo 是旧的股票信息表，Company + PageEntry 才是 PE 页面展示数据的来源。
 
+### Q: 为什么写了 Company 但没有在 PE 页面看到？
+
+A: 必须同时写入 `pageEntry` 数据。只有 `CompanyPageEntry` 记录存在且 `visible=true` 时，公司才会出现在 PE 页面的左侧列表中。
+
 ### Q: 如何更新已有的分析？
 
-A: 重复调用相同 symbol + market 的写入会更新 Company 信息，但 Exploration、Valuation、Explanation 都是新增记录。如需更新，需额外逻辑。
+A: 使用**相同的 runId** 重新调用写入 API，系统会自动更新该 runId 下的 Exploration、Valuation、Explanation 记录，不会创建重复数据。
 
 ### Q: 如何删除错误的写入？
 
@@ -250,12 +524,15 @@ A: `published` 状态的分析会显示在页面上，`draft` 仅存储不展示
 ### TypeScript/JavaScript
 
 ```typescript
+const runId = `analysis-aapl-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-001`
+
 const response = await fetch('/api/market-analysis/write', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
   },
   body: JSON.stringify({
+    runId,  // 必需！用于幂等写入
     company: {
       symbol: 'AAPL',
       market: 'us',
@@ -282,6 +559,13 @@ const response = await fetch('/api/market-analysis/write', {
 
 const result = await response.json()
 console.log(result)
+
+// 验证写入结果
+const verifyResponse = await fetch(
+  `/api/market-analysis/verify?symbol=AAPL&market=us&runId=${runId}`
+)
+const verifyResult = await verifyResponse.json()
+console.log(verifyResult.checkList.fullyComplete)  // true 表示完整写入
 ```
 
 ### Python
@@ -289,8 +573,14 @@ console.log(result)
 ```python
 import requests
 import json
+from datetime import datetime
+
+# 生成 runId
+today = datetime.now().strftime('%Y%m%d')
+run_id = f"analysis-aapl-{today}-001"
 
 data = {
+    "runId": run_id,  # 必需！用于幂等写入
     "company": {
         "symbol": "AAPL",
         "market": "us",
@@ -313,6 +603,13 @@ response = requests.post(
 )
 
 print(response.json())
+
+# 验证写入结果
+verify_response = requests.get(
+    f"https://your-domain.com/api/market-analysis/verify?symbol=AAPL&market=us&runId={run_id}"
+)
+verify_result = verify_response.json()
+print(verify_result["checkList"]["fullyComplete"])  # True 表示完整写入
 ```
 
 ## 数据验证规则

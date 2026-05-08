@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { writeMarketAnalysis, MarketAnalysisWriteInput } from '@/lib/market-analysis'
+import { writeMarketAnalysisCrossMarket, CrossMarketWriteInput } from '@/lib/market-analysis'
 
 export async function POST(request: NextRequest) {
   try {
-    const body: MarketAnalysisWriteInput = await request.json()
+    const body: CrossMarketWriteInput = await request.json()
 
     if (!body.company?.symbol || !body.company?.market || !body.company?.name) {
       return NextResponse.json(
@@ -15,11 +15,24 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const result = await writeMarketAnalysis(body)
+    if (!body.runId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: '缺少必需字段: runId。请提供一个唯一的分析任务 ID，用于幂等写入。',
+        },
+        { status: 400 },
+      )
+    }
+
+    const result = await writeMarketAnalysisCrossMarket(body)
 
     return NextResponse.json({
       success: true,
-      message: '市场分析数据写入成功',
+      message: result.syncedCompanies && result.syncedCompanies.length > 0
+        ? `市场分析数据写入成功，已同步到 ${result.syncedCompanies.length} 个关联市场`
+        : '市场分析数据写入成功',
+      runId: body.runId,
       data: {
         company: {
           id: result.company.id,
@@ -46,6 +59,7 @@ export async function POST(request: NextRequest) {
             }
           : null,
         explanationsCount: result.explanations.length,
+        syncedCompanies: result.syncedCompanies || [],
       },
     })
   } catch (error) {
@@ -63,17 +77,23 @@ export async function POST(request: NextRequest) {
 export async function GET() {
   return NextResponse.json({
     success: true,
-    message: '市场分析写入 API',
+    message: '市场分析写入 API（跨市场幂等写入）',
     usage: {
       method: 'POST',
-      description: '写入市场分析数据到数据库',
+      description: '写入市场分析数据到数据库，支持跨市场同步',
       body: {
+        runId: {
+          required: true,
+          description: '分析任务唯一标识。相同的 runId 重复写入会更新已有记录，不会创建重复数据',
+          example: 'analysis-aapl-20260508-001',
+        },
         company: {
           required: true,
           fields: {
             symbol: '股票代码 (如: AAPL, 600519)',
             market: '市场 (us, hk, a, cn)',
             name: '公司名称',
+            groupId: '跨市场关联标识 (可选，如 "新华保险"。系统会自动根据公司名称识别)',
             exchange: '交易所 (可选)',
             currency: '货币代码 (可选, 如: USD, CNY)',
             sector: '行业板块 (可选)',
@@ -95,7 +115,7 @@ export async function GET() {
         },
         exploration: {
           required: false,
-          description: '公司探索/研究报告',
+          description: '公司探索/研究报告（会自动同步到关联市场）',
           fields: {
             title: '报告标题',
             summary: '摘要总结',
@@ -111,7 +131,7 @@ export async function GET() {
         },
         valuation: {
           required: false,
-          description: '估值快照数据',
+          description: '估值快照数据（仅写入当前市场，不会同步）',
           fields: {
             asOfDate: '数据日期 (ISO 格式或 YYYY-MM-DD)',
             price: '当前价格 (可选)',
@@ -128,7 +148,7 @@ export async function GET() {
         },
         explanations: {
           required: false,
-          description: '估值解释说明数组',
+          description: '估值解释说明数组（仅写入当前市场，不会同步）',
           fields: {
             explanationType: '解释类型 (price, profit, valuation, business)',
             title: '说明标题',
@@ -138,39 +158,40 @@ export async function GET() {
             confidence: '置信度 (可选)',
           },
         },
+        syncToMarkets: {
+          required: false,
+          description: '指定要同步的市场列表。如果不提供，系统会自动同步到所有关联市场',
+          example: ['hk', 'a'],
+        },
       },
-      example: {
-        company: {
-          symbol: 'AAPL',
-          market: 'us',
-          name: 'Apple Inc.',
-          sector: 'Technology',
-        },
-        pageEntry: {
-          entryType: 'ai-generated',
-          title: 'Apple 分析',
-        },
-        exploration: {
-          title: 'Apple 投资分析报告',
-          summary: '苹果是一家值得长期持有的优质公司...',
-          score: 85,
-          tags: ['科技', '消费电子', '长期投资'],
-        },
-        valuation: {
-          asOfDate: '2026-05-08',
-          price: 185.5,
-          ttmPe: 28.5,
-          profitLinePrice: 200,
-        },
-        explanations: [
-          {
-            explanationType: 'profit',
-            title: '服务收入增长强劲',
-            body: '服务收入同比增长 15%，成为新的增长引擎',
-            impactDirection: 'positive',
-            isRecurring: true,
+      crossMarketExample: {
+        description: '新华保险 A+H 股分析写入示例',
+        request: {
+          runId: 'analysis-xinhua-20260508-001',
+          company: {
+            symbol: '601336',
+            market: 'a',
+            name: '新华保险',
+            groupId: '新华保险',
           },
-        ],
+          pageEntry: {
+            entryType: 'ai-generated',
+            title: '新华保险分析',
+          },
+          exploration: {
+            title: '新华保险投资价值分析',
+            summary: '新华保险是中国领先的寿险公司...',
+            score: 78,
+            tags: ['保险', '金融', 'A+H'],
+            visibility: 'published',
+          },
+          valuation: {
+            asOfDate: '2026-05-08',
+            price: 45.2,
+            ttmPe: 12.5,
+          },
+        },
+        behavior: '系统会自动将 exploration 同步到港股市场 (01336.HK)',
       },
     },
   })

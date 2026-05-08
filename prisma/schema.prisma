@@ -1,6 +1,6 @@
 generator client {
   provider      = "prisma-client-js"
-  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "linux-musl-arm64-openssl-3.0.x"]
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "linux-musl-arm64-openssl-3.0.x", "linux-arm64-openssl-3.0.x"]
 }
 
 datasource db {
@@ -44,6 +44,7 @@ model Company {
   country   String?
   website   String?
   status    String   @default("active")
+  groupId   String?  // 关联同一公司在不同市场的记录，如 "新华保险"
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -55,6 +56,7 @@ model Company {
   @@unique([market, symbol])
   @@index([market])
   @@index([sector])
+  @@index([groupId])
 }
 
 model CompanyExplorationRun {
@@ -100,11 +102,13 @@ model CompanyExploration {
   @@index([companyId, createdAt])
   @@index([visibility, pinned, createdAt])
   @@index([score])
+  @@index([companyId, runId])
 }
 
 model CompanyValuationSnapshot {
   id        String   @id @default(cuid())
   companyId String
+  runId     String?
   asOfDate  DateTime
 
   price                  Float?
@@ -135,11 +139,13 @@ model CompanyValuationSnapshot {
   @@index([companyId, asOfDate])
   @@index([ttmPe])
   @@index([profitQualityScore])
+  @@index([companyId, runId])
 }
 
 model CompanyValuationExplanation {
   id                  String   @id @default(cuid())
   companyId           String
+  runId               String?
   valuationSnapshotId String?
   explanationType     String
   title               String
@@ -160,6 +166,7 @@ model CompanyValuationExplanation {
 
   @@index([companyId, explanationType, isCurrent])
   @@index([valuationSnapshotId])
+  @@index([companyId, runId])
 }
 
 model CompanyPageEntry {
