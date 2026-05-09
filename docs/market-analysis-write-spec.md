@@ -29,6 +29,67 @@ Agent 在以下情况下应该调用本 API：
 3. 没有阅读公司年报、研报、新闻等上下文信息 → 降低 confidence
 4. 对公司所在行业缺乏基本了解 → 降低 confidence
 
+### 分析方式与节奏
+
+**核心原则：像人类研究员一样，逐个深入分析，而非批量流水线处理。**
+
+Agent 在分析全市场股票时，必须遵循以下原则：
+
+#### 1. 逐个分析，不可并行敷衍
+
+- **一次只分析一家公司**，完成全部研究、评分、写入流程后，再开始下一家
+- 禁止为了追求效率而对多家公司同时进行浅层分析
+- 每家公司的分析都应该是**独立且完整**的，不因已分析了大量公司而降低标准
+
+#### 2. 深度优先，拒绝走马观花
+
+- 对每家公司都要像人类研究员写深度研报一样认真对待
+- 不是简单抓取几个指标就打分，而是要**理解业务本质、判断竞争格局、评估管理层质量**
+- 宁可少分析几家公司，也不要为了覆盖面而牺牲分析深度
+- 每条 Explanation 的 body 都应体现真正的思考深度，而非模板化的套话
+
+#### 3. 分析节奏：慢即是快
+
+- **信息收集阶段**：花足够时间搜索和阅读公司的财报、行业报告、新闻动态
+- **思考判断阶段**：在形成观点前，反复推敲逻辑是否自洽、证据是否充分
+- **评分决策阶段**：评分不是拍脑袋，而是基于多维度权衡后的审慎判断
+- **写入验证阶段**：写入后检查数据是否完整、逻辑是否通顺
+
+#### 4. 分析质量的一致性
+
+- **第 1 家公司和第 100 家公司的分析深度应保持一致**
+- 不因疲劳或重复感而降低分析标准
+- 不因公司知名度低或数据少就敷衍了事——信息不足时降低 confidence，而非降低分析努力
+- 每次分析都应问自己："如果这是我的客户要看的报告，我会满意吗？"
+
+#### 5. 分析中的思考规范
+
+- **保持独立思考**：不因市场主流观点而随波逐流，敢于给出与共识不同的评分
+- **区分事实与判断**：财务数据是事实，行业前景是判断，两者在分析中应明确区分
+- **承认不确定性**：不确定的地方要坦诚标注，而非用模糊表述掩盖
+- **避免锚定效应**：分析新公司时不要被之前分析的公司的评分所影响
+
+#### 6. 分析间上下文隔离
+
+**核心原则：每家公司的分析应在独立的上下文中进行，避免不同公司间的信息污染。**
+
+**推荐方式：使用 Sub-Agent（子代理）模式**
+
+- **强烈建议**使用 sub-agent 模式进行逐个公司分析：每家公司的完整分析流程（信息收集→思考判断→评分决策→写入验证）都应在一个独立的 sub-agent 中执行
+- Sub-agent 天然具有独立的上下文窗口，分析完一家公司后 sub-agent 销毁，上下文自动清空，无需手动清理
+- 主 agent 只负责调度（如确定待分析公司列表、分配任务），不参与具体分析，从而避免主 agent 上下文被污染
+- 这种方式从根本上杜绝了信息残留、数据串写、锚定效应等问题
+
+**备选方式：手动清理上下文**
+
+如果运行环境不支持 sub-agent 模式，则必须手动清理上下文：
+
+- **写入验证后立即清理**：完成一家公司的数据写入和验证后，主动清空当前对话/上下文窗口，再开始下一家公司的分析
+- **防止信息污染**：上一家公司的财务数据、行业判断、评分逻辑等不应残留在上下文中，避免对下一家公司产生隐性影响
+- **防止数据串写**：上下文中残留的数字（营收、PE、利润等）极易被错误地套用到新公司，清理上下文是杜绝此类错误的最有效手段
+- **保持上下文窗口充裕**：随着分析推进，上下文窗口会不断膨胀，导致模型注意力分散、分析质量下降。定期清理可确保每次分析都在"新鲜"的上下文中进行
+- **清理方式**：如果 Agent 运行环境支持上下文管理（如新建会话、清空历史消息等），应在公司间切换时执行清理操作；如果不支持，则应在开始新公司分析时，用明确的分隔标记（如"以下为全新公司的分析，请忽略之前所有上下文"）来重置分析状态
+
 ### 分析前必须收集的上下文
 
 Agent 在给出评分和写入数据前，必须尽可能收集以下信息：
@@ -114,14 +175,16 @@ PE 页面（利润线 vs 股价）的数据展示逻辑如下：
 
 ### 左侧公司列表（Sidebar）
 
-**数据来源**: `CompanyPageEntry` 表
+**数据来源**: `Company` 表
+
+> **注意**：`CompanyPageEntry` 表已废弃，页面展示相关字段（`entryType`、`entryNote`、`sortOrder`、`visible`）已迁移到 `Company` 表。
 
 **展示条件**:
-- `pageEntry.visible = true`
-- 按 `sortOrder` 排序
+- `company.visible = true`
+- 按 `company.sortOrder` 排序
 
 **展示内容**:
-- 公司名称（来自 `pageEntry.title` 或 `company.name`）
+- 公司名称（来自 `company.name`）
 - 股票代码（来自 `company.symbol`）
 - TTM PE（来自 `valuation.ttmPe`）
 - 利润质量状态（来自 `explanations` 分析）
@@ -142,8 +205,8 @@ PE 页面（利润线 vs 股价）的数据展示逻辑如下：
 ### 数据关联关系
 
 ```
-Company (公司基础信息)
-  ├── CompanyPageEntry (页面入口 - 控制是否在侧边栏显示)
+Company (公司基础信息 + 页面展示配置)
+  │  包含字段: entryType, entryNote, sortOrder, visible
   ├── CompanyExploration (分析报告 - 显示摘要和评分)
   ├── CompanyValuationSnapshot (估值快照 - 显示 PE 等指标)
   └── CompanyValuationExplanation (估值解释 - 显示利润质量分析)
@@ -167,6 +230,8 @@ Company (公司基础信息)
   }
 }
 ```
+
+> **说明**：`pageEntry` 中的字段（`entryType`、`note`、`sortOrder`、`visible`）实际存储在 `Company` 表上，而非独立的 `CompanyPageEntry` 表（该表已废弃）。API 仍保留 `pageEntry` 作为独立输入段，便于逻辑分离，但写入时会合并到 `Company` 记录中。
 
 ### 2. 推荐写入的数据
 
@@ -202,7 +267,7 @@ Company (公司基础信息)
 | 数据类型 | 相同 runId | 不同 runId |
 |---------|-----------|-----------|
 | Company | 更新已有记录 | 更新已有记录（按 market+symbol 唯一） |
-| PageEntry | 更新已有记录（按 companyId+entryType） | 更新已有记录 |
+| PageEntry | 更新 Company 记录上的展示字段（entryType/entryNote/sortOrder/visible） | 同左（始终更新 Company 记录） |
 | Exploration | **更新**该 runId 下的记录 | **创建**新记录 |
 | ValuationSnapshot | **更新**该 runId 下的记录 | **创建**新记录 |
 | Explanation | **更新**该 runId+type 下的记录 | **创建**新记录 |
@@ -266,7 +331,6 @@ Agent B 分析 AAPL → runId: analysis-aapl-002
   },
   "pageEntry": {
     "entryType": "analysis",
-    "title": "贵州茅台分析",
     "note": "基于2026年Q1财报",
     "sortOrder": 1,
     "visible": true
@@ -332,15 +396,16 @@ Agent B 分析 AAPL → runId: analysis-aapl-002
 
 ### PageEntry 字段
 
-PageEntry 是将公司添加到 PE 页面的关键！如果不写入此字段，分析结果将不会在页面上显示。
+> **重要说明**：`CompanyPageEntry` 表已废弃。以下字段实际存储在 `Company` 表上。API 保留 `pageEntry` 作为独立输入段，写入时会合并到 `Company` 记录。
 
-| 字段名 | 类型 | 必需 | 说明 |
-|--------|------|------|------|
-| entryType | string | ✅ | 入口类型 |
-| title | string | ❌ | 显示标题 |
-| note | string | ❌ | 备注说明 |
-| sortOrder | number | ❌ | 排序顺序，数字越小越靠前 |
-| visible | boolean | ❌ | 是否在页面显示，默认 true |
+如果不写入 `pageEntry` 字段，公司将不会在 PE 页面侧边栏显示（`visible` 默认为 `true`，但 `entryType` 默认为 `manual`，建议显式设置）。
+
+| 字段名 | 类型 | 必需 | Company 表对应字段 | 说明 |
+|--------|------|------|-------------------|------|
+| entryType | string | ✅ | `company.entryType` | 入口类型 |
+| note | string | ❌ | `company.entryNote` | 备注说明 |
+| sortOrder | number | ❌ | `company.sortOrder` | 排序顺序，数字越小越靠前 |
+| visible | boolean | ❌ | `company.visible` | 是否在页面显示，默认 true |
 
 **entryType 可选值**:
 - `manual` - 手动添加
@@ -471,6 +536,8 @@ PageEntry 是将公司添加到 PE 页面的关键！如果不写入此字段，
 }
 ```
 
+> `pageEntry` 的字段会合并写入 `Company` 记录，确保公司在 PE 页面可见。
+
 ### P1 - 强烈建议写入
 
 ```json
@@ -507,17 +574,16 @@ PageEntry 是将公司添加到 PE 页面的关键！如果不写入此字段，
     "name": "Apple Inc."
   },
   "dataStatus": {
-    "hasPageEntry": true,
+    "hasVisibleCompany": true,
     "hasPublishedExploration": true,
     "hasValuation": true,
     "hasExplanations": true,
-    "pageEntriesCount": 1,
     "explorationsCount": 1,
     "valuationsCount": 1,
     "explanationsCount": 2
   },
   "pePagePreview": {
-    "title": "Apple 分析",
+    "title": "Apple Inc.",
     "entryType": "ai-generated",
     "metrics": {
       "asOfDate": "2026-05-08",
@@ -556,21 +622,21 @@ PageEntry 是将公司添加到 PE 页面的关键！如果不写入此字段，
 
 | 检查项 | 条件 | PE 页面效果 |
 |--------|------|------------|
-| canShowInSidebar | hasPageEntry | 公司出现在左侧列表 |
-| canShowValuationCard | hasPageEntry + hasValuation | 显示估值指标 |
-| canShowExploration | hasPageEntry + hasPublishedExploration | 显示分析摘要和评分 |
-| canShowExplanations | hasPageEntry + hasExplanations | 显示利润质量分析 |
+| canShowInSidebar | hasVisibleCompany（company.visible = true） | 公司出现在左侧列表 |
+| canShowValuationCard | hasVisibleCompany + hasValuation | 显示估值指标 |
+| canShowExploration | hasVisibleCompany + hasPublishedExploration | 显示分析摘要和评分 |
+| canShowExplanations | hasVisibleCompany + hasExplanations | 显示利润质量分析 |
 | fullyComplete | 以上全部满足 | 完整展示所有信息 |
 
 ## 常见问题
 
 ### Q: 分析后只写了 ShareInfo 没有写 Company 会怎样？
 
-A: 数据不会在 PE 页面展示。ShareInfo 是旧的股票信息表，Company + PageEntry 才是 PE 页面展示数据的来源。
+A: 数据不会在 PE 页面展示。ShareInfo 是旧的股票信息表，Company 才是 PE 页面展示数据的来源。页面展示相关字段（entryType、entryNote、sortOrder、visible）也存储在 Company 表上。
 
 ### Q: 为什么写了 Company 但没有在 PE 页面看到？
 
-A: 必须同时写入 `pageEntry` 数据。只有 `CompanyPageEntry` 记录存在且 `visible=true` 时，公司才会出现在 PE 页面的左侧列表中。
+A: 需要确认 `company.visible = true`。只有 `visible` 为 `true` 的公司才会出现在 PE 页面的左侧列表中。另外，建议同时写入 `pageEntry` 段来显式设置 `entryType`，否则默认为 `manual`。
 
 ### Q: 如何更新已有的分析？
 
@@ -606,7 +672,7 @@ const response = await fetch('/api/market-analysis/write', {
     },
     pageEntry: {
       entryType: 'ai-generated',
-      title: 'Apple 分析',
+      note: 'Apple 分析',
     },
     exploration: {
       title: 'Apple 投资分析',
