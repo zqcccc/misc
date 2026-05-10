@@ -10,6 +10,11 @@ export type ProfitPoint = {
   cash?: number | null
 }
 
+export type DividendPoint = {
+  date: string
+  amount: number
+}
+
 export type ProfitLineData = {
   symbol: string
   name: string
@@ -20,9 +25,11 @@ export type ProfitLineData = {
     date: string
     price: number
   } | null
+  dividends?: DividendPoint[]
   sources: {
     eps: string
     price: string
+    dividends?: string
   }
   ttmMethod?: 'quarterly-rollup' | 'source-eps-ttm'
   epsCurrency?: string

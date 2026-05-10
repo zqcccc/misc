@@ -1,5 +1,9 @@
 import * as assert from 'node:assert/strict'
-import { buildChartSource, type ChartBasePoint } from '../app/pe/chart-data'
+import {
+  buildChartSource,
+  buildDividendChartSource,
+  type ChartBasePoint,
+} from '../app/pe/chart-data'
 
 const points: ChartBasePoint[] = [
   {
@@ -67,3 +71,15 @@ const sameDateSource = buildChartSource(
 )
 
 assert.equal(sameDateSource.length, 2)
+
+assert.deepEqual(
+  buildDividendChartSource([
+    { date: '2024-04-01', amount: 0.5 },
+    { date: '2024-07-02', amount: 0.1256 },
+    { date: '2025-03-20', amount: 0.33 },
+  ]),
+  [
+    { year: '2024', amount: 0.63, count: 2 },
+    { year: '2025', amount: 0.33, count: 1 },
+  ],
+)

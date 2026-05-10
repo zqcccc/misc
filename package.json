@@ -14,7 +14,8 @@
     "docker:restart": "sudo docker compose down && sudo docker compose up -d",
     "prisma:dev": "ts-node --project ./tsconfig-debug.json ./prisma/script.ts",
     "prisma:studio": "prisma studio",
-    "prisma:generate": "prisma generate --schema=./prisma/schema.prisma"
+    "prisma:generate": "prisma generate --schema=./prisma/schema.prisma",
+    "market-analysis:write": "ts-node --project ./tsconfig-debug.json ./scripts/write-market-analysis.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

@@ -8,11 +8,13 @@ import {
   useValuationEntries,
   useChart,
   useChartOptions,
+  useDividendChartOptions,
   useDerivedData,
 } from './hooks'
 import {
   CompanySidebar,
   ChartPanel,
+  DividendChartPanel,
   StatsPanel,
   ControlPanel,
   ExplanationsPanel,
@@ -65,6 +67,11 @@ export default function ProfitLinePage() {
     selectedEntry,
   )
   const { chartNode, chartRef, chartReady } = useChart()
+  const {
+    chartNode: dividendChartNode,
+    chartRef: dividendChartRef,
+    chartReady: dividendChartReady,
+  } = useChart()
 
   const {
     preparedPoints,
@@ -84,6 +91,13 @@ export default function ProfitLinePage() {
     state,
     chartReady,
     chartRef,
+  )
+
+  useDividendChartOptions(
+    data,
+    state,
+    dividendChartReady,
+    dividendChartRef,
   )
 
   const handleSelectCompany = useCallback(
@@ -164,6 +178,13 @@ export default function ProfitLinePage() {
               state={state}
               error={error}
               chartNodeRef={chartNode}
+            />
+
+            <DividendChartPanel
+              data={data}
+              dataLoading={dataLoading}
+              state={state}
+              chartNodeRef={dividendChartNode}
             />
 
             <StatsPanel

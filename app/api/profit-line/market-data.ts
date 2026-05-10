@@ -47,6 +47,143 @@ export type LatestDailyPrice = {
   price: number
 }
 
+export type DividendEvent = {
+  date: string
+  amount: number
+}
+
+const US_SHARE_CLASS_DOT_SYMBOLS = new Set(['BRK.A', 'BRK.B'])
+const US_EPS_SCALE_BY_SYMBOL: Record<string, number> = {
+  'BRK-B': 1500,
+}
+
+export function normalizeUsSymbol(input: string) {
+  const symbol = input.trim().toUpperCase().replace(/\.US$/, '')
+  return US_SHARE_CLASS_DOT_SYMBOLS.has(symbol)
+    ? symbol.replace('.', '-')
+    : symbol
+}
+
+export function adjustUsEpsForShareClass<T extends EpsRow>(
+  symbol: string,
+  quarters: T[],
+): T[] {
+  const scale = US_EPS_SCALE_BY_SYMBOL[normalizeUsSymbol(symbol)]
+  if (!scale) return quarters
+
+  return quarters.map((quarter) => ({
+    ...quarter,
+    eps: Number((quarter.eps / scale).toFixed(4)),
+    ...(quarter.ttmEps === undefined
+      ? {}
+      : { ttmEps: Number((quarter.ttmEps / scale).toFixed(4)) }),
+  }))
+}
+
+export function isQuarterDataStale(
+  quarters: Pick<EpsRow, 'date'>[],
+  asOf = new Date(),
+  maxAgeDays = 550,
+) {
+  const latestDate = quarters.at(-1)?.date
+  if (!latestDate) return true
+
+  const latestMs = new Date(`${latestDate}T00:00:00Z`).getTime()
+  const asOfMs = asOf.getTime()
+  if (!Number.isFinite(latestMs) || !Number.isFinite(asOfMs)) return true
+
+  return asOfMs - latestMs > maxAgeDays * 86_400_000
+}
+
+function parseXmlAttrs(value: string) {
+  const attrs: Record<string, string> = {}
+  for (const match of value.matchAll(/([\w:-]+)="([^"]*)"/g)) {
+    attrs[match[1]] = match[2]
+  }
+  return attrs
+}
+
+function daysBetweenDates(start: string, end: string) {
+  return Math.round(
+    (new Date(`${end}T00:00:00Z`).getTime() -
+      new Date(`${start}T00:00:00Z`).getTime()) /
+      86_400_000,
+  )
+}
+
+export function pickSecFilingEpsRows(
+  xml: string,
+  classMember: string,
+  periodType: 'quarterly' | 'annual' = 'quarterly',
+): EpsRow[] {
+  const contexts = new Map<string, string>()
+  for (const match of xml.matchAll(
+    /<context id="([^"]+)">([\s\S]*?)<\/context>/g,
+  )) {
+    contexts.set(match[1], match[2])
+  }
+
+  const byDate = new Map<string, EpsRow>()
+  for (const match of xml.matchAll(
+    /<us-gaap:EarningsPerShareBasic\b([^>]*)>([^<]*)<\/us-gaap:EarningsPerShareBasic>/g,
+  )) {
+    const attrs = parseXmlAttrs(match[1])
+    const context = contexts.get(attrs.contextRef)
+    if (!context || !context.includes(classMember)) continue
+
+    const start = context.match(/<startDate>([^<]+)<\/startDate>/)?.[1]
+    const end = context.match(/<endDate>([^<]+)<\/endDate>/)?.[1]
+    const eps = toNumber(match[2])
+    if (!start || !end || eps === null) continue
+
+    const durationDays = daysBetweenDates(start, end)
+    const matchesPeriod =
+      periodType === 'quarterly'
+        ? durationDays >= 70 && durationDays <= 110
+        : durationDays >= 350 && durationDays <= 380
+    if (!matchesPeriod) continue
+
+    byDate.set(end, {
+      date: end,
+      quarter: quarterLabel(end),
+      eps: Number(eps.toFixed(4)),
+    })
+  }
+
+  return Array.from(byDate.values()).sort((a, b) => a.date.localeCompare(b.date))
+}
+
+export function buildQuarterlyEpsRows(
+  quarterlyRows: EpsRow[],
+  annualRows: EpsRow[],
+) {
+  const byDate = new Map(quarterlyRows.map((row) => [row.date, row]))
+
+  annualRows.forEach((annual) => {
+    if (!annual.date.endsWith('-12-31') || byDate.has(annual.date)) return
+
+    const year = annual.date.slice(0, 4)
+    const firstThreeQuarters = [`${year}-03-31`, `${year}-06-30`, `${year}-09-30`]
+      .map((date) => byDate.get(date)?.eps)
+
+    if (firstThreeQuarters.some((eps) => eps === undefined)) return
+
+    const q4Eps = Number(
+      (
+        annual.eps -
+        firstThreeQuarters.reduce((total, eps) => total + (eps || 0), 0)
+      ).toFixed(4),
+    )
+    byDate.set(annual.date, {
+      date: annual.date,
+      quarter: quarterLabel(annual.date),
+      eps: q4Eps,
+    })
+  })
+
+  return Array.from(byDate.values()).sort((a, b) => a.date.localeCompare(b.date))
+}
+
 export function normalizeMarketSymbol(input: string): NormalizedMarketSymbol {
   const raw = input.trim().toUpperCase()
   const compact = raw.replace(/\s+/g, '')
@@ -93,7 +230,7 @@ export function normalizeMarketSymbol(input: string): NormalizedMarketSymbol {
 
   return {
     market: 'us',
-    symbol: compact.replace(/\.US$/, ''),
+    symbol: normalizeUsSymbol(compact),
   }
 }
 
@@ -183,6 +320,26 @@ export function latestDailyPrice(prices: DailyPrice[]): LatestDailyPrice | null 
     date: latest.date,
     price: Number(latest.close.toFixed(2)),
   }
+}
+
+export function normalizeYahooDividendEvents(
+  events: Record<string, unknown> | undefined,
+): DividendEvent[] {
+  return Object.values(events || {})
+    .map((event): DividendEvent | null => {
+      if (!event || typeof event !== 'object') return null
+      const row = event as { date?: unknown; amount?: unknown }
+      if (typeof row.date !== 'number') return null
+      const amount = toNumber(row.amount)
+      if (amount === null || amount <= 0) return null
+
+      return {
+        date: new Date(row.date * 1000).toISOString().slice(0, 10),
+        amount: Number(amount.toFixed(4)),
+      }
+    })
+    .filter((event): event is DividendEvent => Boolean(event))
+    .sort((a, b) => a.date.localeCompare(b.date))
 }
 
 export function buildQuarterPoints(

@@ -367,6 +367,21 @@ export async function writeMarketAnalysis(input: MarketAnalysisWriteInput) {
 export async function writeMarketAnalysisIdempotent(input: IdempotentWriteInput) {
   const { runId, ...marketAnalysisInput } = input
 
+  if (runId) {
+    const existingRun = await prisma.companyExplorationRun.findUnique({
+      where: { id: runId },
+    })
+    if (!existingRun) {
+      await prisma.companyExplorationRun.create({
+        data: {
+          id: runId,
+          prompt: `Market analysis run: ${runId}`,
+          status: 'running',
+        },
+      })
+    }
+  }
+
   const company = await findOrCreateCompany(marketAnalysisInput.company)
 
   const results: any = {
@@ -408,6 +423,16 @@ export async function writeMarketAnalysisIdempotent(input: IdempotentWriteInput)
   }
 
   await invalidateValuationCacheAfterWrite()
+
+  if (runId) {
+    await prisma.companyExplorationRun.update({
+      where: { id: runId },
+      data: {
+        status: 'completed',
+        finishedAt: new Date(),
+      },
+    }).catch(() => {})
+  }
 
   return results
 }
