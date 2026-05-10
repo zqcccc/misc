@@ -97,9 +97,14 @@ export function isQuarterDataStale(
 
 function parseXmlAttrs(value: string) {
   const attrs: Record<string, string> = {}
-  for (const match of value.matchAll(/([\w:-]+)="([^"]*)"/g)) {
+  const attrPattern = /([\w:-]+)="([^"]*)"/g
+  let match = attrPattern.exec(value)
+
+  while (match) {
     attrs[match[1]] = match[2]
+    match = attrPattern.exec(value)
   }
+
   return attrs
 }
 
@@ -117,37 +122,46 @@ export function pickSecFilingEpsRows(
   periodType: 'quarterly' | 'annual' = 'quarterly',
 ): EpsRow[] {
   const contexts = new Map<string, string>()
-  for (const match of xml.matchAll(
-    /<context id="([^"]+)">([\s\S]*?)<\/context>/g,
-  )) {
-    contexts.set(match[1], match[2])
+  const contextPattern = /<context id="([^"]+)">([\s\S]*?)<\/context>/g
+  let contextMatch = contextPattern.exec(xml)
+
+  while (contextMatch) {
+    contexts.set(contextMatch[1], contextMatch[2])
+    contextMatch = contextPattern.exec(xml)
   }
 
   const byDate = new Map<string, EpsRow>()
-  for (const match of xml.matchAll(
-    /<us-gaap:EarningsPerShareBasic\b([^>]*)>([^<]*)<\/us-gaap:EarningsPerShareBasic>/g,
-  )) {
-    const attrs = parseXmlAttrs(match[1])
+  const epsPattern =
+    /<us-gaap:EarningsPerShareBasic\b([^>]*)>([^<]*)<\/us-gaap:EarningsPerShareBasic>/g
+  let epsMatch = epsPattern.exec(xml)
+
+  while (epsMatch) {
+    const attrs = parseXmlAttrs(epsMatch[1])
     const context = contexts.get(attrs.contextRef)
-    if (!context || !context.includes(classMember)) continue
 
-    const start = context.match(/<startDate>([^<]+)<\/startDate>/)?.[1]
-    const end = context.match(/<endDate>([^<]+)<\/endDate>/)?.[1]
-    const eps = toNumber(match[2])
-    if (!start || !end || eps === null) continue
+    if (context?.includes(classMember)) {
+      const start = context.match(/<startDate>([^<]+)<\/startDate>/)?.[1]
+      const end = context.match(/<endDate>([^<]+)<\/endDate>/)?.[1]
+      const eps = toNumber(epsMatch[2])
 
-    const durationDays = daysBetweenDates(start, end)
-    const matchesPeriod =
-      periodType === 'quarterly'
-        ? durationDays >= 70 && durationDays <= 110
-        : durationDays >= 350 && durationDays <= 380
-    if (!matchesPeriod) continue
+      if (start && end && eps !== null) {
+        const durationDays = daysBetweenDates(start, end)
+        const matchesPeriod =
+          periodType === 'quarterly'
+            ? durationDays >= 70 && durationDays <= 110
+            : durationDays >= 350 && durationDays <= 380
 
-    byDate.set(end, {
-      date: end,
-      quarter: quarterLabel(end),
-      eps: Number(eps.toFixed(4)),
-    })
+        if (matchesPeriod) {
+          byDate.set(end, {
+            date: end,
+            quarter: quarterLabel(end),
+            eps: Number(eps.toFixed(4)),
+          })
+        }
+      }
+    }
+
+    epsMatch = epsPattern.exec(xml)
   }
 
   return Array.from(byDate.values()).sort((a, b) => a.date.localeCompare(b.date))
@@ -168,12 +182,11 @@ export function buildQuarterlyEpsRows(
 
     if (firstThreeQuarters.some((eps) => eps === undefined)) return
 
-    const q4Eps = Number(
-      (
-        annual.eps -
-        firstThreeQuarters.reduce((total, eps) => total + (eps || 0), 0)
-      ).toFixed(4),
+    const firstThreeQuartersTotal = firstThreeQuarters.reduce<number>(
+      (total, eps) => total + (eps ?? 0),
+      0,
     )
+    const q4Eps = Number((annual.eps - firstThreeQuartersTotal).toFixed(4))
     byDate.set(annual.date, {
       date: annual.date,
       quarter: quarterLabel(annual.date),
