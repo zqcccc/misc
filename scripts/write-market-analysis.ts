@@ -202,7 +202,8 @@ function validatePayload(payload: CrossMarketWriteInput) {
     }
 
     const explanationTypes = new Set<string>()
-    for (const [index, explanation] of payload.explanations.entries()) {
+    for (let index = 0; index < payload.explanations.length; index += 1) {
+      const explanation = payload.explanations[index]
       assertPlainObject(explanation, `explanations[${index}]`)
       assertNonEmptyString(explanation.explanationType, `explanations[${index}].explanationType`)
       assertNonEmptyString(explanation.title, `explanations[${index}].title`)
