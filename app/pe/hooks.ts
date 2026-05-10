@@ -10,7 +10,7 @@ import {
   PeriodType,
 } from './types'
 import { getPreparedPoints, calculatePePercentile, calculatePeriodStats } from './calculations'
-import { buildChartSource } from './chart-data'
+import { buildChartSource, buildDividendChartSource } from './chart-data'
 import { mergeCompanyValuationDetail } from './valuation-merge'
 
 export function useProfitLineData(symbolInput: string) {
@@ -555,6 +555,144 @@ export function useChartOptions(
     state,
     chartRef,
   ])
+}
+
+export function useDividendChartOptions(
+  data: ProfitLineData | null,
+  state: LoadState,
+  chartReady: boolean,
+  chartRef: React.MutableRefObject<any>,
+) {
+  useEffect(() => {
+    if (!chartRef.current) return
+
+    const isDark = document.documentElement.classList.contains('dark')
+    const source = buildDividendChartSource(data?.dividends)
+    const currency = data?.currency || 'USD'
+    const axisLabelColor = isDark ? '#64748b' : '#94a3b8'
+    const splitLineColor = isDark ? 'rgba(255,255,255,0.04)' : '#f1f5f9'
+    const axisLineColor = isDark ? 'rgba(255,255,255,0.06)' : '#e2e8f0'
+    const tooltipBg = isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.98)'
+    const tooltipBorder = isDark ? 'rgba(255,255,255,0.08)' : '#e2e8f0'
+    const tooltipText = isDark ? '#e2e8f0' : '#1e293b'
+    const dataZoomBorder = isDark ? 'rgba(255,255,255,0.06)' : '#e2e8f0'
+    const dataZoomFiller = isDark ? 'rgba(16, 185, 129, 0.14)' : 'rgba(16, 185, 129, 0.1)'
+
+    if (source.length === 0) {
+      chartRef.current.clear()
+      return
+    }
+
+    chartRef.current.setOption(
+      {
+        animationDuration: 360,
+        color: [isDark ? '#34d399' : '#10b981'],
+        backgroundColor: 'transparent',
+        grid: {
+          top: 34,
+          right: 28,
+          bottom: source.length > 12 ? 58 : 30,
+          left: 54,
+          containLabel: true,
+        },
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: {
+            type: 'shadow',
+          },
+          borderColor: tooltipBorder,
+          backgroundColor: tooltipBg,
+          textStyle: {
+            color: tooltipText,
+          },
+          formatter(params: any[]) {
+            const item = source[params?.[0]?.dataIndex]
+            if (!item) return ''
+            return [
+              `<strong>${item.year}</strong>`,
+              `每股分红合计：${new Intl.NumberFormat('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              }).format(item.amount)} ${currency}`,
+              `分红次数：${item.count}`,
+            ].join('<br/>')
+          },
+        },
+        xAxis: {
+          type: 'category',
+          data: source.map((point) => point.year),
+          axisLine: {
+            lineStyle: {
+              color: axisLineColor,
+            },
+          },
+          axisTick: {
+            alignWithLabel: true,
+          },
+          axisLabel: {
+            color: axisLabelColor,
+            hideOverlap: true,
+          },
+        },
+        yAxis: {
+          type: 'value',
+          name: `每股分红（${currency}）`,
+          nameTextStyle: {
+            color: axisLabelColor,
+          },
+          axisLabel: {
+            color: axisLabelColor,
+          },
+          splitLine: {
+            lineStyle: {
+              color: splitLineColor,
+            },
+          },
+        },
+        dataZoom: source.length > 12
+          ? [
+              {
+                type: 'inside',
+                start: 40,
+                end: 100,
+              },
+              {
+                type: 'slider',
+                height: 18,
+                bottom: 16,
+                borderColor: dataZoomBorder,
+                fillerColor: dataZoomFiller,
+                handleStyle: {
+                  color: isDark ? '#34d399' : '#10b981',
+                },
+              },
+            ]
+          : [],
+        series: [
+          {
+            name: '年度每股分红',
+            type: 'bar',
+            barMaxWidth: 34,
+            data: source.map((point) => point.amount),
+            itemStyle: {
+              color: isDark ? 'rgba(52, 211, 153, 0.78)' : 'rgba(16, 185, 129, 0.78)',
+              borderRadius: [4, 4, 0, 0],
+            },
+            emphasis: {
+              itemStyle: {
+                color: isDark ? '#34d399' : '#10b981',
+              },
+            },
+          },
+        ],
+      },
+      true,
+    )
+
+    if (source.length === 0 && state === 'ready') {
+      chartRef.current.clear()
+    }
+  }, [chartReady, chartRef, data?.currency, data?.dividends, state])
 }
 
 export function useDerivedData(

@@ -18,11 +18,40 @@ export type LatestPricePoint = {
   price: number
 } | null | undefined
 
+export type DividendChartPoint = {
+  year: string
+  amount: number
+  count: number
+}
+
 export type ChartPoint = ChartBasePoint & {
   referenceLine: number | null
   isLatestPrice: boolean
   displayLabel: string
   epsSourceQuarter?: string
+}
+
+export function buildDividendChartSource(
+  dividends: Array<{ date: string; amount: number }> | null | undefined,
+): DividendChartPoint[] {
+  const byYear = new Map<string, { amount: number; count: number }>()
+
+  for (const dividend of dividends || []) {
+    const year = dividend.date.slice(0, 4)
+    if (!/^\d{4}$/.test(year) || !Number.isFinite(dividend.amount)) continue
+    const existing = byYear.get(year) || { amount: 0, count: 0 }
+    existing.amount += dividend.amount
+    existing.count += 1
+    byYear.set(year, existing)
+  }
+
+  return Array.from(byYear.entries())
+    .map(([year, item]) => ({
+      year,
+      amount: Number(item.amount.toFixed(2)),
+      count: item.count,
+    }))
+    .sort((a, b) => a.year.localeCompare(b.year))
 }
 
 function linePrice(ttmEps: number | null, multiple: number) {

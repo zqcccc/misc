@@ -6,11 +6,18 @@ import {
   writeProfitLineCache,
 } from './cache'
 import {
+  adjustUsEpsForShareClass,
   buildQuarterPoints,
+  buildQuarterlyEpsRows,
+  isQuarterDataStale,
   latestDailyPrice,
   normalizeMarketSymbol,
+  normalizeUsSymbol,
+  normalizeYahooDividendEvents,
+  pickSecFilingEpsRows,
   pickEastmoneyEpsRows,
   toNumber,
+  type DividendEvent,
   type EpsRow,
   type NormalizedMarketSymbol,
 } from './market-data'
@@ -30,6 +37,13 @@ type SecFact = {
   filed?: string
 }
 
+type SecRecentFilings = {
+  form: string[]
+  filingDate: string[]
+  accessionNumber: string[]
+  primaryDocument: string[]
+}
+
 type SplitEvent = {
   date: string
   numerator: number
@@ -43,9 +57,11 @@ type ProfitLinePayload = {
   currency: string
   points: ReturnType<typeof buildQuarterPoints>
   latestPrice: ReturnType<typeof latestDailyPrice>
+  dividends: DividendEvent[]
   sources: {
     eps: string
     price: string
+    dividends?: string
   }
   ttmMethod: 'quarterly-rollup' | 'source-eps-ttm'
   splitAdjusted?: boolean
@@ -70,6 +86,11 @@ const EPS_TAGS = [
   'EarningsPerShareBasicAndDiluted',
   'EarningsPerShareBasic',
 ]
+
+const BERKSHIRE_CLASS_MEMBER_BY_TICKER: Record<string, string> = {
+  'BRK-A': 'brka:EquivalentClassAMember',
+  'BRK-B': 'brka:EquivalentClassBMember',
+}
 
 function jsonError(message: string, status = 400) {
   return NextResponse.json({ message }, { status })
@@ -101,6 +122,14 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>
 }
 
+async function fetchText(url: string, init?: RequestInit): Promise<string> {
+  const response = await fetch(url, init)
+  if (!response.ok) {
+    throw new Error(`${response.status} ${response.statusText}`)
+  }
+  return response.text()
+}
+
 async function fetchEastmoneyJson<T>(
   url: string,
   params: Record<string, string>,
@@ -125,7 +154,7 @@ async function resolveCompany(symbol: string) {
       next: { revalidate: 60 * 60 * 24 * 7 },
     },
   )
-  const normalized = symbol.trim().toUpperCase().replace(/\.US$/, '')
+  const normalized = normalizeUsSymbol(symbol)
   const company = Object.values(tickers).find(
     (item) => item.ticker.toUpperCase() === normalized,
   )
@@ -202,24 +231,29 @@ function pickQuarterlyEps(secFacts: any): Array<{
 
 function pickSecInstantFacts(secFacts: any, tags: string[]) {
   const gaap = secFacts?.facts?.['us-gaap']
-  const tag = tags.find((name) => Array.isArray(gaap?.[name]?.units?.USD))
-  const facts = tag ? (gaap[tag].units.USD as SecFact[]) : []
+  const matchedTags = tags.filter((name) =>
+    Array.isArray(gaap?.[name]?.units?.USD),
+  )
   const byEndDate = new Map<string, { value: number; rank: number }>()
 
-  facts.forEach((fact) => {
-    if (!fact.end || typeof fact.val !== 'number') return
-    if (!['10-Q', '10-K'].includes(fact.form || '')) return
+  matchedTags.forEach((tag, tagPriority) => {
+    const facts = gaap[tag].units.USD as SecFact[]
+    facts.forEach((fact) => {
+      if (!fact.end || typeof fact.val !== 'number') return
+      if (!['10-Q', '10-K'].includes(fact.form || '')) return
 
-    const rank =
-      (fact.form === '10-Q' ? 2 : 1) +
-      (fact.filed ? new Date(fact.filed).getTime() / 10_000_000_000_000 : 0)
-    const existing = byEndDate.get(fact.end)
-    if (!existing || rank >= existing.rank) {
-      byEndDate.set(fact.end, {
-        value: Number(fact.val.toFixed(2)),
-        rank,
-      })
-    }
+      const rank =
+        (fact.form === '10-Q' ? 2 : 1) +
+        (fact.filed ? new Date(fact.filed).getTime() / 10_000_000_000_000 : 0) +
+        (matchedTags.length - tagPriority) * 100
+      const existing = byEndDate.get(fact.end)
+      if (!existing || rank >= existing.rank) {
+        byEndDate.set(fact.end, {
+          value: Number(fact.val.toFixed(2)),
+          rank,
+        })
+      }
+    })
   })
 
   return new Map(
@@ -264,7 +298,7 @@ async function fetchMarketData(symbol: string, firstDate: string) {
   const period2 = Math.floor(Date.now() / 1000) + 86_400
   const url = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
     yahooSymbol,
-  )}?period1=${period1}&period2=${period2}&interval=1d&events=history%7Csplits`
+  )}?period1=${period1}&period2=${period2}&interval=1d&events=history%7Csplits%7Cdividends`
 
   const data = await fetchJson<any>(url, {
     headers: {
@@ -300,7 +334,62 @@ async function fetchMarketData(symbol: string, firstDate: string) {
         denominator: split.denominator,
       }))
       .filter((split) => split.numerator > 0 && split.denominator > 0),
+    dividends: normalizeYahooDividendEvents(result?.events?.dividends),
   }
+}
+
+function secArchiveFilingUrl(cik: string, accessionNumber: string, document: string) {
+  const cikNumber = String(Number(cik))
+  const accessionPath = accessionNumber.replace(/-/g, '')
+  const xmlDocument = document.replace(/\.htm$/i, '_htm.xml')
+  return `https://www.sec.gov/Archives/edgar/data/${cikNumber}/${accessionPath}/${xmlDocument}`
+}
+
+async function fetchBerkshireQuarterlyEps(
+  company: Awaited<ReturnType<typeof resolveCompany>>,
+) {
+  if (!company) return []
+
+  const classMember = BERKSHIRE_CLASS_MEMBER_BY_TICKER[company.ticker]
+  if (!classMember) return []
+
+  const submissions = await fetchJson<{ filings?: { recent?: SecRecentFilings } }>(
+    `https://data.sec.gov/submissions/CIK${company.cik}.json`,
+    {
+      headers: SEC_HEADERS,
+      cache: 'no-store',
+    },
+  )
+  const recent = submissions.filings?.recent
+  if (!recent) return []
+
+  const quarterlyRows: EpsRow[] = []
+  const annualRows: EpsRow[] = []
+  for (let index = 0; index < recent.form.length; index += 1) {
+    const form = recent.form[index]
+    if (!['10-Q', '10-K'].includes(form)) continue
+
+    const url = secArchiveFilingUrl(
+      company.cik,
+      recent.accessionNumber[index],
+      recent.primaryDocument[index],
+    )
+    const xml = await fetchText(url, {
+      headers: {
+        ...SEC_HEADERS,
+        Accept: 'application/xml,text/xml,text/plain,*/*',
+      },
+      cache: 'no-store',
+    })
+    quarterlyRows.push(...pickSecFilingEpsRows(xml, classMember, 'quarterly'))
+    if (form === '10-K') {
+      annualRows.push(...pickSecFilingEpsRows(xml, classMember, 'annual'))
+    }
+
+    if (buildQuarterlyEpsRows(quarterlyRows, annualRows).length >= 8) break
+  }
+
+  return buildQuarterlyEpsRows(quarterlyRows, annualRows).slice(-48)
 }
 
 function splitAdjustmentForDate(splits: SplitEvent[], date: string) {
@@ -323,14 +412,23 @@ async function buildUsPayload(symbol: string): Promise<ProfitLinePayload> {
       cache: 'no-store',
     },
   )
-  const quarters = pickQuarterlyEps(secFacts)
+  const filingQuarters = await fetchBerkshireQuarterlyEps(company)
+  const quarters =
+    filingQuarters.length > 0 ? filingQuarters : pickQuarterlyEps(secFacts)
 
   if (quarters.length < 4) {
     throw new ProfitLineDataError('可用季度 EPS 少于 4 个，无法计算 TTM EPS', 404)
   }
+  if (isQuarterDataStale(quarters)) {
+    throw new ProfitLineDataError('SEC EPS 数据已过期，无法可靠计算 TTM EPS', 404)
+  }
 
   const marketData = await fetchMarketData(company.ticker, quarters[0].date)
-  const adjustedQuarters = quarters.map((quarter) => {
+  const shareClassAdjustedQuarters =
+    filingQuarters.length > 0
+      ? quarters
+      : adjustUsEpsForShareClass(company.ticker, quarters)
+  const adjustedQuarters = shareClassAdjustedQuarters.map((quarter) => {
     const splitAdjustment = splitAdjustmentForDate(marketData.splits, quarter.date)
     return {
       ...quarter,
@@ -347,9 +445,14 @@ async function buildUsPayload(symbol: string): Promise<ProfitLinePayload> {
     currency: 'USD',
     points,
     latestPrice: latestDailyPrice(marketData.prices),
+    dividends: marketData.dividends,
     sources: {
-      eps: 'SEC companyfacts',
+      eps:
+        filingQuarters.length > 0
+          ? 'SEC filing XBRL class-specific EPS'
+          : 'SEC companyfacts',
       price: 'Yahoo Finance chart',
+      dividends: 'Yahoo Finance chart',
     },
     ttmMethod: 'quarterly-rollup',
     splitAdjusted: marketData.splits.length > 0,
@@ -694,9 +797,11 @@ async function buildEastmoneyPayload(
     currency: marketSymbol.currency,
     points,
     latestPrice: latestDailyPrice(marketData.prices),
+    dividends: marketData.dividends,
     sources: {
       eps: financialData.epsSource,
       price: 'Yahoo Finance chart',
+      dividends: 'Yahoo Finance chart',
     },
     ttmMethod: financialData.ttmMethod,
     ...(epsCurrency ? { epsCurrency, fxRate } : {}),
@@ -743,7 +848,9 @@ export async function GET(request: Request) {
     const cacheKey = buildProfitLineCacheKey(canonicalCacheSymbol(marketSymbol))
     const cached = await readRedisCache(cacheKey)
 
-    if (cached) return jsonPayload(cached, 'HIT')
+    if (cached && Array.isArray(cached.dividends)) {
+      return jsonPayload(cached, 'HIT')
+    }
 
     const payload =
       marketSymbol.market === 'us'

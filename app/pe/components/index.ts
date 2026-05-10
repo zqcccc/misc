@@ -1,6 +1,7 @@
 export { Skeleton } from './Skeleton'
 export { CompanySidebar } from './CompanySidebar'
 export { ChartPanel } from './ChartPanel'
+export { DividendChartPanel } from './DividendChartPanel'
 export { StatsPanel } from './StatsPanel'
 export { ControlPanel } from './ControlPanel'
 export { ExplanationsPanel } from './ExplanationsPanel'

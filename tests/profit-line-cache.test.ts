@@ -24,7 +24,7 @@ class FakeRedis {
 }
 
 async function run() {
-  assert.equal(buildProfitLineCacheKey(' 00700.hk '), 'profit-line:v6:00700.HK')
+  assert.equal(buildProfitLineCacheKey(' 00700.hk '), 'profit-line:v7:00700.HK')
 
   const redis = new FakeRedis()
   const cacheKey = buildProfitLineCacheKey('AAPL')
