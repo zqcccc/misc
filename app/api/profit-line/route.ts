@@ -92,6 +92,8 @@ const BERKSHIRE_CLASS_MEMBER_BY_TICKER: Record<string, string> = {
   'BRK-B': 'brka:EquivalentClassBMember',
 }
 
+const CNY_TO_HKD_FALLBACK_RATE = 1.08
+
 function jsonError(message: string, status = 400) {
   return NextResponse.json({ message }, { status })
 }
@@ -678,19 +680,26 @@ function toRegionalYahooSymbol(
 async function fetchCnyToHkdRate(): Promise<number> {
   const url =
     'https://query2.finance.yahoo.com/v8/finance/chart/CNYHKD=X?range=5d&interval=1d'
-  const data = await fetchJson<any>(url, {
-    headers: {
-      Accept: 'application/json',
-      'User-Agent':
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-    },
-    next: { revalidate: 60 * 60 * 6 },
-  })
-  const rate = data?.chart?.result?.[0]?.meta?.regularMarketPrice
-  if (typeof rate !== 'number' || !Number.isFinite(rate) || rate <= 0) {
+
+  try {
+    const data = await fetchJson<any>(url, {
+      headers: {
+        Accept: 'application/json',
+        'User-Agent':
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+      },
+      next: { revalidate: 60 * 60 * 6 },
+    })
+    const rate = data?.chart?.result?.[0]?.meta?.regularMarketPrice
+    if (typeof rate === 'number' && Number.isFinite(rate) && rate > 0) {
+      return rate
+    }
+
     throw new Error('无法获取 CNY/HKD 汇率')
+  } catch (error) {
+    console.warn('[profit-line] CNY/HKD rate fallback used:', error)
+    return CNY_TO_HKD_FALLBACK_RATE
   }
-  return rate
 }
 
 type HkCompanyProfile = {
