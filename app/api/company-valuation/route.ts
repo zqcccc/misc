@@ -17,12 +17,19 @@ const prisma = new PrismaClient()
 const PAGE_SIZE = 30
 
 async function getAllSortedEntries(): Promise<ReturnType<typeof buildCompanyValuationCard>[]> {
-  const redis = await getCompanyValuationRedis()
   const cacheKey = buildCompanyValuationAllKey()
+  let redis: Awaited<ReturnType<typeof getCompanyValuationRedis>> | null = null
 
-  const cached = await readCompanyValuationCache<{ entries: ReturnType<typeof buildCompanyValuationCard>[] }>(redis, cacheKey)
-  if (cached) {
-    return cached.entries
+  try {
+    redis = await getCompanyValuationRedis()
+    const cached = await readCompanyValuationCache<{
+      entries: ReturnType<typeof buildCompanyValuationCard>[]
+    }>(redis, cacheKey)
+    if (cached) {
+      return cached.entries
+    }
+  } catch (error) {
+    console.warn('[company-valuation] cache read skipped:', error)
   }
 
   const companies = await prisma.company.findMany({
@@ -46,7 +53,14 @@ async function getAllSortedEntries(): Promise<ReturnType<typeof buildCompanyValu
     return (b.exploration.score ?? 0) - (a.exploration.score ?? 0)
   })
 
-  await writeCompanyValuationCache(redis, cacheKey, { entries: sortedCards })
+  if (redis) {
+    try {
+      await writeCompanyValuationCache(redis, cacheKey, { entries: sortedCards })
+    } catch (error) {
+      console.warn('[company-valuation] cache write skipped:', error)
+    }
+  }
+
   return sortedCards
 }
 
