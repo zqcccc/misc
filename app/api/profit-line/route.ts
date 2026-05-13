@@ -14,6 +14,7 @@ import {
   normalizeMarketSymbol,
   normalizeUsSymbol,
   normalizeYahooDividendEvents,
+  pickSecAnnualEpsRows,
   pickSecFilingEpsRows,
   pickEastmoneyEpsRows,
   toNumber,
@@ -185,15 +186,12 @@ function quarterLabel(date: string, frame?: string) {
   return `${value.getUTCFullYear()} Q${quarter}`
 }
 
-function pickQuarterlyEps(secFacts: any): Array<{
+function pickQuarterlyEpsFromFacts(facts: SecFact[]): Array<{
   date: string
   quarter: string
   eps: number
   filed: string
 }> {
-  const gaap = secFacts?.facts?.['us-gaap']
-  const tag = EPS_TAGS.find((name) => gaap?.[name]?.units?.['USD/shares'])
-  const facts = tag ? (gaap[tag].units['USD/shares'] as SecFact[]) : []
   const byEndDate = new Map<
     string,
     { date: string; quarter: string; eps: number; filed: string; rank: number }
@@ -229,6 +227,25 @@ function pickQuarterlyEps(secFacts: any): Array<{
   return Array.from(byEndDate.values())
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(-48)
+}
+
+function pickQuarterlyEps(secFacts: any): Array<{
+  date: string
+  quarter: string
+  eps: number
+  filed: string
+}> {
+  const gaap = secFacts?.facts?.['us-gaap']
+
+  for (const tag of EPS_TAGS) {
+    const facts = gaap?.[tag]?.units?.['USD/shares']
+    if (!Array.isArray(facts)) continue
+
+    const rows = pickQuarterlyEpsFromFacts(facts)
+    if (rows.length > 0) return rows
+  }
+
+  return []
 }
 
 function pickSecInstantFacts(secFacts: any, tags: string[]) {
@@ -415,14 +432,20 @@ async function buildUsPayload(symbol: string): Promise<ProfitLinePayload> {
     },
   )
   const filingQuarters = await fetchBerkshireQuarterlyEps(company)
+  const companyFactQuarters = pickQuarterlyEps(secFacts)
+  const annualRows = pickSecAnnualEpsRows(secFacts)
   const quarters =
-    filingQuarters.length > 0 ? filingQuarters : pickQuarterlyEps(secFacts)
+    filingQuarters.length > 0
+      ? filingQuarters
+      : companyFactQuarters.length > 0
+        ? companyFactQuarters
+        : annualRows
 
   if (quarters.length < 4) {
-    throw new ProfitLineDataError('可用季度 EPS 少于 4 个，无法计算 TTM EPS', 404)
+    throw new ProfitLineDataError('可用 EPS 数据少于 4 个，无法绘制利润线', 404)
   }
   if (isQuarterDataStale(quarters)) {
-    throw new ProfitLineDataError('SEC EPS 数据已过期，无法可靠计算 TTM EPS', 404)
+    throw new ProfitLineDataError('SEC EPS 数据已过期，无法可靠计算利润线', 404)
   }
 
   const marketData = await fetchMarketData(company.ticker, quarters[0].date)
@@ -435,6 +458,9 @@ async function buildUsPayload(symbol: string): Promise<ProfitLinePayload> {
     return {
       ...quarter,
       eps: Number((quarter.eps / splitAdjustment).toFixed(4)),
+      ...(quarter.ttmEps === undefined
+        ? {}
+        : { ttmEps: Number((quarter.ttmEps / splitAdjustment).toFixed(4)) }),
     }
   })
   const quartersWithBalance = mergeUsBalanceMetrics(adjustedQuarters, secFacts)
@@ -452,7 +478,9 @@ async function buildUsPayload(symbol: string): Promise<ProfitLinePayload> {
       eps:
         filingQuarters.length > 0
           ? 'SEC filing XBRL class-specific EPS'
-          : 'SEC companyfacts',
+          : companyFactQuarters.length > 0
+            ? 'SEC companyfacts quarterly EPS'
+            : 'SEC companyfacts annual EPS',
       price: 'Yahoo Finance chart',
       dividends: 'Yahoo Finance chart',
     },

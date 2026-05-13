@@ -56,6 +56,21 @@ const US_SHARE_CLASS_DOT_SYMBOLS = new Set(['BRK.A', 'BRK.B'])
 const US_EPS_SCALE_BY_SYMBOL: Record<string, number> = {
   'BRK-B': 1500,
 }
+const SEC_EPS_TAGS = [
+  'EarningsPerShareDiluted',
+  'EarningsPerShareBasicAndDiluted',
+  'EarningsPerShareBasic',
+]
+const SEC_ANNUAL_REPORT_FORMS = new Set(['10-K', '20-F', '40-F'])
+
+type SecEpsFact = {
+  form?: string
+  start?: string
+  end?: string
+  val?: number
+  frame?: string
+  filed?: string
+}
 
 export function normalizeUsSymbol(input: string) {
   const symbol = input.trim().toUpperCase().replace(/\.US$/, '')
@@ -93,6 +108,61 @@ export function isQuarterDataStale(
   if (!Number.isFinite(latestMs) || !Number.isFinite(asOfMs)) return true
 
   return asOfMs - latestMs > maxAgeDays * 86_400_000
+}
+
+function pickSecAnnualEpsRowsFromFacts(facts: SecEpsFact[]): EpsRow[] {
+  const byEndDate = new Map<
+    string,
+    { date: string; quarter: string; eps: number; ttmEps: number; rank: number }
+  >()
+
+  facts.forEach((fact) => {
+    if (!fact.end || typeof fact.val !== 'number') return
+    if (!SEC_ANNUAL_REPORT_FORMS.has(fact.form || '')) return
+
+    const hasAnnualFrame = /^CY\d{4}$/.test(fact.frame || '')
+    const durationDays = fact.start ? daysBetweenDates(fact.start, fact.end) : 0
+    const isAnnualDuration = durationDays >= 350 && durationDays <= 380
+
+    if (!hasAnnualFrame && !isAnnualDuration) return
+
+    const year = fact.end.slice(0, 4)
+    const rank =
+      (hasAnnualFrame ? 4 : 0) +
+      (fact.form === '20-F' || fact.form === '40-F' ? 2 : 1) +
+      (fact.filed ? new Date(fact.filed).getTime() / 10_000_000_000_000 : 0)
+    const existing = byEndDate.get(fact.end)
+
+    if (!existing || rank >= existing.rank) {
+      const eps = Number(fact.val.toFixed(4))
+      byEndDate.set(fact.end, {
+        date: fact.end,
+        quarter: `${year} FY`,
+        eps,
+        ttmEps: eps,
+        rank,
+      })
+    }
+  })
+
+  return Array.from(byEndDate.values())
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .map(({ rank, ...row }) => row)
+    .slice(-48)
+}
+
+export function pickSecAnnualEpsRows(secFacts: any): EpsRow[] {
+  const gaap = secFacts?.facts?.['us-gaap']
+
+  for (const tag of SEC_EPS_TAGS) {
+    const facts = gaap?.[tag]?.units?.['USD/shares']
+    if (!Array.isArray(facts)) continue
+
+    const rows = pickSecAnnualEpsRowsFromFacts(facts)
+    if (rows.length > 0) return rows
+  }
+
+  return []
 }
 
 function parseXmlAttrs(value: string) {

@@ -7,6 +7,7 @@ import {
   latestDailyPrice,
   normalizeMarketSymbol,
   normalizeYahooDividendEvents,
+  pickSecAnnualEpsRows,
   pickSecFilingEpsRows,
   pickEastmoneyEpsRows,
 } from '../app/api/profit-line/market-data'
@@ -53,6 +54,95 @@ assert.deepEqual(
   [
     { date: '2024-03-31', quarter: '2024 Q1', eps: 1 },
     { date: '2024-06-30', quarter: '2024 Q2', eps: 0.5, ttmEps: 2 },
+  ],
+)
+
+assert.deepEqual(
+  pickSecAnnualEpsRows({
+    facts: {
+      'us-gaap': {
+        EarningsPerShareDiluted: {
+          units: {
+            'USD/shares': [
+              {
+                form: '6-K',
+                start: '2024-01-01',
+                end: '2024-09-30',
+                val: 1.8,
+              },
+              {
+                form: '20-F',
+                start: '2023-01-01',
+                end: '2023-12-31',
+                val: 1.45,
+                frame: 'CY2023',
+                filed: '2024-04-25',
+              },
+              {
+                form: '20-F',
+                start: '2024-01-01',
+                end: '2024-12-31',
+                val: 2.6,
+                frame: 'CY2024',
+                filed: '2025-04-28',
+              },
+            ],
+          },
+        },
+      },
+    },
+  }),
+  [
+    { date: '2023-12-31', quarter: '2023 FY', eps: 1.45, ttmEps: 1.45 },
+    { date: '2024-12-31', quarter: '2024 FY', eps: 2.6, ttmEps: 2.6 },
+  ],
+)
+
+assert.deepEqual(
+  pickSecAnnualEpsRows({
+    facts: {
+      'us-gaap': {
+        EarningsPerShareDiluted: {
+          units: {
+            'USD/shares': [
+              {
+                form: '6-K',
+                start: '2025-04-01',
+                end: '2025-06-30',
+                val: 2.44,
+                frame: 'CY2025Q2',
+              },
+            ],
+          },
+        },
+        EarningsPerShareBasic: {
+          units: {
+            'USD/shares': [
+              {
+                form: '20-F',
+                start: '2024-01-01',
+                end: '2024-12-31',
+                val: 8.69,
+                frame: 'CY2024',
+                filed: '2025-03-27',
+              },
+              {
+                form: '20-F',
+                start: '2025-01-01',
+                end: '2025-12-31',
+                val: 3.35,
+                frame: 'CY2025',
+                filed: '2026-03-26',
+              },
+            ],
+          },
+        },
+      },
+    },
+  }),
+  [
+    { date: '2024-12-31', quarter: '2024 FY', eps: 8.69, ttmEps: 8.69 },
+    { date: '2025-12-31', quarter: '2025 FY', eps: 3.35, ttmEps: 3.35 },
   ],
 )
 
