@@ -455,12 +455,14 @@ async function buildUsPayload(symbol: string): Promise<ProfitLinePayload> {
       : adjustUsEpsForShareClass(company.ticker, quarters)
   const adjustedQuarters = shareClassAdjustedQuarters.map((quarter) => {
     const splitAdjustment = splitAdjustmentForDate(marketData.splits, quarter.date)
+    const ttmEps = 'ttmEps' in quarter ? quarter.ttmEps : undefined
+
     return {
       ...quarter,
       eps: Number((quarter.eps / splitAdjustment).toFixed(4)),
-      ...(quarter.ttmEps === undefined
+      ...(ttmEps === undefined
         ? {}
-        : { ttmEps: Number((quarter.ttmEps / splitAdjustment).toFixed(4)) }),
+        : { ttmEps: Number((ttmEps / splitAdjustment).toFixed(4)) }),
     }
   })
   const quartersWithBalance = mergeUsBalanceMetrics(adjustedQuarters, secFacts)

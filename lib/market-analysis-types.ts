@@ -3,6 +3,48 @@ export type EntryType = 'manual' | 'ai-generated' | 'analysis' | 'research'
 export type VisibilityType = 'draft' | 'published' | 'archived'
 export type ExplanationType = 'price' | 'profit' | 'valuation' | 'business'
 export type ImpactDirection = 'positive' | 'neutral' | 'negative'
+export type SourceUrlsInput = string | string[] | null
+export type RawJsonInput = string | Record<string, unknown> | unknown[] | null
+export type AnalysisChecklistStatus = 'done' | 'missing' | 'not_applicable'
+
+export interface AnalysisDataSourceInput {
+  provider: string
+  description?: string
+  sourceUrls?: SourceUrlsInput
+  fetchedAt?: string
+  rawJson?: RawJsonInput
+}
+
+export interface AnalysisToolResultInput {
+  tool: string
+  query?: string
+  args?: Record<string, unknown>
+  data?: unknown
+  summary?: string
+  sourceUrls?: SourceUrlsInput
+  error?: string | null
+}
+
+export interface AnalysisChecklistInput {
+  item: string
+  status: AnalysisChecklistStatus | string
+  note?: string
+}
+
+export interface DexterInspiredAnalysisInput {
+  financialStatements?: {
+    incomeStatement?: boolean
+    balanceSheet?: boolean
+    cashFlowStatement?: boolean
+    keyRatios?: boolean
+    historicalKeyRatios?: boolean
+    earnings?: boolean
+    segments?: boolean
+  }
+  dataSources?: AnalysisDataSourceInput[]
+  toolResults?: AnalysisToolResultInput[]
+  checklist?: AnalysisChecklistInput[]
+}
 
 export interface CompanyInput {
   symbol: string
@@ -34,7 +76,8 @@ export interface ExplorationInput {
   tags?: string[]
   score?: number
   confidence?: number
-  sourceUrls?: string[]
+  sourceUrls?: SourceUrlsInput
+  rawJson?: RawJsonInput
   visibility?: VisibilityType
   pinned?: boolean
 }
@@ -60,7 +103,7 @@ export interface ValuationSnapshotInput {
   profitQualityScore?: number
   profitQualitySummary?: string
   source?: string
-  rawJson?: string
+  rawJson?: RawJsonInput
 }
 
 export interface ValuationExplanationInput {
@@ -71,7 +114,7 @@ export interface ValuationExplanationInput {
   impactDirection?: ImpactDirection
   impactAmount?: number
   isRecurring?: boolean
-  sourceUrls?: string[]
+  sourceUrls?: SourceUrlsInput
   confidence?: number
 }
 
@@ -81,6 +124,7 @@ export interface MarketAnalysisWriteInput {
   exploration?: ExplorationInput
   valuation?: ValuationSnapshotInput
   explanations?: ValuationExplanationInput[]
+  analysisContext?: DexterInspiredAnalysisInput
 }
 
 export interface IdempotentWriteInput extends MarketAnalysisWriteInput {

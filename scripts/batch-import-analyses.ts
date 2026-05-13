@@ -9,6 +9,7 @@ import { readdir, readFile } from 'fs/promises'
 import { join } from 'path'
 import { PrismaClient } from '@prisma/client'
 import { writeMarketAnalysisCrossMarket, type CrossMarketWriteInput } from '../lib/market-analysis'
+import { recordMarketAnalysisScratchpad } from '../lib/market-analysis-scratchpad'
 
 const prisma = new PrismaClient()
 const TMP_DIR = join(process.cwd(), 'tmp')
@@ -117,6 +118,12 @@ async function main() {
         failed++
         continue
       }
+
+      await recordMarketAnalysisScratchpad(payload.runId, 'validation', {
+        success: true,
+        mode: DRY_RUN ? 'batch-dry-run' : 'batch-write',
+        filePath,
+      })
 
       const key = `${payload.company.market}:${payload.company.symbol}`
       let companyId = companyMap.get(key)

@@ -4,6 +4,7 @@ import {
   writeMarketAnalysisCrossMarket,
   type CrossMarketWriteInput,
 } from '../lib/market-analysis'
+import { recordMarketAnalysisScratchpad } from '../lib/market-analysis-scratchpad'
 
 const FLAG_DRY_RUN = '--dry-run'
 const FLAG_HELP = '--help'
@@ -16,6 +17,7 @@ const VALID_ENTRY_TYPES = new Set(['manual', 'ai-generated', 'ai-deep-analysis',
 const VALID_VISIBILITIES = new Set(['draft', 'published', 'archived'])
 const VALID_EXPLANATION_TYPES = new Set(['price', 'profit', 'valuation', 'business'])
 const VALID_IMPACT_DIRECTIONS = new Set(['positive', 'neutral', 'negative'])
+const VALID_ANALYSIS_CHECKLIST_STATUSES = new Set(['done', 'missing', 'not_applicable'])
 
 const prisma = new PrismaClient()
 
@@ -161,6 +163,49 @@ function assertOptionalDate(value: unknown, fieldName: string) {
   }
 }
 
+function assertOptionalArray(value: unknown, fieldName: string) {
+  if (value === undefined || value === null) return
+  if (!Array.isArray(value)) {
+    throw new Error(`${fieldName} 必须是数组`)
+  }
+}
+
+function validateAnalysisContext(payload: CrossMarketWriteInput) {
+  const context = payload.analysisContext
+  if (!context) return
+
+  assertPlainObject(context, 'analysisContext')
+  assertOptionalArray(context.dataSources, 'analysisContext.dataSources')
+  assertOptionalArray(context.toolResults, 'analysisContext.toolResults')
+  assertOptionalArray(context.checklist, 'analysisContext.checklist')
+
+  if (Array.isArray(context.dataSources)) {
+    context.dataSources.forEach((source, index) => {
+      assertPlainObject(source, `analysisContext.dataSources[${index}]`)
+      assertNonEmptyString(source.provider, `analysisContext.dataSources[${index}].provider`)
+    })
+  }
+
+  if (Array.isArray(context.toolResults)) {
+    context.toolResults.forEach((result, index) => {
+      assertPlainObject(result, `analysisContext.toolResults[${index}]`)
+      assertNonEmptyString(result.tool, `analysisContext.toolResults[${index}].tool`)
+    })
+  }
+
+  if (Array.isArray(context.checklist)) {
+    context.checklist.forEach((item, index) => {
+      assertPlainObject(item, `analysisContext.checklist[${index}]`)
+      assertNonEmptyString(item.item, `analysisContext.checklist[${index}].item`)
+      assertOptionalEnum(
+        item.status,
+        `analysisContext.checklist[${index}].status`,
+        VALID_ANALYSIS_CHECKLIST_STATUSES,
+      )
+    })
+  }
+}
+
 function validatePayload(payload: CrossMarketWriteInput) {
   assertPlainObject(payload, 'payload')
   assertNonEmptyString(payload.runId, 'runId')
@@ -218,6 +263,8 @@ function validatePayload(payload: CrossMarketWriteInput) {
       explanationTypes.add(explanation.explanationType)
     }
   }
+
+  validateAnalysisContext(payload)
 }
 
 async function verifyWrite(input: CrossMarketWriteInput): Promise<VerifyResult> {
@@ -306,6 +353,11 @@ async function main() {
 
   const payload = await readPayload(options.filePath)
   validatePayload(payload)
+  await recordMarketAnalysisScratchpad(payload.runId, 'validation', {
+    success: true,
+    mode: options.dryRun ? 'dry-run' : 'write',
+    filePath: options.filePath,
+  })
 
   if (options.dryRun) {
     console.log(JSON.stringify({
