@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { writeMarketAnalysisCrossMarket, CrossMarketWriteInput } from '@/lib/market-analysis'
+import { recordMarketAnalysisScratchpad } from '@/lib/market-analysis-scratchpad'
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,6 +25,11 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       )
     }
+
+    await recordMarketAnalysisScratchpad(body.runId, 'validation', {
+      success: true,
+      mode: 'api',
+    })
 
     const result = await writeMarketAnalysisCrossMarket(body)
 
@@ -124,7 +130,8 @@ export async function GET() {
             tags: '标签数组 (可选)',
             score: '评分 1-100 (可选)',
             confidence: '置信度 1-100 (可选)',
-            sourceUrls: '来源链接数组 (可选)',
+            sourceUrls: '来源链接数组或单个链接 (可选，会与 analysisContext 的来源合并)',
+            rawJson: '原始分析上下文 (可选，会与 analysisContext 合并)',
             visibility: '可见性 (可选, draft/published/archived)',
           },
         },
@@ -157,6 +164,16 @@ export async function GET() {
             confidence: '置信度 (可选)',
           },
         },
+        analysisContext: {
+          required: false,
+          description: '借鉴 dexter 的分析上下文，用于保存财报覆盖、数据源、工具结果和分析检查表；会写入 scratchpad，并合并到 exploration.rawJson/sourceUrls',
+          fields: {
+            financialStatements: '财报覆盖标记，如 incomeStatement、balanceSheet、cashFlowStatement、keyRatios、earnings',
+            dataSources: '数据源数组，每项包含 provider、description、sourceUrls、fetchedAt、rawJson',
+            toolResults: '工具调用结果数组，每项包含 tool、query、args、data、summary、sourceUrls、error',
+            checklist: '分析检查表数组，每项包含 item、status(done/missing/not_applicable)、note',
+          },
+        },
         syncToMarkets: {
           required: false,
           description: '指定要同步的市场列表。如果不提供，系统会自动同步到所有关联市场',
@@ -187,6 +204,36 @@ export async function GET() {
             asOfDate: '2026-05-08',
             price: 45.2,
             ttmPe: 12.5,
+          },
+          analysisContext: {
+            financialStatements: {
+              incomeStatement: true,
+              balanceSheet: true,
+              cashFlowStatement: true,
+              keyRatios: true,
+              earnings: true,
+            },
+            dataSources: [
+              {
+                provider: 'SEC/Eastmoney/Yahoo/Financial Datasets',
+                description: '结构化财报、行情、分红和关键比率来源',
+                sourceUrls: ['SOURCE_URL'],
+              },
+            ],
+            toolResults: [
+              {
+                tool: 'get_financials',
+                query: '获取最近 5 年利润表、资产负债表、现金流和关键比率',
+                summary: '收入、利润、现金流、负债和关键比率已覆盖',
+                sourceUrls: ['SOURCE_URL'],
+              },
+            ],
+            checklist: [
+              {
+                item: '覆盖利润表、资产负债表、现金流和关键比率',
+                status: 'done',
+              },
+            ],
           },
         },
         behavior: '系统会自动将 exploration 同步到港股市场 (01336.HK)',

@@ -10,12 +10,129 @@ import type {
   MarketAnalysisWriteInput,
   IdempotentWriteInput,
   CrossMarketWriteInput,
+  SourceUrlsInput,
+  RawJsonInput,
+  DexterInspiredAnalysisInput,
 } from './market-analysis-types'
 import { invalidateCompanyValuationCache } from '../app/api/company-valuation/cache'
+import { recordMarketAnalysisScratchpad } from './market-analysis-scratchpad'
 
 export type { MarketType, EntryType, CompanyInput, PageEntryInput, ExplorationInput, ValuationSnapshotInput, ValuationExplanationInput, MarketAnalysisWriteInput, IdempotentWriteInput, CrossMarketWriteInput }
 
 const prisma = new PrismaClient()
+
+function normalizeSourceUrls(value: SourceUrlsInput | undefined) {
+  if (value === undefined || value === null) return null
+
+  const sourceUrls = Array.isArray(value) ? value : parseSourceUrlsString(value)
+  const normalized = Array.from(
+    new Set(
+      sourceUrls
+        .map((url) => url.trim())
+        .filter((url) => url.length > 0),
+    ),
+  )
+
+  return normalized.length > 0 ? JSON.stringify(normalized) : null
+}
+
+function parseSourceUrlsString(value: string) {
+  const trimmed = value.trim()
+  if (!trimmed) return []
+
+  try {
+    const parsed = JSON.parse(trimmed)
+    if (Array.isArray(parsed)) {
+      return parsed.filter((item): item is string => typeof item === 'string')
+    }
+  } catch {}
+
+  return [trimmed]
+}
+
+function normalizeRawJson(value: RawJsonInput | undefined) {
+  if (value === undefined || value === null) return null
+  if (typeof value === 'string') return value.trim() || null
+
+  return JSON.stringify(value)
+}
+
+function parseRawJson(value: RawJsonInput | undefined) {
+  if (value === undefined || value === null) return null
+  if (typeof value !== 'string') return value
+
+  try {
+    return JSON.parse(value) as unknown
+  } catch {
+    return value
+  }
+}
+
+function mergeSourceUrls(
+  value: SourceUrlsInput | undefined,
+  extraSourceUrls: string[],
+) {
+  const sourceUrls = [
+    ...(value === undefined || value === null
+      ? []
+      : Array.isArray(value)
+        ? value
+        : parseSourceUrlsString(value)),
+    ...extraSourceUrls,
+  ]
+  const normalized = Array.from(
+    new Set(sourceUrls.map((url) => url.trim()).filter((url) => url.length > 0)),
+  )
+
+  return normalized.length > 0 ? normalized : value
+}
+
+function collectAnalysisContextSourceUrls(
+  analysisContext: DexterInspiredAnalysisInput | undefined,
+) {
+  if (!analysisContext) return []
+
+  const sourceUrls: string[] = []
+  for (const source of analysisContext.dataSources || []) {
+    sourceUrls.push(...sourceUrlsFromInput(source.sourceUrls))
+  }
+  for (const result of analysisContext.toolResults || []) {
+    sourceUrls.push(...sourceUrlsFromInput(result.sourceUrls))
+  }
+
+  return Array.from(new Set(sourceUrls))
+}
+
+function sourceUrlsFromInput(value: SourceUrlsInput | undefined) {
+  if (value === undefined || value === null) return []
+  return Array.isArray(value) ? value : parseSourceUrlsString(value)
+}
+
+function withAnalysisContext(
+  exploration: ExplorationInput | undefined,
+  analysisContext: DexterInspiredAnalysisInput | undefined,
+) {
+  if (!exploration || !analysisContext) return exploration
+
+  const existingRawJson = parseRawJson(exploration.rawJson)
+  const rawJson =
+    existingRawJson && typeof existingRawJson === 'object' && !Array.isArray(existingRawJson)
+      ? { ...existingRawJson, analysisContext }
+      : { analysisContext, originalRawJson: existingRawJson }
+
+  return {
+    ...exploration,
+    sourceUrls: mergeSourceUrls(
+      exploration.sourceUrls,
+      collectAnalysisContextSourceUrls(analysisContext),
+    ),
+    rawJson,
+  }
+}
+
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error)
+}
 
 async function invalidateValuationCacheAfterWrite() {
   if (process.env.SKIP_COMPANY_VALUATION_CACHE_INVALIDATION === '1') {
@@ -178,7 +295,8 @@ export async function upsertExploration(
           tags: input.tags ? JSON.stringify(input.tags) : null,
           score: input.score,
           confidence: input.confidence,
-          sourceUrls: input.sourceUrls ? JSON.stringify(input.sourceUrls) : null,
+          sourceUrls: normalizeSourceUrls(input.sourceUrls),
+          rawJson: normalizeRawJson(input.rawJson),
           visibility: input.visibility ?? existing.visibility,
           pinned: input.pinned ?? existing.pinned,
         },
@@ -198,7 +316,8 @@ export async function upsertExploration(
       tags: input.tags ? JSON.stringify(input.tags) : null,
       score: input.score,
       confidence: input.confidence,
-      sourceUrls: input.sourceUrls ? JSON.stringify(input.sourceUrls) : null,
+      sourceUrls: normalizeSourceUrls(input.sourceUrls),
+      rawJson: normalizeRawJson(input.rawJson),
       visibility: input.visibility ?? 'draft',
       pinned: input.pinned ?? false,
     },
@@ -246,7 +365,7 @@ export async function upsertValuationSnapshot(
           profitQualityScore: input.profitQualityScore,
           profitQualitySummary: input.profitQualitySummary,
           source: input.source,
-          rawJson: input.rawJson,
+          rawJson: normalizeRawJson(input.rawJson),
         },
       })
     }
@@ -276,7 +395,7 @@ export async function upsertValuationSnapshot(
       profitQualityScore: input.profitQualityScore,
       profitQualitySummary: input.profitQualitySummary,
       source: input.source,
-      rawJson: input.rawJson,
+      rawJson: normalizeRawJson(input.rawJson),
     },
   })
 }
@@ -305,7 +424,7 @@ export async function upsertValuationExplanation(
           impactDirection: input.impactDirection,
           impactAmount: input.impactAmount,
           isRecurring: input.isRecurring,
-          sourceUrls: input.sourceUrls ? JSON.stringify(input.sourceUrls) : null,
+          sourceUrls: normalizeSourceUrls(input.sourceUrls),
           confidence: input.confidence,
         },
       })
@@ -323,7 +442,7 @@ export async function upsertValuationExplanation(
       impactDirection: input.impactDirection,
       impactAmount: input.impactAmount,
       isRecurring: input.isRecurring,
-      sourceUrls: input.sourceUrls ? JSON.stringify(input.sourceUrls) : null,
+      sourceUrls: normalizeSourceUrls(input.sourceUrls),
       confidence: input.confidence,
       authorType: 'ai',
     },
@@ -332,6 +451,7 @@ export async function upsertValuationExplanation(
 
 export async function writeMarketAnalysis(input: MarketAnalysisWriteInput) {
   const company = await findOrCreateCompany(input.company)
+  const explorationInput = withAnalysisContext(input.exploration, input.analysisContext)
 
   const results: any = {
     company,
@@ -345,8 +465,8 @@ export async function writeMarketAnalysis(input: MarketAnalysisWriteInput) {
     results.pageEntry = await upsertPageEntry(company.id, input.pageEntry)
   }
 
-  if (input.exploration) {
-    results.exploration = await upsertExploration(company.id, input.exploration)
+  if (explorationInput) {
+    results.exploration = await upsertExploration(company.id, explorationInput)
   }
 
   if (input.valuation) {
@@ -371,74 +491,113 @@ export async function writeMarketAnalysis(input: MarketAnalysisWriteInput) {
 export async function writeMarketAnalysisIdempotent(input: IdempotentWriteInput) {
   const { runId, ...marketAnalysisInput } = input
 
-  if (runId) {
-    const existingRun = await prisma.companyExplorationRun.findUnique({
-      where: { id: runId },
-    })
-    if (!existingRun) {
-      await prisma.companyExplorationRun.create({
-        data: {
-          id: runId,
-          prompt: `Market analysis run: ${runId}`,
-          status: 'running',
-        },
+  await recordMarketAnalysisScratchpad(runId, 'init', {
+    company: marketAnalysisInput.company,
+    hasPageEntry: Boolean(marketAnalysisInput.pageEntry),
+    hasExploration: Boolean(marketAnalysisInput.exploration),
+    hasValuation: Boolean(marketAnalysisInput.valuation),
+    explanationsCount: marketAnalysisInput.explanations?.length || 0,
+    hasAnalysisContext: Boolean(marketAnalysisInput.analysisContext),
+    toolResultsCount: marketAnalysisInput.analysisContext?.toolResults?.length || 0,
+  })
+
+  for (const toolResult of marketAnalysisInput.analysisContext?.toolResults || []) {
+    await recordMarketAnalysisScratchpad(
+      runId,
+      'tool_result',
+      toolResult as unknown as Record<string, unknown>,
+    )
+  }
+
+  const explorationInput = withAnalysisContext(
+    marketAnalysisInput.exploration,
+    marketAnalysisInput.analysisContext,
+  )
+
+  try {
+    if (runId) {
+      const existingRun = await prisma.companyExplorationRun.findUnique({
+        where: { id: runId },
       })
-    }
-  }
-
-  const company = await findOrCreateCompany(marketAnalysisInput.company)
-
-  const results: any = {
-    company,
-    pageEntry: null,
-    exploration: null,
-    valuation: null,
-    explanations: [],
-  }
-
-  if (marketAnalysisInput.pageEntry) {
-    results.pageEntry = await upsertPageEntry(company.id, marketAnalysisInput.pageEntry)
-  }
-
-  if (marketAnalysisInput.exploration) {
-    results.exploration = await upsertExploration(
-      company.id,
-      marketAnalysisInput.exploration,
-      runId,
-    )
-  }
-
-  if (marketAnalysisInput.valuation) {
-    results.valuation = await upsertValuationSnapshot(
-      company.id,
-      marketAnalysisInput.valuation,
-      runId,
-    )
-
-    if (marketAnalysisInput.explanations && marketAnalysisInput.explanations.length > 0) {
-      for (const explanation of marketAnalysisInput.explanations) {
-        const exp = await upsertValuationExplanation(company.id, {
-          ...explanation,
-          valuationSnapshotId: results.valuation.id,
-        }, runId)
-        results.explanations.push(exp)
+      if (!existingRun) {
+        await prisma.companyExplorationRun.create({
+          data: {
+            id: runId,
+            prompt: `Market analysis run: ${runId}`,
+            status: 'running',
+          },
+        })
       }
     }
+
+    const company = await findOrCreateCompany(marketAnalysisInput.company)
+
+    const results: any = {
+      company,
+      pageEntry: null,
+      exploration: null,
+      valuation: null,
+      explanations: [],
+    }
+
+    if (marketAnalysisInput.pageEntry) {
+      results.pageEntry = await upsertPageEntry(company.id, marketAnalysisInput.pageEntry)
+    }
+
+    if (explorationInput) {
+      results.exploration = await upsertExploration(
+        company.id,
+        explorationInput,
+        runId,
+      )
+    }
+
+    if (marketAnalysisInput.valuation) {
+      results.valuation = await upsertValuationSnapshot(
+        company.id,
+        marketAnalysisInput.valuation,
+        runId,
+      )
+
+      if (marketAnalysisInput.explanations && marketAnalysisInput.explanations.length > 0) {
+        for (const explanation of marketAnalysisInput.explanations) {
+          const exp = await upsertValuationExplanation(company.id, {
+            ...explanation,
+            valuationSnapshotId: results.valuation.id,
+          }, runId)
+          results.explanations.push(exp)
+        }
+      }
+    }
+
+    await invalidateValuationCacheAfterWrite()
+
+    if (runId) {
+      await prisma.companyExplorationRun.update({
+        where: { id: runId },
+        data: {
+          status: 'completed',
+          finishedAt: new Date(),
+        },
+      }).catch(() => {})
+    }
+
+    await recordMarketAnalysisScratchpad(runId, 'write_result', {
+      companyId: results.company.id,
+      pageEntryId: results.pageEntry?.id || null,
+      explorationId: results.exploration?.id || null,
+      valuationId: results.valuation?.id || null,
+      explanationsCount: results.explanations.length,
+    })
+
+    return results
+  } catch (error) {
+    await recordMarketAnalysisScratchpad(runId, 'error', {
+      stage: 'write',
+      message: errorMessage(error),
+    })
+    throw error
   }
-
-  await invalidateValuationCacheAfterWrite()
-
-  if (runId) {
-    await prisma.companyExplorationRun.update({
-      where: { id: runId },
-      data: {
-        status: 'completed',
-        finishedAt: new Date(),
-      },
-    }).catch(() => {})
-  }
-
-  return results
 }
 
 export async function writeMarketAnalysisCrossMarket(input: CrossMarketWriteInput) {
@@ -459,8 +618,12 @@ export async function writeMarketAnalysisCrossMarket(input: CrossMarketWriteInpu
 
   // 2. 如果提供了 groupId，同步 exploration 到其他市场
   const groupId = marketAnalysisInput.company.groupId || detectGroupId(marketAnalysisInput.company.name)
+  const explorationInput = withAnalysisContext(
+    marketAnalysisInput.exploration,
+    marketAnalysisInput.analysisContext,
+  )
 
-  if (groupId && marketAnalysisInput.exploration) {
+  if (groupId && explorationInput) {
     const crossMarketSymbols = getCrossMarketSymbols(groupId)
 
     if (crossMarketSymbols) {
@@ -514,7 +677,7 @@ export async function writeMarketAnalysisCrossMarket(input: CrossMarketWriteInpu
         // 同步 exploration（使用相同的 runId）
         const syncedExploration = await upsertExploration(
           targetCompany.id,
-          marketAnalysisInput.exploration,
+          explorationInput,
           runId,
         )
 
@@ -529,6 +692,11 @@ export async function writeMarketAnalysisCrossMarket(input: CrossMarketWriteInpu
   }
 
   await invalidateValuationCacheAfterWrite()
+
+  await recordMarketAnalysisScratchpad(runId, 'write_result', {
+    stage: 'cross_market_sync',
+    syncedCompanies,
+  })
 
   return {
     ...primaryResult,
