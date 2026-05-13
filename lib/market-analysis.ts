@@ -18,6 +18,10 @@ export type { MarketType, EntryType, CompanyInput, PageEntryInput, ExplorationIn
 const prisma = new PrismaClient()
 
 async function invalidateValuationCacheAfterWrite() {
+  if (process.env.SKIP_COMPANY_VALUATION_CACHE_INVALIDATION === '1') {
+    return
+  }
+
   try {
     await invalidateCompanyValuationCache()
   } catch (error) {
