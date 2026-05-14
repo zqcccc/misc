@@ -45,3 +45,45 @@ export const companyValuationOrderBy = [
   { updatedAt: 'desc' as const },
   { name: 'asc' as const },
 ]
+
+export function buildCompanyValuationSummaryWhere(
+  search?: string,
+  quality?: string,
+): Prisma.CompanyValuationSummaryWhereInput {
+  const where: Prisma.CompanyValuationSummaryWhereInput = { visible: true }
+  const query = search?.trim()
+
+  if (quality && quality !== '全部') {
+    where.profitQuality = quality
+  }
+
+  if (query) {
+    where.searchText = { contains: query.toLowerCase(), mode: 'insensitive' }
+  }
+
+  return where
+}
+
+const defaultCompanyValuationSummaryOrderBy = [
+  { profitQualityRank: 'asc' as const },
+  { explorationScore: 'desc' as const },
+  { updatedAt: 'desc' as const },
+  { title: 'asc' as const },
+]
+
+const searchCompanyValuationSummaryOrderBy = [
+  { sortOrder: 'desc' as const },
+  { companyUpdatedAt: 'desc' as const },
+  { title: 'asc' as const },
+]
+
+export function buildCompanyValuationSummaryOrderBy(
+  search?: string,
+  quality?: string,
+) {
+  if (search?.trim() && (!quality || quality === '全部')) {
+    return searchCompanyValuationSummaryOrderBy
+  }
+
+  return defaultCompanyValuationSummaryOrderBy
+}

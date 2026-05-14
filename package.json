@@ -15,7 +15,8 @@
     "prisma:dev": "ts-node --project ./tsconfig-debug.json ./prisma/script.ts",
     "prisma:studio": "prisma studio",
     "prisma:generate": "prisma generate --schema=./prisma/schema.prisma",
-    "market-analysis:write": "ts-node --project ./tsconfig-debug.json ./scripts/write-market-analysis.ts"
+    "market-analysis:write": "ts-node --project ./tsconfig-debug.json ./scripts/write-market-analysis.ts",
+    "company-valuation:rebuild-summaries": "ts-node --project ./tsconfig-debug.json ./scripts/rebuild-company-valuation-summaries.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

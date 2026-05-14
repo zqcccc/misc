@@ -1,11 +1,13 @@
 generator client {
-  provider      = "prisma-client-js"
-  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "linux-musl-arm64-openssl-3.0.x", "linux-arm64-openssl-3.0.x"]
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+  binaryTargets   = ["native", "linux-musl-openssl-3.0.x", "linux-musl-arm64-openssl-3.0.x", "linux-arm64-openssl-3.0.x"]
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  schemas  = ["public", "appuser"]
 }
 
 model Share {
@@ -16,6 +18,8 @@ model Share {
   pe        String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@schema("public")
 }
 
 model ShareInfo {
@@ -24,12 +28,16 @@ model ShareInfo {
   stock_abbr   String
   stock_number String
   stock_pinyin String
+
+  @@schema("public")
 }
 
 model LowCodeConfig {
   id   Int    @id @default(autoincrement())
   name String @default("website")
   json String
+
+  @@schema("public")
 }
 
 model Company {
@@ -55,9 +63,10 @@ model Company {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  explorations CompanyExploration[]
-  valuations   CompanyValuationSnapshot[]
-  explanations CompanyValuationExplanation[]
+  explorations      CompanyExploration[]
+  valuations        CompanyValuationSnapshot[]
+  explanations      CompanyValuationExplanation[]
+  valuationSummary  CompanyValuationSummary?
 
   @@unique([market, symbol])
   @@index([market])
@@ -65,6 +74,7 @@ model Company {
   @@index([groupId])
   @@index([visible, sortOrder])
   @@index([entryType])
+  @@schema("public")
 }
 
 model CompanyExplorationRun {
@@ -81,6 +91,7 @@ model CompanyExplorationRun {
   results CompanyExploration[]
 
   @@index([status, startedAt])
+  @@schema("public")
 }
 
 model CompanyExploration {
@@ -111,6 +122,7 @@ model CompanyExploration {
   @@index([visibility, pinned, createdAt])
   @@index([score])
   @@index([companyId, runId])
+  @@schema("public")
 }
 
 model CompanyValuationSnapshot {
@@ -148,6 +160,7 @@ model CompanyValuationSnapshot {
   @@index([ttmPe])
   @@index([profitQualityScore])
   @@index([companyId, runId])
+  @@schema("public")
 }
 
 model CompanyValuationExplanation {
@@ -175,6 +188,39 @@ model CompanyValuationExplanation {
   @@index([companyId, explanationType, isCurrent])
   @@index([valuationSnapshotId])
   @@index([companyId, runId])
+  @@schema("public")
+}
+
+model CompanyValuationSummary {
+  id                 String   @id @default(cuid())
+  companyId          String   @unique
+  symbol             String
+  market             String
+  title              String
+  currency           String?
+  entryType          String   @default("manual")
+  entryNote          String?
+  metrics            Json
+  exploration        Json
+  tags               Json
+  profitQuality      String
+  profitQualityRank  Int
+  primaryExplanation Json?
+  explanations       Json
+  explorationScore   Int      @default(0)
+  sortOrder          Int      @default(0)
+  companyUpdatedAt   DateTime
+  searchText         String
+  visible            Boolean  @default(true)
+  updatedAt          DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([visible, profitQualityRank, explorationScore, updatedAt])
+  @@index([visible, profitQuality])
+  @@index([visible, sortOrder, companyUpdatedAt])
+  @@index([visible, market, symbol])
+  @@schema("appuser")
 }
 
 // CompanyPageEntry 表已废弃，字段已迁移到 Company 表
@@ -192,4 +238,5 @@ model CompanyPageEntry {
 
   @@index([visible, sortOrder])
   @@index([entryType])
+  @@schema("public")
 }
