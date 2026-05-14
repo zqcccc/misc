@@ -141,7 +141,7 @@ export default function ProfitLinePage() {
 
   return (
     <main className='bg-[#f4f6f9] text-gray-800 dark:bg-[#0b0f1a] dark:text-gray-100 transition-colors duration-300'>
-      <section className='mx-auto flex w-full max-w-[1400px] flex-col gap-4 px-6 py-5'>
+      <section className='mx-auto flex w-full max-w-[1400px] flex-col gap-4 px-2 py-4 sm:px-6 sm:py-5'>
         <header className='pb-4'>
           <p className='text-[10px] font-bold text-gray-500 tracking-[0.2em] uppercase dark:text-blue-400/80'>
             Profit Line Lab

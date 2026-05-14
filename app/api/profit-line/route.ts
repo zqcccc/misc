@@ -87,6 +87,12 @@ const EPS_TAGS = [
   'EarningsPerShareBasicAndDiluted',
   'EarningsPerShareBasic',
 ]
+const SEC_INSTANT_FACT_FORM_RANK: Record<string, number> = {
+  '10-Q': 4,
+  '6-K': 3,
+  '10-K': 2,
+  '20-F': 1,
+}
 
 const BERKSHIRE_CLASS_MEMBER_BY_TICKER: Record<string, string> = {
   'BRK-A': 'brka:EquivalentClassAMember',
@@ -259,10 +265,12 @@ function pickSecInstantFacts(secFacts: any, tags: string[]) {
     const facts = gaap[tag].units.USD as SecFact[]
     facts.forEach((fact) => {
       if (!fact.end || typeof fact.val !== 'number') return
-      if (!['10-Q', '10-K'].includes(fact.form || '')) return
+      const formRank = SEC_INSTANT_FACT_FORM_RANK[fact.form || '']
+      if (!formRank) return
 
       const rank =
-        (fact.form === '10-Q' ? 2 : 1) +
+        formRank +
+        (fact.frame ? 0.5 : 0) +
         (fact.filed ? new Date(fact.filed).getTime() / 10_000_000_000_000 : 0) +
         (matchedTags.length - tagPriority) * 100
       const existing = byEndDate.get(fact.end)

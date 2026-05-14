@@ -15,6 +15,7 @@ import type {
   DexterInspiredAnalysisInput,
 } from './market-analysis-types'
 import { invalidateCompanyValuationCache } from '../app/api/company-valuation/cache'
+import { refreshCompanyValuationSummary } from '../app/api/company-valuation/summary-store'
 import { recordMarketAnalysisScratchpad } from './market-analysis-scratchpad'
 
 export type { MarketType, EntryType, CompanyInput, PageEntryInput, ExplorationInput, ValuationSnapshotInput, ValuationExplanationInput, MarketAnalysisWriteInput, IdempotentWriteInput, CrossMarketWriteInput }
@@ -132,6 +133,14 @@ function withAnalysisContext(
 
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error)
+}
+
+async function refreshCompanyValuationSummaryAfterWrite(companyId: string) {
+  try {
+    await refreshCompanyValuationSummary(prisma, companyId)
+  } catch (error) {
+    console.warn('[market-analysis] refresh company valuation summary failed:', error instanceof Error ? error.message : String(error))
+  }
 }
 
 async function invalidateValuationCacheAfterWrite() {
@@ -483,6 +492,7 @@ export async function writeMarketAnalysis(input: MarketAnalysisWriteInput) {
     }
   }
 
+  await refreshCompanyValuationSummaryAfterWrite(company.id)
   await invalidateValuationCacheAfterWrite()
 
   return results
@@ -570,6 +580,7 @@ export async function writeMarketAnalysisIdempotent(input: IdempotentWriteInput)
       }
     }
 
+    await refreshCompanyValuationSummaryAfterWrite(company.id)
     await invalidateValuationCacheAfterWrite()
 
     if (runId) {
@@ -680,6 +691,8 @@ export async function writeMarketAnalysisCrossMarket(input: CrossMarketWriteInpu
           explorationInput,
           runId,
         )
+
+        await refreshCompanyValuationSummaryAfterWrite(targetCompany.id)
 
         syncedCompanies.push({
           market: targetMarket,

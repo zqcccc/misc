@@ -13,6 +13,20 @@ import { getPreparedPoints, calculatePePercentile, calculatePeriodStats } from '
 import { buildChartSource, buildDividendChartSource } from './chart-data'
 import { mergeCompanyValuationDetail } from './valuation-merge'
 
+const MOBILE_CHART_MAX_WIDTH = 640
+const DESKTOP_PRICE_CHART_GRID = {
+  top: 86,
+  right: 72,
+  bottom: 58,
+  left: 54,
+}
+const MOBILE_PRICE_CHART_GRID = {
+  top: 78,
+  right: 8,
+  bottom: 56,
+  left: 8,
+}
+
 export function useProfitLineData(symbolInput: string) {
   const [submittedSymbol, setSubmittedSymbol] = useState('00700.HK')
   const [data, setData] = useState<ProfitLineData | null>(null)
@@ -277,6 +291,10 @@ export function useChartOptions(
     const dataZoomBorder = isDark ? 'rgba(255,255,255,0.06)' : '#e2e8f0'
     const dataZoomFiller = isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)'
     const dataZoomHandle = isDark ? '#3b82f6' : '#3b82f6'
+    const chartWidth = chartRef.current.getWidth?.() ?? window.innerWidth
+    const chartGrid = chartWidth < MOBILE_CHART_MAX_WIDTH
+      ? MOBILE_PRICE_CHART_GRID
+      : DESKTOP_PRICE_CHART_GRID
 
     chartRef.current.setOption(
       {
@@ -286,10 +304,7 @@ export function useChartOptions(
           : ['#3b82f6', '#ef4444', '#22c55e', '#14b8a6', '#f97316', '#8b5cf6', '#f59e0b', '#ef4444'],
         backgroundColor: 'transparent',
         grid: {
-          top: 86,
-          right: 72,
-          bottom: 58,
-          left: 54,
+          ...chartGrid,
           containLabel: true,
         },
         tooltip: {

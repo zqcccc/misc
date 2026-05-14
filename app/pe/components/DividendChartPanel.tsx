@@ -20,7 +20,7 @@ export function DividendChartPanel({
   const dividendYears = buildDividendChartSource(data?.dividends).length
 
   return (
-    <div className='rounded-xl bg-white shadow-sm dark:bg-[#0e1220] dark:shadow-none flex flex-col overflow-hidden relative p-5'>
+    <div className='rounded-xl bg-white shadow-sm dark:bg-[#0e1220] dark:shadow-none flex flex-col overflow-hidden relative p-3 sm:p-5'>
       <div className='flex justify-between items-start mb-4'>
         <div>
           <h2 className='text-lg font-bold text-gray-900 dark:text-white'>历史分红</h2>

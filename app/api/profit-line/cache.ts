@@ -7,7 +7,7 @@ export type ProfitLineRedis = {
 }
 
 export function buildProfitLineCacheKey(symbol: string) {
-  return `profit-line:v8:${symbol.trim().toUpperCase()}`
+  return `profit-line:v9:${symbol.trim().toUpperCase()}`
 }
 
 export async function readProfitLineCache<T>(
