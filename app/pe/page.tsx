@@ -83,6 +83,11 @@ export default function ProfitLinePage() {
     periodStats,
   } = useDerivedData(data, profitMultiple, selectedPeriod)
 
+  const [visibleAlertCount, setVisibleAlertCount] = useState<number | null>(null)
+  const handleVisibleAlertCountChange = useCallback((count: number) => {
+    setVisibleAlertCount(count)
+  }, [])
+
   useChartOptions(
     data,
     preparedPoints,
@@ -91,6 +96,7 @@ export default function ProfitLinePage() {
     state,
     chartReady,
     chartRef,
+    handleVisibleAlertCountChange,
   )
 
   useDividendChartOptions(
@@ -173,7 +179,7 @@ export default function ProfitLinePage() {
             <ChartPanel
               data={data}
               submittedSymbol={submittedSymbol}
-              alertCount={alertCount}
+              alertCount={visibleAlertCount ?? alertCount}
               dataLoading={dataLoading}
               state={state}
               error={error}
