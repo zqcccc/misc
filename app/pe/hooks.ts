@@ -252,6 +252,7 @@ export function useChartOptions(
   state: LoadState,
   chartReady: boolean,
   chartRef: React.MutableRefObject<any>,
+  onVisibleAlertCountChange?: (count: number) => void,
 ) {
   useEffect(() => {
     if (!chartRef.current) return
@@ -366,6 +367,16 @@ export function useChartOptions(
           pageTextStyle: {
             color: legendColor,
           },
+          data: [
+            { name: '股价' },
+            { name: `${profitMultiple}x 利润 (${profitMultiple} 倍 PE)`, icon: 'path://M0,3L5,3L5,5L0,5Z M7,3L12,3L12,5L7,5Z' },
+            { name: `${referenceMultiple}x 参考`, icon: 'path://M0,3L5,3L5,5L0,5Z M7,3L12,3L12,5L7,5Z' },
+            { name: '股东权益' },
+            { name: '负债' },
+            { name: '现金' },
+            { name: '低于利润线' },
+            { name: '最新价' },
+          ],
         },
         xAxis: {
           type: 'category',
@@ -446,29 +457,37 @@ export function useChartOptions(
             },
           },
           {
-            name: `${profitMultiple}x 利润线`,
+            name: `${profitMultiple}x 利润 (${profitMultiple} 倍 PE)`,
             type: 'line',
             yAxisIndex: 0,
             smooth: false,
             showSymbol: false,
+            symbol: 'none',
             data: source.map((point) => point.profitLine),
+            lineStyle: {
+              width: 1.5,
+              type: 'dashed',
+              color: isDark ? '#4ade80' : '#22c55e',
+            },
+            itemStyle: {
+              color: isDark ? '#4ade80' : '#22c55e',
+            },
+          },
+          {
+            name: `${referenceMultiple}x 参考`,
+            type: 'line',
+            yAxisIndex: 0,
+            smooth: false,
+            showSymbol: false,
+            symbol: 'none',
+            data: source.map((point) => point.referenceLine),
             lineStyle: {
               width: 1.5,
               type: 'dashed',
               color: isDark ? '#f87171' : '#ef4444',
             },
-          },
-          {
-            name: `${referenceMultiple}x 参考线`,
-            type: 'line',
-            yAxisIndex: 0,
-            smooth: false,
-            showSymbol: false,
-            data: source.map((point) => point.referenceLine),
-            lineStyle: {
-              width: 1.5,
-              type: 'dashed',
-              color: isDark ? '#4ade80' : '#22c55e',
+            itemStyle: {
+              color: isDark ? '#f87171' : '#ef4444',
             },
           },
           {
@@ -558,6 +577,30 @@ export function useChartOptions(
     if (visible.length === 0 && state === 'ready') {
       chartRef.current.clear()
     }
+
+    // 计算可见范围内 alert 数量的辅助函数
+    const calcVisibleAlerts = () => {
+      const chart = chartRef.current
+      if (!chart || !onVisibleAlertCountChange) return
+      const option = chart.getOption()
+      const dz = option?.dataZoom
+      if (!dz || dz.length === 0) return
+      const startPct = dz[0].start ?? 0
+      const endPct = dz[0].end ?? 100
+      const total = source.length
+      const startIdx = Math.floor((startPct / 100) * total)
+      const endIdx = Math.ceil((endPct / 100) * total) - 1
+      const visibleSlice = source.slice(startIdx, endIdx + 1)
+      const count = visibleSlice.filter((p) => p.alert).length
+      onVisibleAlertCountChange(count)
+    }
+
+    // 监听 datazoom 事件
+    chartRef.current.off('datazoom')
+    chartRef.current.on('datazoom', calcVisibleAlerts)
+
+    // 初始计算一次
+    calcVisibleAlerts()
   }, [
     chartReady,
     data?.currency,
@@ -569,6 +612,7 @@ export function useChartOptions(
     referenceMultiple,
     state,
     chartRef,
+    onVisibleAlertCountChange,
   ])
 }
 

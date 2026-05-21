@@ -37,13 +37,13 @@ export function ControlPanel({
           >
             利润线倍数
           </label>
-          <span className='text-lg font-bold text-blue-600 dark:text-blue-400 tabular-nums'>
+          <span className='text-lg font-bold text-green-600 dark:text-green-400 tabular-nums'>
             {profitMultiple}x
           </span>
         </div>
         <input
           id='profitMultiple'
-          className='mt-3 w-full h-1.5 rounded-full appearance-none cursor-pointer bg-gray-200 dark:bg-[#1e2435] accent-blue-500 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-500 [&::-webkit-slider-thumb]:shadow-sm [&::-moz-range-thumb]:w-3.5 [&::-moz-range-thumb]:h-3.5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-blue-500 [&::-moz-range-thumb]:border-0'
+          className='mt-3 w-full h-1.5 rounded-full appearance-none cursor-pointer bg-gray-200 dark:bg-[#1e2435] accent-green-500 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-green-500 [&::-webkit-slider-thumb]:shadow-sm [&::-moz-range-thumb]:w-3.5 [&::-moz-range-thumb]:h-3.5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-green-500 [&::-moz-range-thumb]:border-0'
           max='50'
           min='5'
           step='1'
@@ -61,13 +61,13 @@ export function ControlPanel({
           >
             参考线倍数
           </label>
-          <span className='text-lg font-bold text-emerald-600 dark:text-emerald-400 tabular-nums'>
+          <span className='text-lg font-bold text-red-600 dark:text-red-400 tabular-nums'>
             {referenceMultiple}x
           </span>
         </div>
         <input
           id='referenceMultiple'
-          className='mt-3 w-full h-1.5 rounded-full appearance-none cursor-pointer bg-gray-200 dark:bg-[#1e2435] accent-emerald-500 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-emerald-500 [&::-webkit-slider-thumb]:shadow-sm [&::-moz-range-thumb]:w-3.5 [&::-moz-range-thumb]:h-3.5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-emerald-500 [&::-moz-range-thumb]:border-0'
+          className='mt-3 w-full h-1.5 rounded-full appearance-none cursor-pointer bg-gray-200 dark:bg-[#1e2435] accent-red-500 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-red-500 [&::-webkit-slider-thumb]:shadow-sm [&::-moz-range-thumb]:w-3.5 [&::-moz-range-thumb]:h-3.5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-red-500 [&::-moz-range-thumb]:border-0'
           max='50'
           min='5'
           step='1'
