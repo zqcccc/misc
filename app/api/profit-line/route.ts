@@ -151,7 +151,7 @@ async function fetchEastmoneyJson<T>(
       'User-Agent':
         'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
     },
-    next: { revalidate: 60 * 60 * 6 },
+    cache: 'no-store',
   })
 }
 
@@ -160,7 +160,7 @@ async function resolveCompany(symbol: string) {
     'https://www.sec.gov/files/company_tickers.json',
     {
       headers: SEC_HEADERS,
-      next: { revalidate: 60 * 60 * 24 * 7 },
+      cache: 'no-store',
     },
   )
   const normalized = normalizeUsSymbol(symbol)
@@ -333,7 +333,7 @@ async function fetchMarketData(symbol: string, firstDate: string) {
       'User-Agent':
         'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
     },
-    next: { revalidate: 60 * 60 * 6 },
+    cache: 'no-store',
   })
   const result = data?.chart?.result?.[0]
   const timestamps: number[] = result?.timestamp || []
@@ -726,7 +726,7 @@ async function fetchCnyToHkdRate(): Promise<number> {
         'User-Agent':
           'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
       },
-      next: { revalidate: 60 * 60 * 6 },
+      cache: 'no-store',
     })
     const rate = data?.chart?.result?.[0]?.meta?.regularMarketPrice
     if (typeof rate === 'number' && Number.isFinite(rate) && rate > 0) {
@@ -760,7 +760,7 @@ async function fetchHkCompanyProfile(symbol: string): Promise<HkCompanyProfile> 
         'User-Agent':
           'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
       },
-      next: { revalidate: 60 * 60 * 24 * 7 },
+      cache: 'no-store',
     })
     return data
   } catch {

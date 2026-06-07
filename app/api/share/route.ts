@@ -104,7 +104,7 @@ export async function GET(request: Request) {
     }
 
     const [res, hasSavedShareInfo] = await Promise.all([
-      fetch(`https://eniu.com/chart/pea/${id}/t/all`),
+      fetch(`https://eniu.com/chart/pea/${id}/t/all`, { cache: 'no-store' }),
       prisma.shareInfo.findUnique({
         where: {
           id,

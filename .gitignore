@@ -4,6 +4,9 @@
 .codebuddy
 AGENTS.md
 CLAUDE.md
+.venv
+_cache*
+__pycache__
 # dependencies
 /node_modules
 /.pnp
