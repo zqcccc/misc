@@ -3,6 +3,7 @@ const nextConfig = {
   output: 'standalone',
   poweredByHeader: false,
   compress: true,
+  cacheMaxMemorySize: 0,
   images: {
     formats: ['image/avif', 'image/webp'],
   },
