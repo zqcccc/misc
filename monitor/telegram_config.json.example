@@ -1,0 +1,4 @@
+{
+  "bot_token": "<从 BotFather 拿到的 bot token, 形如 5250950856:AAE...>",
+  "chat_id": "<你的 chat_id, 数字字符串>"
+}

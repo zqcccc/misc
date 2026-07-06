@@ -1,0 +1,3 @@
+{
+  "webhook_url": "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=<你的企业微信群机器人 key>"
+}

@@ -12,6 +12,12 @@ const tools = [
     icon: '📈',
   },
   {
+    name: 'EMA 反手策略回测',
+    desc: 'EMA 反手策略多品种回测净值曲线 + 实时监控当前持仓位置 + 真实操作日志.',
+    href: '/ema-backtest',
+    icon: '📊',
+  },
+  {
     name: '图片合并工具',
     desc: '支持多图上传、顺序调整、横/纵向拼接、格式与质量选择。',
     href: '/tools/merge-images',

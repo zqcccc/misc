@@ -16,6 +16,9 @@ const Menu = () => {
         <Link href='/pe'>Profit Line</Link>
       </li>
       <li>
+        <Link href='/ema-backtest'>EMA Backtest</Link>
+      </li>
+      <li>
         <Link href='/vmess'>Vmess(deprecated)</Link>
       </li>
       <li>
