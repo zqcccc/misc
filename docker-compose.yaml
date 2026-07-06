@@ -6,6 +6,10 @@ services:
     #  context: .
     #    dockerfile: ./Dockerfile
     restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 1G
     volumes:
       - './.env:/app/.env'
       - './plusPosts:/app/plusPosts'

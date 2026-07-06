@@ -2,6 +2,8 @@
 .claude
 .workbuddy
 .codebuddy
+.trae
+.opencode
 AGENTS.md
 CLAUDE.md
 .venv
@@ -46,3 +48,33 @@ next-env.d.ts
 *.db
 
 /plusPosts
+
+# deliverables: 临时交付物与回测产物（图表、HTML 报告、母 prompt 等），不纳入版本控制
+/deliverables
+
+# 与 Next.js 无关的本地研究/回测产物
+/scripts/*.py
+/btc_ema_15m
+/data
+
+# ETH/SOL/BNB 15m EMA 反手策略研究项目（Python 回测、parquet 数据、HTML 报告、监控 daemon）
+# 仅保留 README.md 为研究档案，其余全部不纳入版本控制
+# 注：不能直接写 /eth_sol_bnb_15m/ (目录匹配会让 git 跳过子项导致 exception 失效),
+#     改用 /* 形式 - 这样 git 仍会下钻到子项查阅 exception.
+/eth_sol_bnb_15m/*
+!/eth_sol_bnb_15m/README.md
+/eth_sol_bnb_15m/data/
+/eth_sol_bnb_15m/scripts/
+/eth_sol_bnb_15m/reports/
+/eth_sol_bnb_15m/monitor/
+
+# === monitor/ 统一监控入口 ===
+# 运行时产物: 每品种 daemon.pid / log / state, 不入库
+/monitor/caches/
+# 通知配置含 secret (bot_token / webhook key), 不入库; 模板用 *.example 文件提供
+/monitor/telegram_config.json
+/monitor/wechat_webhook.json
+# python 缓存
+/monitor/__pycache__/
+/monitor/datasources/__pycache__/
+/monitor/notifiers/__pycache__/
