@@ -112,11 +112,19 @@ function RangeStatsPanel({ rs }: { rs: RangeStats | null }) {
     },
     { k: '区间天数', v: `${rs.days} 天`, cls: '' },
     { k: '策略收益(区间)', v: fmtPct(rs.sRet), cls: clsColor(rs.sRet) },
+    { k: '纯择时收益(区间)', v: fmtPct(rs.tRet), cls: clsColor(rs.tRet) },
     { k: '标的收益(区间)', v: fmtPct(rs.bRet), cls: clsColor(rs.bRet) },
     { k: '超额(策略−标的)', v: fmtPct(rs.excess), cls: clsColor(rs.excess) },
+    {
+      k: 'GLD增益(策略−纯择时)',
+      v: fmtPct(rs.tExcess),
+      cls: clsColor(rs.tExcess),
+    },
     { k: '策略最大回撤', v: pct(rs.sMdd), cls: s.neg },
+    { k: '纯择时最大回撤', v: pct(rs.tMdd), cls: s.neg },
     { k: '标的最大回撤', v: pct(rs.bMdd), cls: s.neg },
     { k: '策略年化', v: fmtPct(rs.sAnn), cls: clsColor(rs.sAnn) },
+    { k: '纯择时年化', v: fmtPct(rs.tAnn), cls: clsColor(rs.tAnn) },
     { k: '标的年化', v: fmtPct(rs.bAnn), cls: clsColor(rs.bAnn) },
   ]
   return (
@@ -154,10 +162,13 @@ function SummaryTable({
     { label: '标的', key: 'label', fmt: 'text' },
     { label: '代码', key: 'ticker', fmt: 'text' },
     { label: '策略总收益', key: 'strat_total', fmt: 'signed' },
+    { label: '纯择时总收益', key: 'timing_total', fmt: 'signed' },
     { label: '基准总收益', key: 'bench_total', fmt: 'signed' },
-    { label: '超额', key: 'excess', fmt: 'signed' },
+    { label: '超额(策略−基准)', key: 'excess', fmt: 'signed' },
+    { label: '择时超额(策略−纯择时)', key: 'timing_excess', fmt: 'signed' },
     { label: '策略CAGR', key: 'strat_cagr', fmt: 'signed' },
     { label: '策略MDD', key: 'strat_mdd', fmt: 'pct' },
+    { label: '纯择时MDD', key: 'timing_mdd', fmt: 'pct' },
     { label: '基准MDD', key: 'bench_mdd', fmt: 'pct' },
     { label: '偏好天', key: 'risk_on', fmt: 'int' },
     { label: '中性天', key: 'moderate', fmt: 'int' },
@@ -368,20 +379,22 @@ export default function TrhrpBacktestPage() {
             <div className={s.legend}>
               <b>绿带</b>=风险偏好 · <b>黄带</b>=中性 · <b>红带</b>=风险规避；▲红=加仓，
               ▼绿=减仓（落在归一价曲线上）。左轴净值、右轴归一价。
+              <b style={{ color: '#ef6c00' }}>橙虚线</b>=纯择时净值（equity 权重同策略，其余全 SGOV，不含 GLD 防御腿）。
             </div>
           </div>
 
           <div className={s.card}>
             <div className={s.cardHeader}>
-              <h3 className={s.cardTitle}>股票仓位 %（0–100% · 与上方联动缩放）</h3>
+              <h3 className={s.cardTitle}>股票仓位 % 与波动率%（与上方联动缩放）</h3>
             </div>
             <div ref={weightRef} style={{ width: '100%', height: 200 }} />
             <div className={s.legend}>
-              紫线 = 每日股票仓位；虚线参考
+              紫线 = 每日股票仓位（左轴）；<b style={{ color: '#00838f' }}>青线</b>=vol21 年化波动率（右轴）；
+              虚线参考
               <b style={{ color: 'var(--neg)' }}> 清仓 0%</b> /
               <b style={{ color: 'var(--warn)' }}> risk_off 下限 20%</b> /
               <b style={{ color: 'var(--pos)' }}> risk_on 80%</b>。
-              这是判断“是否清仓”的唯一准绳。
+              vol 飙升即触发 risk_off 的核心信号。
             </div>
           </div>
 

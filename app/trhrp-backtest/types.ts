@@ -8,6 +8,8 @@ export interface TsPoint {
   d: string // 日期 "2018-01-03"
   s: number // 策略净值
   b: number // 基准净值 (买入持有)
+  c: number // 现金防御腿净值 (equity 权重同策略, 其余全 SGOV)
+  v: number | null // vol_21 年化波动率 (0~1, 早期可能为 null)
   r: string // regime: risk_on / moderate / risk_off
   o: string // 操作: add / reduce / hold
   we: number // 股票权重 (0~1)
@@ -41,11 +43,14 @@ export interface MarketSummary {
   end: string
   days: number
   strat_total: number
+  timing_total: number
   bench_total: number
   excess: number
+  timing_excess: number
   strat_cagr: number
   bench_cagr: number
   strat_mdd: number
+  timing_mdd: number
   bench_mdd: number
   risk_on: number
   moderate: number
@@ -62,16 +67,22 @@ export interface MarketResult {
   summary: {
     strategy_total_return: number
     benchmark_total_return: number
+    timing_total_return: number
     excess_total_return: number
+    timing_excess_total_return: number
     strategy_cagr: number
     benchmark_cagr: number
+    timing_cagr: number
     excess_cagr: number
     strategy_max_drawdown: number
     benchmark_max_drawdown: number
+    timing_max_drawdown: number
     strategy_peak_date: string
     strategy_trough_date: string
     benchmark_peak_date: string
     benchmark_trough_date: string
+    timing_peak_date: string
+    timing_trough_date: string
     target_regime_changes: number
     rebalance_days: number
     avg_turnover_per_day: number
@@ -101,9 +112,13 @@ export interface RangeStats {
   days: number
   sRet: number
   bRet: number
-  excess: number
+  tRet: number // 纯择时收益(区间): equity 权重同策略, 其余全 SGOV
+  excess: number // 策略 - 标的
+  tExcess: number // 策略 - 纯择时 (即 GLD 防御腿的区间增益)
   sAnn: number
   bAnn: number
+  tAnn: number
   sMdd: number
   bMdd: number
+  tMdd: number
 }

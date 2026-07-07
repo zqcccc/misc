@@ -190,6 +190,14 @@
       "proxy": "泡泡玛特(相对波动率重校准)",
       "crashMode": "relative_zscore",
       "crashZscore": 2.5
+    },
+    {
+      "label": "TQQQ",
+      "marketGroup": "美股杠杆ETF",
+      "ticker": "TQQQ",
+      "proxy": "三倍做多QQQ(相对波动率重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
     }
   ],
   "regime_weights": {
