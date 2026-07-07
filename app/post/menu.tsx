@@ -19,6 +19,9 @@ const Menu = () => {
         <Link href='/ema-backtest'>EMA Backtest</Link>
       </li>
       <li>
+        <Link href='/trhrp-backtest'>TRHRP Backtest</Link>
+      </li>
+      <li>
         <Link href='/vmess'>Vmess(deprecated)</Link>
       </li>
       <li>

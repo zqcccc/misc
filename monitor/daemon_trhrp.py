@@ -130,14 +130,14 @@ def _regime_summary(state):
 
 def _market_line(m):
     """每个市场仓位水平单行签."""
-    cur_r = (m.get("currentRegime") or "?")[:4].upper()
-    nxt_r = (m.get("nextRegime") or "?")[:4].upper()
+    cur_r = REGIME_LABEL.get(m.get("currentRegime"), "?")
+    nxt_r = REGIME_LABEL.get(m.get("nextRegime"), "?")
     bal = m.get("allocationText") or "-"
     adj = m.get("overlayAdjustedAllocationText") or bal
     z = m.get("priceZScore252")
     z_str = f"{z:+.2f}σ" if isinstance(z, (int, float)) else "-"
     overlay_text = m.get("overlayRecommendationText") or "-"
-    return f"{m.get('label','?')} [{cur_r}->{nxt_r}] | 基础 {bal} | 叠加 {adj} | z={z_str} | {overlay_text}"
+    return f"{m.get('label','?')} [今日 {cur_r} -> 次日 {nxt_r}] | 基础 {bal} | 叠加 {adj} | z={z_str} | {overlay_text}"
 
 
 def _compare_regime_changes(prev_state, cur_state):
@@ -189,28 +189,35 @@ def _notify_changes(cfg, chgs, cur_state):
         return
     name = cfg["name"]
     cur_map = {m.get("label"): m for m in (cur_state.get("markets") or [])}
-    lines = [f"TRHRP regime 变化 ({len(chgs)} 个市场)"]
-    # 只列发生变化的品种 (用详情行 + 推理), 不再把全市场清单塞进通知
+    as_of = cur_state.get("asOfDate") or "-"
+    lines = [f"TRHRP 档位切换 ({len(chgs)} 个市场) | 信号日 {as_of}, T+1 生效"]
+    # 每条变化明确显示: 上次预测档位 -> 本次预测档位, 以及仓位变化, 信号日期, 推理
     for c in chgs:
         m = cur_map.get(c.get("label"))
-        if m:
-            lines.append(_market_line(m) + " ⚠️")
-        else:
-            descr = (f"{c['label']} {REGIME_LABEL.get(c['prevRegime'],'?')} -> "
-                     f"{REGIME_LABEL.get(c['curRegime'],'?')}  仓位 "
-                     f"{c['prevAlloc'] or '-'} -> {c['curAlloc'] or '-'}")
-            lines.append(descr)
+        prev_r = REGIME_LABEL.get(c.get("prevRegime"), "?")
+        cur_r = REGIME_LABEL.get(c.get("curRegime"), "?")
+        prev_alloc = c.get("prevAlloc") or "-"
+        cur_alloc = c.get("curAlloc") or "-"
+        sig_date = (m or {}).get("signalDate") or as_of
+        z = (m or {}).get("priceZScore252")
+        z_str = f"{z:+.2f}σ" if isinstance(z, (int, float)) else "-"
+        overlay_text = (m or {}).get("overlayRecommendationText") or "-"
+        lines.append(
+            f"{c['label']}: {prev_r} → {cur_r} | 仓位 {prev_alloc} → {cur_alloc} "
+            f"| z={z_str} | {overlay_text} ⚠️"
+        )
+        lines.append(f"  信号日 {sig_date} (T+1 生效, 次日开盘调仓)")
         if m:
             # 在通知里带上 "为什么这次会被判定为新档位" 的解释
             reason = m.get("nextRegimeReason")
             if reason:
-                lines.append(f"  ↳ 推理: {reason}")
+                lines.append(f"  ↳ 判定依据: {reason}")
             nt = m.get("nextRegimeNextTrigger")
             if nt and nt != "-":
                 lines.append(f"  ↳ 维持/下一步: {nt}")
     lines.append("")
     lines.append(f"当前持仓分布: {_regime_summary(cur_state)}")
-    notifiers.notify_all(f"[{name}] regime 变化", "\n".join(lines), important=True)
+    notifiers.notify_all(f"[{name}] 档位切换", "\n".join(lines), important=True)
 
 
 def _bootstrap_log(prev_state, cur_state, log_func):

@@ -62,6 +62,8 @@ def compact_ts(ts_rows: list) -> list:
             "d": r["date"],
             "s": r["strategy_nav"],
             "b": r["benchmark_nav"],
+            "c": r["cash_nav"],
+            "v": r["vol_21"],
             "r": r["regime"],
             "o": r["operation"],
             "we": r["weight_equity"],
@@ -81,8 +83,12 @@ def run_backtest_live(spec, usd_equity, usd_gld, usd_sgov, scenario, overlay,
     # —— 关键: regime 必须在「原始权益序列」上算 (与 monitor 一致) ——
     # build_calendar_frame 的 .ffill() 会把休市日(如 HK 国庆)前向填充成假交易日,
     # 若在其上算 regime 会导致标签错位一天. 故先用原始 equity 算, 再对齐回 frame.
-    raw_regime = ts.build_signal_frame(usd_equity["Close"], sp)["regime"]
+    sig_frame = ts.build_signal_frame(usd_equity["Close"], sp)
+    raw_regime = sig_frame["regime"]
+    # vol_21 (年化波动率) 同样在原始权益序列上算, 再对齐回 frame; 不 ffill, 早期 NaN 留空
+    raw_vol = sig_frame["vol"]
     target_regime = raw_regime.reindex(frame.index).ffill().fillna("moderate")
+    vol_series = raw_vol.reindex(frame.index)
 
     if overlay:
         weights_df = eng.apply_overlay(target_regime, frame["equity_Close"],
@@ -101,11 +107,20 @@ def run_backtest_live(spec, usd_equity, usd_gld, usd_sgov, scenario, overlay,
     equity_ret = equity_ret.loc[valid]
     gld_ret = gld_ret.loc[valid]
     sgov_ret = sgov_ret.loc[valid]
+    vol_series = vol_series.loc[valid]
 
     strat_close = [initial_capital]
     strat_high, strat_low = [], []
     bench_close = [initial_capital]
     bench_high, bench_low = [], []
+    # 平行「现金防御腿」净值: 沿用策略每日 equity 权重, 非标的部分全部换成 SGOV (不持有 GLD).
+    # 与策略同口径扣除 equity 再平衡的交易成本, 用于 isolates GLD 防御腿的边际贡献.
+    cash_close = [initial_capital]
+    cash_current_weights = {
+        "equity": float(eng.REGIME_WEIGHTS[str(target_regime.iloc[0])]["equity"]),
+        "GLD": 0.0,
+        "SGOV": 1.0 - float(eng.REGIME_WEIGHTS[str(target_regime.iloc[0])]["equity"]),
+    }
     target_regime_changes = int((target_regime != target_regime.shift(1)).sum())
     rebalance_days = 0
     turnover_sum = 0.0
@@ -153,6 +168,18 @@ def run_backtest_live(spec, usd_equity, usd_gld, usd_sgov, scenario, overlay,
         strat_high.append(nav_after_cost * (1.0 + day_high))
         strat_low.append(nav_after_cost * (1.0 + day_low))
         strat_close.append(nav_after_cost * (1.0 + day_close))
+
+        # 平行现金防御腿: equity 权重与策略一致, 其余全部 SGOV, 同口径扣再平衡成本
+        cash_eq_next = float(next_weights["equity"])
+        cash_next_weights = {"equity": cash_eq_next, "GLD": 0.0, "SGOV": 1.0 - cash_eq_next}
+        cash_nav_before = float(cash_close[-1])
+        cash_trade_cost = eng.calc_trade_cost(spec.market, cash_nav_before,
+                                              cash_current_weights, cash_next_weights, prices)
+        cash_nav_after_cost = max(cash_nav_before - cash_trade_cost, 0.0)
+        cash_current_weights = cash_next_weights
+        cash_day_close = (cash_eq_next * float(equity_ret.loc[date, "close"])
+                          + (1.0 - cash_eq_next) * float(sgov_ret.loc[date, "close"]))
+        cash_close.append(cash_nav_after_cost * (1.0 + cash_day_close))
         prev_bench = float(bench_close[-1])
         bench_high.append(prev_bench * (1.0 + float(equity_ret.loc[date, "high"])))
         bench_low.append(prev_bench * (1.0 + float(equity_ret.loc[date, "low"])))
@@ -169,10 +196,13 @@ def run_backtest_live(spec, usd_equity, usd_gld, usd_sgov, scenario, overlay,
                 op = "reduce"
                 op_delta = d
         prev_equity_weight = eq_w
+        vol_val = vol_series.loc[date]
         daily_records.append({
             "date": str(date.date()),
             "strategy_nav": round(strat_close[-1] / initial_capital, 6),
             "benchmark_nav": round(bench_close[-1] / initial_capital, 6),
+            "cash_nav": round(cash_close[-1] / initial_capital, 6),
+            "vol_21": None if pd.isna(vol_val) else round(float(vol_val), 6),
             "regime": state,
             "regime_changed": prev_regime is not None and state != prev_regime,
             "rebalanced": trade_cost > eng.EPS,
@@ -191,24 +221,34 @@ def run_backtest_live(spec, usd_equity, usd_gld, usd_sgov, scenario, overlay,
     bc = pd.Series(bench_close[1:], index=frame.index)
     bh = pd.Series(bench_high, index=frame.index)
     bl = pd.Series(bench_low, index=frame.index)
+    cc = pd.Series(cash_close[1:], index=frame.index)
     strat_total = float(sc.iloc[-1] / initial_capital - 1.0)
     bench_total = float(bc.iloc[-1] / initial_capital - 1.0)
+    timing_total = float(cc.iloc[-1] / initial_capital - 1.0)
     years = max(len(frame) / 252.0, 1e-9)
     strat_cagr = float(sc.iloc[-1] / initial_capital) ** (1.0 / years) - 1.0
     bench_cagr = float(bc.iloc[-1] / initial_capital) ** (1.0 / years) - 1.0
+    timing_cagr = float(cc.iloc[-1] / initial_capital) ** (1.0 / years) - 1.0
     strat_mdd, sp_d, st_d = eng.scan_max_drawdown(sh / initial_capital, sl / initial_capital)
     bench_mdd, bp, bt = eng.scan_max_drawdown(bh / initial_capital, bl / initial_capital)
+    # 纯择时只有 close 序列, 用 close 自身做 peak/through 近似 MDD (与策略同口径的 close-only MDD)
+    timing_mdd, tp_d, tt_d = eng.scan_max_drawdown(cc / initial_capital, cc / initial_capital)
     n_ops = sum(1 for r in daily_records if r["operation"] != "hold")
     n_add = sum(1 for r in daily_records if r["operation"] == "add")
     n_reduce = sum(1 for r in daily_records if r["operation"] == "reduce")
     summary = {
         "strategy_total_return": strat_total, "benchmark_total_return": bench_total,
+        "timing_total_return": timing_total,
         "excess_total_return": float(strat_total - bench_total),
+        "timing_excess_total_return": float(strat_total - timing_total),
         "strategy_cagr": strat_cagr, "benchmark_cagr": bench_cagr,
+        "timing_cagr": timing_cagr,
         "excess_cagr": float(strat_cagr - bench_cagr),
         "strategy_max_drawdown": float(strat_mdd), "benchmark_max_drawdown": float(bench_mdd),
+        "timing_max_drawdown": float(timing_mdd),
         "strategy_peak_date": sp_d, "strategy_trough_date": st_d,
         "benchmark_peak_date": bp, "benchmark_trough_date": bt,
+        "timing_peak_date": tp_d, "timing_trough_date": tt_d,
         "target_regime_changes": target_regime_changes, "rebalance_days": rebalance_days,
         "avg_turnover_per_day": float(turnover_sum / max(len(frame), 1)),
         "strategy_total_commission": float(total_commission),
@@ -290,8 +330,11 @@ def main() -> None:
             "label": label, "ticker": ticker, "group": grp, "crash_mode": crash_mode, "crash_z": crash_z,
             "overlay": overlay_label, "start": res["meta"]["start"], "end": res["meta"]["end"], "days": res["meta"]["days"],
             "strat_total": s["strategy_total_return"], "bench_total": s["benchmark_total_return"],
-            "excess": s["excess_total_return"], "strat_cagr": s["strategy_cagr"], "bench_cagr": s["benchmark_cagr"],
+            "timing_total": s["timing_total_return"],
+            "excess": s["excess_total_return"], "timing_excess": s["timing_excess_total_return"],
+            "strat_cagr": s["strategy_cagr"], "bench_cagr": s["benchmark_cagr"],
             "strat_mdd": s["strategy_max_drawdown"], "bench_mdd": s["benchmark_max_drawdown"],
+            "timing_mdd": s["timing_max_drawdown"],
             "risk_on": s["risk_on_days"], "moderate": s["moderate_days"], "risk_off": s["risk_off_days"],
             "ops": s["operation_days"], "adds": s["add_days"], "reduces": s["reduce_days"], "rebalances": s["rebalance_days"],
         })

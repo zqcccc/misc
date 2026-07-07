@@ -89,10 +89,10 @@ function axisTooltip(regimeCn: RegimeCn) {
       if (d.o !== 'hold') h += ` (Δ股票仓位 ${(d.dw * 100).toFixed(0)}pp)`
       h += `<br/><b>策略净值:</b> ${d.s.toFixed(3)} &nbsp; <b>基准:</b> ${d.b.toFixed(
         3,
-      )}`
+      )} &nbsp; <b>纯择时:</b> ${d.c != null ? d.c.toFixed(3) : '—'}`
       h += `<br/><b>股票权重:</b> ${(d.we * 100).toFixed(0)}% &nbsp; <b>标的(归一):</b> ${d.p.toFixed(
         3,
-      )}`
+      )} &nbsp; <b>vol21:</b> ${d.v != null ? (d.v * 100).toFixed(1) + '%' : '—'}`
       return h
     },
   }
@@ -114,6 +114,20 @@ export function buildMainOption(
     we: pt.we,
     s: pt.s,
     b: pt.b,
+    c: pt.c,
+    v: pt.v,
+    p: pt.p / p0,
+  }))
+  const cashData = ts.map((pt) => ({
+    value: [pt.d, pt.c],
+    r: pt.r,
+    o: pt.o,
+    dw: pt.dw,
+    we: pt.we,
+    s: pt.s,
+    b: pt.b,
+    c: pt.c,
+    v: pt.v,
     p: pt.p / p0,
   }))
   const priceData = ts.map((pt) => ({
@@ -124,6 +138,8 @@ export function buildMainOption(
     we: pt.we,
     s: pt.s,
     b: pt.b,
+    c: pt.c,
+    v: pt.v,
     p: pt.p / p0,
   }))
   // 操作点标记必须落在归一价曲线上(同量纲), 否则会飞出轴外
@@ -140,7 +156,7 @@ export function buildMainOption(
     textStyle: { color: t.legend },
     tooltip: axisTooltip(regimeCn),
     legend: {
-      data: ['策略净值', '标的价格(归一)', '加仓', '减仓'],
+      data: ['策略净值', '纯择时净值', '标的价格(归一)', '加仓', '减仓'],
       top: 0,
       textStyle: { color: t.legend, fontSize: 12 },
       selected: { 加仓: true, 减仓: true },
@@ -176,6 +192,14 @@ export function buildMainOption(
         showSymbol: false,
         lineStyle: { width: 1.8, color: '#2e7d32' },
         markArea: { silent: true, data: runs },
+      },
+      {
+        name: '纯择时净值',
+        type: 'line',
+        yAxisIndex: 0,
+        data: cashData,
+        showSymbol: false,
+        lineStyle: { width: 1.4, color: '#ef6c00', type: 'dashed' },
       },
       {
         name: '标的价格(归一)',
@@ -224,10 +248,22 @@ export function buildWeightOption(
     o: pt.o,
     dw: pt.dw,
     we: pt.we,
+    v: pt.v,
     s: pt.s,
     b: pt.b,
     p: pt.p / p0,
   }))
+  // vol_21 年化波动率 -> 百分比, 早期 null 过滤掉(否则 echarts 会画到 0)
+  const volData = ts
+    .map((pt) => ({
+      value: [pt.d, pt.v == null ? null : +(pt.v * 100).toFixed(2)],
+      r: pt.r,
+      o: pt.o,
+      dw: pt.dw,
+      we: pt.we,
+      v: pt.v,
+    }))
+    .filter((pt) => pt.value[1] != null)
   const mWadd: any[] = []
   const mWred: any[] = []
   wData.forEach((pt) => {
@@ -255,31 +291,45 @@ export function buildWeightOption(
         h += `<b>操作:</b> ${OP_CN[d.o] || d.o}`
         if (d.o !== 'hold') h += ` (Δ ${(d.dw * 100).toFixed(0)}pp)`
         h += `<br/><b>股票仓位:</b> ${d.value[1].toFixed(0)}%`
+        if (d.v != null) h += ` &nbsp; <b>vol21:</b> ${(d.v * 100).toFixed(1)}%`
         return h
       },
     },
     legend: {
-      data: ['股票仓位%', '加仓', '减仓'],
+      data: ['股票仓位%', '波动率%', '加仓', '减仓'],
       top: 0,
       textStyle: { color: t.legend, fontSize: 12 },
       selected: { 加仓: true, 减仓: true },
     },
     grid: { left: 58, right: 64, top: 34, bottom: 48 },
     xAxis: { type: 'time', axisLabel: { fontSize: 11, color: t.axis } },
-    yAxis: {
-      type: 'value',
-      min: 0,
-      max: 100,
-      name: '仓位%',
-      axisLabel: { fontSize: 11, color: t.axis },
-      nameTextStyle: { color: t.legend },
-    },
+    yAxis: [
+      {
+        type: 'value',
+        min: 0,
+        max: 100,
+        name: '仓位%',
+        position: 'left',
+        axisLabel: { fontSize: 11, color: t.axis },
+        nameTextStyle: { color: t.legend },
+      },
+      {
+        type: 'value',
+        scale: true,
+        name: 'vol%',
+        position: 'right',
+        axisLabel: { fontSize: 11, color: t.axis, formatter: '{value}%' },
+        nameTextStyle: { color: '#00838f' },
+        splitLine: { show: false },
+      },
+    ],
     dataZoom: [{ type: 'inside' }, { type: 'slider', height: 16, bottom: 18 }],
     series: [
       {
         name: '股票仓位%',
         type: 'line',
         step: 'end',
+        yAxisIndex: 0,
         data: wData,
         showSymbol: false,
         lineStyle: { width: 1.8, color: '#6a1b9a' },
@@ -322,8 +372,19 @@ export function buildWeightOption(
         },
       },
       {
+        name: '波动率%',
+        type: 'line',
+        yAxisIndex: 1,
+        data: volData,
+        showSymbol: false,
+        smooth: true,
+        lineStyle: { width: 1.2, color: '#00838f' },
+        areaStyle: { color: 'rgba(0,131,143,0.06)' },
+      },
+      {
         name: '加仓',
         type: 'scatter',
+        yAxisIndex: 0,
         data: mWadd,
         tooltip: { show: false },
         symbol: 'triangle',
@@ -333,6 +394,7 @@ export function buildWeightOption(
       {
         name: '减仓',
         type: 'scatter',
+        yAxisIndex: 0,
         data: mWred,
         tooltip: { show: false },
         symbol: 'triangle',
@@ -393,24 +455,32 @@ export function computeRangeStats(
   const last = win[win.length - 1]
   const sRet = first.s ? last.s / first.s - 1 : 0
   const bRet = first.b ? last.b / first.b - 1 : 0
+  const tRet = first.c ? last.c / first.c - 1 : 0
   const excess = sRet - bRet
+  const tExcess = sRet - tRet
   const days = Math.round((Date.parse(last.d) - Date.parse(first.d)) / 86400000) + 1
   const years = days / 365
   const annF = (r: number) => (years > 0 ? Math.pow(1 + r, 1 / years) - 1 : r)
   const sAnn = annF(sRet)
   const bAnn = annF(bRet)
+  const tAnn = annF(tRet)
   const sMdd = maxDD(win.map((p) => p.s))
   const bMdd = maxDD(win.map((p) => p.b))
+  const tMdd = maxDD(win.map((p) => p.c))
   return {
     start: first.d,
     end: last.d,
     days,
     sRet,
     bRet,
+    tRet,
     excess,
+    tExcess,
     sAnn,
     bAnn,
+    tAnn,
     sMdd,
     bMdd,
+    tMdd,
   }
 }
