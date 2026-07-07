@@ -19,6 +19,24 @@ const OP_CN: Record<string, string> = {
   hold: '持有',
 }
 
+const isDark = () =>
+  typeof document !== 'undefined' &&
+  document.documentElement.classList.contains('dark')
+
+/** 图表文字配色: 跟随页面 light/dark 主题, 保证图例/坐标轴在两种模式下都清晰 */
+function themeColors(d: boolean) {
+  return {
+    legend: d ? '#cbd5e1' : '#334155',
+    axis: d ? '#94a3b8' : '#64748b',
+    nameGreen: d ? '#4ade80' : '#2e7d32',
+    nameBlue: d ? '#60a5fa' : '#1565c0',
+    // markLine 参考线标签: 暗色下用更亮的同色系, 否则压在深底上看不清
+    lineRed: d ? '#ef5350' : '#b71c1c',
+    lineOrange: d ? '#ffb74d' : '#ef6c00',
+    lineGreen: d ? '#66bb6a' : '#2e7d32',
+  }
+}
+
 export function pct(x: number): string {
   return (x * 100).toFixed(1) + '%'
 }
@@ -81,7 +99,11 @@ function axisTooltip(regimeCn: RegimeCn) {
 }
 
 /** 主图: 策略净值 + 基准 + 归一价 + 加/减仓三角标记 + regime 背景带 */
-export function buildMainOption(res: MarketResult, regimeCn: RegimeCn) {
+export function buildMainOption(
+  res: MarketResult,
+  regimeCn: RegimeCn,
+  isDarkMode: boolean = isDark(),
+) {
   const ts = res.timeseries
   const p0 = ts[0].p
   const navData = ts.map((pt) => ({
@@ -94,7 +116,6 @@ export function buildMainOption(res: MarketResult, regimeCn: RegimeCn) {
     b: pt.b,
     p: pt.p / p0,
   }))
-  const benchData = ts.map((pt) => [pt.d, pt.b])
   const priceData = ts.map((pt) => ({
     value: [pt.d, pt.p / p0],
     r: pt.r,
@@ -112,32 +133,36 @@ export function buildMainOption(res: MarketResult, regimeCn: RegimeCn) {
     else if (pt.o === 'reduce') mPrice.red.push(pt)
   })
   const runs = bandRuns(ts)
+  const t = themeColors(isDarkMode)
 
   return {
+    backgroundColor: 'transparent',
+    textStyle: { color: t.legend },
     tooltip: axisTooltip(regimeCn),
     legend: {
-      data: ['策略净值', '基准·买入持有', '标的价格(归一)', '加仓', '减仓'],
+      data: ['策略净值', '标的价格(归一)', '加仓', '减仓'],
       top: 0,
+      textStyle: { color: t.legend, fontSize: 12 },
       selected: { 加仓: true, 减仓: true },
     },
     grid: { left: 58, right: 64, top: 38, bottom: 64 },
-    xAxis: { type: 'time', axisLabel: { fontSize: 11 } },
+    xAxis: { type: 'time', axisLabel: { fontSize: 11, color: t.axis } },
     yAxis: [
       {
         type: 'value',
         scale: true,
         name: '净值',
         position: 'left',
-        axisLabel: { fontSize: 11 },
-        nameTextStyle: { color: '#2e7d32' },
+        axisLabel: { fontSize: 11, color: t.axis },
+        nameTextStyle: { color: t.nameGreen },
       },
       {
         type: 'value',
         scale: true,
         name: '归一价',
         position: 'right',
-        axisLabel: { fontSize: 11 },
-        nameTextStyle: { color: '#1565c0' },
+        axisLabel: { fontSize: 11, color: t.axis },
+        nameTextStyle: { color: t.nameBlue },
         splitLine: { show: false },
       },
     ],
@@ -151,14 +176,6 @@ export function buildMainOption(res: MarketResult, regimeCn: RegimeCn) {
         showSymbol: false,
         lineStyle: { width: 1.8, color: '#2e7d32' },
         markArea: { silent: true, data: runs },
-      },
-      {
-        name: '基准·买入持有',
-        type: 'line',
-        yAxisIndex: 0,
-        data: benchData,
-        showSymbol: false,
-        lineStyle: { width: 1.4, color: '#9aa0a6', type: 'dashed' },
       },
       {
         name: '标的价格(归一)',
@@ -194,7 +211,11 @@ export function buildMainOption(res: MarketResult, regimeCn: RegimeCn) {
 }
 
 /** 股票仓位子图(0-100%), 与主轴 dataZoom 联动 */
-export function buildWeightOption(res: MarketResult, regimeCn: RegimeCn) {
+export function buildWeightOption(
+  res: MarketResult,
+  regimeCn: RegimeCn,
+  isDarkMode: boolean = isDark(),
+) {
   const ts = res.timeseries
   const p0 = ts[0].p
   const wData = ts.map((pt) => ({
@@ -214,8 +235,11 @@ export function buildWeightOption(res: MarketResult, regimeCn: RegimeCn) {
     else if (pt.o === 'reduce') mWred.push(pt)
   })
   const runs = bandRuns(ts)
+  const t = themeColors(isDarkMode)
 
   return {
+    backgroundColor: 'transparent',
+    textStyle: { color: t.legend },
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'cross' },
@@ -237,16 +261,18 @@ export function buildWeightOption(res: MarketResult, regimeCn: RegimeCn) {
     legend: {
       data: ['股票仓位%', '加仓', '减仓'],
       top: 0,
+      textStyle: { color: t.legend, fontSize: 12 },
       selected: { 加仓: true, 减仓: true },
     },
     grid: { left: 58, right: 64, top: 34, bottom: 48 },
-    xAxis: { type: 'time', axisLabel: { fontSize: 11 } },
+    xAxis: { type: 'time', axisLabel: { fontSize: 11, color: t.axis } },
     yAxis: {
       type: 'value',
       min: 0,
       max: 100,
       name: '仓位%',
-      axisLabel: { fontSize: 11 },
+      axisLabel: { fontSize: 11, color: t.axis },
+      nameTextStyle: { color: t.legend },
     },
     dataZoom: [{ type: 'inside' }, { type: 'slider', height: 16, bottom: 18 }],
     series: [
@@ -264,30 +290,30 @@ export function buildWeightOption(res: MarketResult, regimeCn: RegimeCn) {
           data: [
             {
               yAxis: 0,
-              lineStyle: { color: '#b71c1c', type: 'dashed', width: 1.5 },
+              lineStyle: { color: t.lineRed, type: 'dashed', width: 1.5 },
               label: {
                 formatter: '清仓 0%',
-                color: '#b71c1c',
+                color: t.lineRed,
                 fontSize: 10,
                 position: 'insideEndTop',
               },
             },
             {
               yAxis: 20,
-              lineStyle: { color: '#ef6c00', type: 'dashed', width: 1 },
+              lineStyle: { color: t.lineOrange, type: 'dashed', width: 1 },
               label: {
                 formatter: 'risk_off 下限 20%',
-                color: '#ef6c00',
+                color: t.lineOrange,
                 fontSize: 10,
                 position: 'insideEndTop',
               },
             },
             {
               yAxis: 80,
-              lineStyle: { color: '#2e7d32', type: 'dashed', width: 1 },
+              lineStyle: { color: t.lineGreen, type: 'dashed', width: 1 },
               label: {
                 formatter: 'risk_on 80%',
-                color: '#2e7d32',
+                color: t.lineGreen,
                 fontSize: 10,
                 position: 'insideEndTop',
               },
