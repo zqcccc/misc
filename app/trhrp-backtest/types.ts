@@ -1,6 +1,9 @@
 // TRHRP 回测页面前后端共享类型。
 // 字段与 deliverables/trhrp_backtest_all/_all.json 一一对应。
 
+/** regime 代码 -> 中文标签 的映射 (如 risk_on -> "风险开启") */
+export type RegimeCn = Record<string, string>
+
 export interface TsPoint {
   d: string // 日期 "2018-01-03"
   s: number // 策略净值
