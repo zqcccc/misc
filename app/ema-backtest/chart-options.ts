@@ -1,6 +1,6 @@
 'use client'
 
-import type { InstrumentPayload } from '../types'
+import type { InstrumentPayload } from './types'
 
 interface ThemeColors {
   isDark: boolean
