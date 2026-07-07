@@ -14,7 +14,10 @@ EMA 趋势反手策略 · 统一监控入口
   python monitor.py stop --all                             # 停全部
   python monitor.py restart ETH                            # 等价于 stop ETH && start ETH
   python monitor.py status                                 # 全品种汇总 ( daemon 状态 + state.json 关键字段)
-  python monitor.py logs ETH                               # tail -n 20 最近日志
+  python monitor.py logs                                   # 实时跟随所有品种日志 (默认)
+  python monitor.py logs ETH                               # 实时跟随 ETH 日志
+  python monitor.py logs --no-follow                        # 只打印最近 N 行后退出, 不跟随
+  python monitor.py logs ETH --no-follow                    # 只看 ETH 最近 20 行
   python monitor.py show ETH                               # cat state.json
   python monitor.py run ETH --ema 200 --bp 0.005           # 临时覆盖参数前台跑 (调试, 不写 strategies.json)
 
@@ -58,6 +61,13 @@ def find_cfg(name):
         if s["name"] == name:
             return s
     raise SystemExit(f"未知策略 name={name!r}; 用 `monitor.py list` 查看全部")
+
+
+def _ensure_known_name(name):
+    """校验 name 是已知策略; TRHRP 子系统 (独立配置) 跳过 find_cfg, 其余按 EMA 反手校验."""
+    if _is_trhrp_name(name):
+        return
+    find_cfg(name)
 
 
 def cache_dir_for(name):
@@ -105,15 +115,27 @@ def clear_pid(name):
 # ============================================================
 def cmd_list(args):
     data = load_strategies()
-    print(f"{'NAME':<10} {'SYMBOL':<22} {'TF':<5} {'EMA':>5} {'CB':>6} {'BP':>7} {'TP':<18} {'SRC':<10} {'RUN':<5}")
-    print("-" * 100)
+    print(f"{'NAME':<10} {'SYMBOL':<22} {'TF':<5} {'EMA':>5} {'CB':>6} {'BP':>7} {'TP':<24} {'SRC':<10} {'RUN':<5}")
+    print("-" * 106)
     for s in sorted(data["strategies"], key=lambda x: (x.get("priority", 99), x["name"])):
         cb = (f"f{s['cb_float']:.2f}" if s.get("cb_float") else f"{int(s['confirm_bars'])}i")
         run = "✓" if is_running(s["name"]) else "-"
-        tp = s.get("tp_type", "none") if s.get("tp_enabled", True) else "none"
+        if s.get("tp_enabled", True) and s.get("tp_type") not in (None, "none"):
+            side = s.get("tp_side", "both")
+            tp = f"{s['tp_type']}[{side}]"
+        else:
+            tp = "none"
         print(f"{s['name']:<10} {s['symbol']:<22} {s.get('timeframe','15m'):<5} {int(s['ema_span']):>5} {cb:>6} "
-              f"{float(s['breakout_pct'])*100:>6.2f}% {tp:<18} {s['data_source']:<10} {run:<5}")
-    print(f"\n共 {len(data['strategies'])} 个策略. 配置文件: {STRATEGIES_FILE}")
+              f"{float(s['breakout_pct'])*100:>6.2f}% {tp:<24} {s['data_source']:<10} {run:<5}")
+    print(f"\n共 {len(data['strategies'])} 个 EMA 策略. 配置文件: {STRATEGIES_FILE}")
+    # TRHRP 子系统也一并展示
+    cmd_trhrp_list()
+
+
+def _is_trhrp_name(name):
+    """判断给定 name 属于 TRHRP 子系统 (否则认为是 EMA 反手策略)."""
+    cfg = _load_trhrp_config()
+    return bool(cfg) and cfg.get("name", "TRHRP") == name
 
 
 def cmd_start(args):
@@ -121,14 +143,18 @@ def cmd_start(args):
     started = []
     skipped = []
     for name in names:
-        find_cfg(name)  # 校验存在
+        if _is_trhrp_name(name):
+            daemon_file = "daemon_trhrp.py"
+        else:
+            find_cfg(name)  # 校验 EMA 反手策略存在
+            daemon_file = "daemon.py"
         if is_running(name):
             skipped.append(name)
             print(f"[{name}] already running (pid {read_pid(name)}), skip")
             continue
         cd = cache_dir_for(name)
         stdout_log = os.path.join(cd, "stdout.log")
-        cmd = [DEFAULT_PY, "-u", os.path.join(HERE, "daemon.py"), name]
+        cmd = [DEFAULT_PY, "-u", os.path.join(HERE, daemon_file), name]
         if args.foreground:
             print(f"[{name}] foreground start: {' '.join(cmd)}",
                   "(Ctrl+C 退出)" if not args.dry_run else "(dry-run)")
@@ -224,14 +250,69 @@ def _fmt_price(p):
     return f"{x:.4g}"
 
 
+def _read_last_action_from_log(name):
+    """从 monitor/caches/<name>/actions.log 最后一行读真实上一次动作. 没有 log 则返回 None.
+
+    这是 LAST_ACTION 展示的真实单一来源: daemon 自身启动时已回放写满, 之后每次动作都追加.
+    """
+    p = os.path.join(cache_dir_for(name), "actions.log")
+    if not os.path.exists(p):
+        return None
+    try:
+        last = None
+        with open(p, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    last = json.loads(line)
+                except Exception:
+                    continue
+        return last
+    except Exception:
+        return None
+
+
+def _fmt_action_from_log(name, st_fallback):
+    """优先从 actions.log 读, 否则回退 state.json 的 last_action. 返回 (短摘要, 详细).
+
+    TRHRP 等子系统若用自己的 actions.log schema 也由这里识别 kind 字段加分支.
+    """
+    la = _read_last_action_from_log(name)
+    if not la:
+        la = st_fallback.get("last_action") if st_fallback else None
+    if not la:
+        return ("-", "-")
+    kind = la.get("kind", "?")
+    if kind == "regime_change":
+        # TRHRP 子系统的限速 schema: label + prevRegime/curRegime
+        # 注意: 当某市场数据拉取失败时 prevRegime/curRegime 可能是 JSON null,
+        # 此时 .get(...) 返回 None 而非默认值, 不能对其做 [:] 切片.
+        # 必须用 (v or '?') 兜底, 否则会抛 'NoneType' object is not subscriptable.
+        prev = la.get("prevRegime") or "?"
+        cur = la.get("curRegime") or "?"
+        short = (f"{la.get('label','?')} {prev[:4].upper()}→{cur[:4].upper()}")
+        descr = la.get("descr") or short
+        return (short, descr)
+    price = _fmt_price(la.get("price"))
+    time = (la.get("time") or "")[11:16] or "?"
+    short = f"{kind} {price} {time}"
+    descr = la.get("descr") or short
+    return (short, descr)
+
+
 def _fmt_action(st):
-    """从 state.json 的 last_action 提取可读短行. 返回 (短摘要, 详细描述)."""
+    """[deprecated, 仅用于向后兼容] 从 state.json 的 last_action 变短行.
+
+    新代码用 _fmt_action_from_log(name, st).
+    """
     la = st.get("last_action")
     if not la:
         return ("-", "-")
     kind = la.get("kind", "?")
     price = _fmt_price(la.get("price"))
-    time = (la.get("time") or "")[11:16] or "?"  # HH:MM
+    time = (la.get("time") or "")[11:16] or "?"
     short = f"{kind} {price} {time}"
     descr = la.get("descr") or short
     return (short, descr)
@@ -239,8 +320,8 @@ def _fmt_action(st):
 
 def cmd_status(args):
     data = load_strategies()
-    print(f"{'NAME':<9} {'RUN':<4} {'PID':<6} {'POS':<4} {'SIZE':>4} {'PRICE':<13} {'UNREAL':<8} {'LAST_ACTION':<22} {'LAST_BAR':<17}")
-    print("-" * 100)
+    print(f"{'NAME':<9} {'RUN':<4} {'PID':<6} {'POS':<4} {'SIZE':>4} {'PRICE':<13} {'UNREAL':<8} {'LAST_ACTION':<28} {'LAST_BAR':<17}")
+    print("-" * 110)
     running = 0
     for s in sorted(data["strategies"], key=lambda x: (x.get("priority", 99), x["name"])):
         name = s["name"]
@@ -259,31 +340,197 @@ def cmd_status(args):
                 price = _fmt_price(st.get("live_price", 0))
                 unreal = f"{float(st.get('unreal_pct', 0))*100:+.2f}%"
                 lastbar = (st.get("last_closed", "") or "")[:16].replace("T", " ")
-                la_short, _ = _fmt_action(st)
+                la_short, _ = _fmt_action_from_log(name, st)
             except Exception as e:
                 pos = size = price = unreal = lastbar = la_short = "?"
         else:
             pos = size = price = unreal = lastbar = la_short = "-"
         run_flag = "✓" if rn else "-"
-        print(f"{name:<9} {run_flag:<4} {pid:<6} {pos:<4} {size:>4} {price:<13} {unreal:<8} {la_short:<22} {lastbar:<17}")
-    print(f"\n运行中 {running}/{len(data['strategies'])}  (PID 文件在 monitor/caches/<name>/daemon.pid)")
+        print(f"{name:<9} {run_flag:<4} {pid:<6} {pos:<4} {size:>4} {price:<13} {unreal:<8} {la_short:<28} {lastbar:<17}")
+    print(f"\n运行中 {running}/{len(data['strategies'])}  (PID 文件在 monitor/caches/<name>/daemon.pid; "
+          f"LAST_ACTION 真实来自 actions.log JSONL)")
+
+    # === TRHRP 子系统 (独立配置文件 monitor/strategies_trhrp.json) ===
+    trhrp_state = _trhrp_status_section()
+    if trhrp_state is not None:
+        print(trhrp_state)
+
+
+# ============================================================
+# TRHRP 子系统 (与 EMA 反手完全独立)
+# ============================================================
+def _trhrp_config_path():
+    return os.path.join(HERE, "strategies_trhrp.json")
+
+
+def _load_trhrp_config():
+    p = _trhrp_config_path()
+    if not os.path.exists(p):
+        return None
+    with open(p) as f:
+        return json.load(f)
+
+
+def _trhrp_status_section():
+    """构建 TRHRP 子系统 status 段落. 没配置或没数据时返回 None (不打印)."""
+    cfg = _load_trhrp_config()
+    if not cfg:
+        return None
+    name = cfg.get("name", "TRHRP")
+    cache_dir = cache_dir_for(name)
+    state_file = os.path.join(cache_dir, "state.json")
+    rn = is_running(name)
+    pid = str(read_pid(name) or "-")
+    lines = []
+    lines.append("")
+    lines.append("[TRHRP 多市场 regime 策略子系统]")
+    lines.append(f"{'NAME':<8} {'RUN':<4} {'PID':<6} {'REGIME':<18} {'CHG':<4} {'ASOF':<11} {'LAST_ACTION':<40} {'FETCHED':<17}")
+    lines.append("-" * 110)
+    if not os.path.exists(state_file):
+        lines.append(f"{name:<8} {'✓' if rn else '-':<4} {pid:<6} {'-':<18} {'-':<4} {'-':<11} {'-':<40} {'-':<17}")
+    else:
+        try:
+            with open(state_file) as f:
+                st = json.load(f)
+            regime_summary = f"🟢{st.get('riskOnCount',0)} 🟡{st.get('moderateCount',0)} 🔴{st.get('riskOffCount',0)}"
+            as_of = (st.get("asOfDate") or "-")[:10]
+            changed = st.get("changedMarkets", 0)
+            fetched = (st.get("fetchedAt") or "")[:16].replace("T", " ")
+            la_short, _ = _fmt_action_from_log(name, st)
+            run_flag = "✓" if rn else "-"
+            lines.append(f"{name:<8} {run_flag:<4} {pid:<6} {regime_summary:<18} {changed:<4} {as_of:<11} {la_short:<40} {fetched:<17}")
+            # 名词速查 (一次出现, 供各市场行参照):
+            #   REGIME: 风险档 — RISK_ON 偏多仓 / MODERATE 中性 / RISK_OFF 避险
+            #   cur→nxt: 当前生效档 → 次日交易档 (T 日信号, T+1 生效); ⚠️=次日档已变化, 待执行
+            #   vol: 21d realized vol 年化; p60 = 252 日窗口 60 分位; 中位 = 126 日窗口中位; mom = 21d 动量
+            #   崩盘线: 强制 RISK_OFF 的 vol 阈值; z: 252 日 log 价 z-score (均值回归极端偏差)
+            #   基础配比: regime → 股票/GLD/SGOV; 叠加后: 经 z-score overlay 调整后配比 (抄底加 / 高位减)
+            lines.append("")
+            lines.append(f"  ── 段一·当前 {len(st.get('markets') or [])} 个市场仓位水平 ──")
+            lines.append(f"  {'市场':<10} {'分组':<6} {'REGIME':<20} {'基础配比':<24} {'叠加后配比':<26} {'z-score':<10} {'叠加提示'}")
+            for raw_m in (st.get("markets") or []):
+                m = {k: (v if v is not None else "-") for k, v in (raw_m or {}).items()}
+                cur_r = (m.get("currentRegime") or "?")[:8].upper()
+                nxt_r = (m.get("nextRegime") or "?")[:8].upper()
+                regime_cell = f"{cur_r} → {nxt_r}"
+                z = m.get("priceZScore252")
+                z_str = f"{z:+.2f}σ" if isinstance(z, (int, float)) else "-"
+                marker = " ⚠️" if m.get("changed") else ""
+                lines.append(f"  {m.get('label','-'):<10} {m.get('marketGroup','-'):<6} {regime_cell:<20} "
+                             f"{m.get('allocationText','-'):<24} "
+                             f"{m.get('overlayAdjustedAllocationText','-'):<26} {z_str:<10} "
+                             f"{m.get('overlayRecommendationText','-')}{marker}")
+            # 段二: 各市场当前→次日档对比 (原因只在次日档与当前档不同时再展开, 避免重复)
+            lines.append("")
+            lines.append(f"  ── 段二·各市场档位原因 + 下一步触发条件 (次日档 ≠ 当前档时高亮) ──")
+            for raw_m in (st.get("markets") or []):
+                m = {k: (v if v is not None else "-") for k, v in (raw_m or {}).items()}
+                cur_r = (m.get("currentRegime") or "?").upper()
+                nxt_r = (m.get("nextRegime") or "?").upper()
+                vol_pct = m.get("volPct")
+                p60 = m.get("volP60Pct")
+                med = m.get("medianVolPct")
+                mom = m.get("momPct")
+                crash = m.get("crashTriggerVolPct")
+                z = m.get("priceZScore252")
+                z_str = f"{z:+.2f}σ" if isinstance(z, (int, float)) else "-"
+
+                def _f(x, d=2):
+                    return f"{x:.{d}f}%" if isinstance(x, (int, float)) else "-"
+                marker = " ⚠️变化" if m.get("changed") else ""
+                lines.append(f"  • {m.get('label','-'):<10} {cur_r} → {nxt_r}{marker}")
+                lines.append(f"      指标: vol={_f(vol_pct)} p60={_f(p60)} 中位={_f(med)} "
+                             f"mom={(f'{mom:+.2f}%' if isinstance(mom, (int, float)) else '-')} "
+                             f"崩盘线={_f(crash, 0)} z={z_str}")
+                if m.get("changed") or cur_r != nxt_r:
+                    nxt_reason = m.get("nextRegimeReason") or "-"
+                    nxt_nt = m.get("nextRegimeNextTrigger") or "-"
+                    lines.append(f"      次日档原因: {nxt_reason}")
+                    lines.append(f"      下一步: {nxt_nt}")
+                else:
+                    # 同档, 原因其实一样 — 给一句话 "维持当前档" + 简短 next trigger
+                    cur_nt = m.get("nextRegimeNextTrigger") or "-"
+                    lines.append(f"      维持 {cur_r}: {cur_nt}")
+            if st.get("error"):
+                lines.append("")
+                lines.append(f"  ⚠️ error: {st.get('error')}")
+            if st.get("warnings"):
+                lines.append("")
+                for w in st.get("warnings") or []:
+                    lines.append(f"  ⚠️ 缓存回退: {w}")
+        except Exception as e:
+            lines.append(f"(TRHRP state.json 读取失败: {e})")
+    return "\n".join(lines)
+
+
+def cmd_trhrp_list(name="TRHRP"):
+    """打印 TRHRP 子系统配置的市场 (markets UNIVERSE). 用于 monitor list 子命令展示."""
+    cfg = _load_trhrp_config()
+    if not cfg:
+        return
+    markets = cfg.get("markets") or []
+    if not markets:
+        return
+    rn = is_running(name)
+    pid = read_pid(name)
+    print()
+    print("[TRHRP 子系统品种清单]  (单一 daemon 进程, 覆盖下方全部市场)")
+    print(f"  守护进程: {'✓ 运行中' if rn else '✗ 未运行'}   pid={pid or '-'}   "
+          f"启动: python monitor/monitor.py start {name}   |   停止: python monitor/monitor.py stop {name}")
+    print(f"{'#':<3} {'GROUP':<8} {'LABEL':<14} {'TICKER':<14} {'PROXY':<12}")
+    print("-" * 60)
+    for i, m in enumerate(markets, 1):
+        print(f"{i:<3} {m.get('marketGroup','-'):<8} {m.get('label','-'):<14} "
+              f"{m.get('ticker','-'):<14} {m.get('proxy','-'):<12}")
+    print(f"\n共 {len(markets)} 个市场. 配置文件: {_trhrp_config_path()}")
+    print(f"检查间隔: {cfg.get('check_interval_minutes', 60)} 分钟")
 
 
 def cmd_logs(args):
-    name = args.name
-    find_cfg(name)
-    log_file = os.path.join(cache_dir_for(name), "monitor.log")
+    names = _expand_names(args.names, args.all, default_all=True)
     if args.follow:
-        _follow_single(name, log_file, args.n or 20)
+        targets = []
+        for name in names:
+            _ensure_known_name(name)
+            lf = os.path.join(cache_dir_for(name), "monitor.log")
+            if not os.path.exists(lf):
+                print(f"[{name}] 无日志: {lf}, 跳过", file=sys.stderr)
+                continue
+            targets.append((name, lf))
+        if not targets:
+            print("无可跟随的日志", file=sys.stderr)
+            return
+        if len(targets) == 1:
+            _follow_single(targets[0][0], targets[0][1], args.n or 20)
+        else:
+            _tail_multi(targets, args.n or 20)
         return
-    if not os.path.exists(log_file):
-        print(f"无日志文件: {log_file}")
+    if len(names) == 1:
+        name = names[0]
+        _ensure_known_name(name)
+        log_file = os.path.join(cache_dir_for(name), "monitor.log")
+        if not os.path.exists(log_file):
+            print(f"无日志文件: {log_file}")
+            return
+        n = args.n or 20
+        with open(log_file) as f:
+            lines = f.readlines()
+        for line in lines[-n:]:
+            print(line, end="")
         return
+    # 多品种: 逐个打印, 带品种名分隔
     n = args.n or 20
-    with open(log_file) as f:
-        lines = f.readlines()
-    for line in lines[-n:]:
-        print(line, end="")
+    for name in names:
+        _ensure_known_name(name)
+        log_file = os.path.join(cache_dir_for(name), "monitor.log")
+        print(f"\n===== [{name}] =====")
+        if not os.path.exists(log_file):
+            print(f"  (无日志: {log_file})")
+            continue
+        with open(log_file) as f:
+            lines = f.readlines()
+        for line in lines[-n:]:
+            print(line, end="")
 
 
 def cmd_show(args):
@@ -316,7 +563,7 @@ def cmd_tail(args):
     # 不存在日志文件的品种先告知
     targets = []
     for n in names:
-        find_cfg(n)
+        _ensure_known_name(n)
         lf = os.path.join(cache_dir_for(n), "monitor.log")
         if not os.path.exists(lf):
             print(f"[{n}] 无日志: {lf}, 跳过", file=sys.stderr)
@@ -373,18 +620,58 @@ def _strip_ts(line):
     return line
 
 
+def _strip_name_prefix(line, name):
+    """若日志行本身已带 [NAME] 前缀 (daemon 日志格式), 去掉它, 避免聚合后重复."""
+    tag = f"[{name}] "
+    if line.startswith(tag):
+        return line[len(tag):]
+    return line
+
+
+# ANSI 颜色: 头部用色块区分品种, 主体走终端默认色.
+_NAME_COLORS = [
+    "\033[36m",  # 青色
+    "\033[35m",  # 紫色
+    "\033[33m",  # 黄色
+    "\033[32m",  # 绿色
+    "\033[34m",  # 蓝色
+    "\033[31m",  # 红色
+    "\033[92m",  # 亮绿
+    "\033[93m",  # 亮黄
+    "\033[94m",  # 亮蓝
+    "\033[95m",  # 亮紫
+    "\033[96m",  # 亮青
+    "\033[91m",  # 亮红
+]
+_RESET = "\033[0m"
+_DIM = "\033[2m"
+
+
+def _color_for(name):
+    """按 hash 给品种分配稳定颜色, 同一品种每次都是同一色."""
+    h = sum(ord(c) for c in name)
+    return _NAME_COLORS[h % len(_NAME_COLORS)]
+
+
+def _format_agg_line(name, line):
+    """聚合输出: 用颜色化 [NAME] 前缀 + 余下内容; 去掉重复 [NAME]."""
+    body = _strip_ts(line)
+    body = _strip_name_prefix(body, name)
+    return f"{_color_for(name)}[{name}]{_RESET} {body}"
+
+
 def _tail_multi(targets, init_n):
-    """多品种聚合 tail -f. 每行前缀 [NAME] 区分."""
+    """多品种聚合 tail -f. 每行用颜色化 [NAME] 前缀区分来源品种."""
     states = {}
     for name, path in targets:
         for line in _read_tail(path, init_n):
-            sys.stdout.write(f"[{name}] {_strip_ts(line)}")
+            sys.stdout.write(_format_agg_line(name, line))
         sys.stdout.flush()
         try:
             states[name] = (path, os.path.getsize(path))
         except FileNotFoundError:
             states[name] = (path, 0)
-    print(f"\n=== {len(targets)} 个品种 跟随中, Ctrl+C 退出 (不影响 daemon) ===\n", flush=True)
+    print(f"\n=== {len(targets)} 个品种 跟随中, 每行以 {_color_for('x')}[NAME]{_RESET} 前缀区分, Ctrl+C 退出 (不影响 daemon) ===\n", flush=True)
     try:
         while True:
             for name, (path, _) in list(states.items()):
@@ -398,7 +685,7 @@ def _tail_multi(targets, init_n):
                         f.seek(last_pos)
                         chunk = f.read()
                         for line in chunk.splitlines(keepends=True):
-                            sys.stdout.write(f"[{name}] {_strip_ts(line)}")
+                            sys.stdout.write(_format_agg_line(name, line))
                         sys.stdout.flush()
                     states[name] = (path, size)
             time.sleep(0.5)
@@ -408,6 +695,9 @@ def _tail_multi(targets, init_n):
 
 def cmd_run(args):
     """前台跑指定品种, 可任意覆盖参数, 不写 strategies.json. 直接 exec daemon.py."""
+    if _is_trhrp_name(args.name):
+        cmd = [DEFAULT_PY, "-u", os.path.join(HERE, "daemon_trhrp.py"), args.name]
+        os.execvpe(cmd[0], cmd, os.environ)
     cmd = [DEFAULT_PY, "-u", os.path.join(HERE, "daemon.py"), args.name]
     if args.ema is not None: cmd += ["--ema", str(args.ema)]
     if args.cb_float is not None and args.cb_float > 0:
@@ -421,7 +711,13 @@ def cmd_run(args):
 
 def _expand_names(names_csv, all_flag, default_all=False):
     if all_flag or (default_all and not names_csv):
-        return [s["name"] for s in load_strategies()["strategies"]]
+        names = [s["name"] for s in load_strategies()["strategies"]]
+        trhrp_cfg = _load_trhrp_config()
+        if trhrp_cfg and trhrp_cfg.get("name"):
+            tn = trhrp_cfg["name"]
+            if tn not in names:
+                names.append(tn)
+        return names
     if not names_csv:
         raise SystemExit("需要 --all 或显式列出品种 (逗号分隔), 见 --help")
     return [n.strip() for n in names_csv.split(",") if n.strip()]
@@ -458,10 +754,12 @@ def main():
     sp = sub.add_parser("status", help="查看所有品种 daemon 状态 + 关键 state 字段")
     sp.set_defaults(func=cmd_status)
 
-    sp = sub.add_parser("logs", help="查看品种日志; -f 实时跟随")
-    sp.add_argument("name")
-    sp.add_argument("-n", type=int, default=20, help="先打印最近 N 行")
-    sp.add_argument("-f", "--follow", action="store_true", help="尾随, Ctrl+C 退出")
+    sp = sub.add_parser("logs", help="查看品种日志; 默认实时跟随所有品种, Ctrl+C 退出")
+    sp.add_argument("names", nargs="?", default=None, help="如 ETH 或 ETH,SOL; 省略=全部")
+    sp.add_argument("--all", action="store_true", help="查看所有品种")
+    sp.add_argument("-n", type=int, default=20, help="启动时先打印最近 N 行历史")
+    sp.add_argument("--no-follow", dest="follow", action="store_false", help="不实时跟随, 只打印最近 N 行后退出")
+    sp.set_defaults(follow=True)
     sp.set_defaults(func=cmd_logs)
 
     sp = sub.add_parser("tail", help="聚合多品种 monitor.log 实时尾随 (无参=全部, 仅查看, 不影响 daemon)")

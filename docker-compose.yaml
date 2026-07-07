@@ -13,8 +13,30 @@ services:
     volumes:
       - './.env:/app/.env'
       - './plusPosts:/app/plusPosts'
+      # TRHRP 回测数据: 由 trhrp-data 容器写入, 这里只读挂载给页面 API 用
+      - 'trhrp-data:/app/deliverables:ro'
     #   - ./json:/usr/share/nginx/html/json
     ports:
       - 3010:3010
         #- 3000:3000
     # network_mode: 'host'
+    depends_on:
+      - trhrp-data
+
+  # TRHRP 回测数据生成器: 每日刷新行情 + 重算 _all.json, 写入共享卷 trhrp-data.
+  # 镜像自带依赖与 seed, 不依赖宿主机有 Python / yfinance.
+  trhrp-data:
+    image: 172232502/trhrp-data
+    #build:
+    #  context: .
+    #    dockerfile: ./docker/trhrp-data/Dockerfile
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    volumes:
+      - 'trhrp-data:/data'
+
+volumes:
+  trhrp-data:
