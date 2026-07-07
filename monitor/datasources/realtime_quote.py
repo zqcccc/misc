@@ -10,6 +10,12 @@ _SINA_URL = "https://hq.sinajs.cn/list=hk{code}"
 _TENCENT_URL = "https://qt.gtimg.cn/q=hk{code}"
 _HEADERS = {"Referer": "https://finance.sina.com.cn"}
 
+# sina/腾讯港股实时报价是国内 API, 不应走系统代理.
+# 用 trust_env=False 的 Session 屏蔽 HTTPS_PROXY/HTTP_PROXY 环境变量,
+# 避免 daemon 继承父 shell 的失效代理端口 (如 127.0.0.1:57076).
+_SESSION = requests.Session()
+_SESSION.trust_env = False
+
 
 def _normalize_symbol(symbol):
     """支持 0700.HK / 00700.HK / 00700 全写法 → 5 位代码 (00700)."""
@@ -35,7 +41,7 @@ def fetch_realtime(symbol, source="sina", timeout=5):
         url = _TENCENT_URL.format(code=code)
         h = {}
     t0 = time.time()
-    r = requests.get(url, headers=h, timeout=timeout)
+    r = _SESSION.get(url, headers=h, timeout=timeout)
     r.encoding = "gbk"
     m = re.search(r'"([^"]+)"', r.text)
     if not m or not m.group(1):
