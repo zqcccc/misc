@@ -1,0 +1,5 @@
+{
+  "_comment": "飞书自定义群机器人配置. 群设置 -> 群机器人 -> 添加机器人(自定义) -> 复制 webhook 地址; 安全设置选 '签名校验' 拿 secret.",
+  "webhook_url": "https://open.feishu.cn/open-apis/bot/v2/hook/你的token",
+  "secret": "群机器人安全设置的签名校验密钥(可选, 推荐开启; 留空或删掉则该机器人不设签名)"
+}

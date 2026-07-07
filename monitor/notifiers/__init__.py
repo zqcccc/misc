@@ -6,11 +6,13 @@
 from . import macos
 from . import telegram
 from . import wechat_work
+from . import feishu
 
 REGISTRY = {
     "macos": macos,
     "telegram": telegram,
     "wechat_work": wechat_work,
+    "feishu": feishu,
 }
 
 

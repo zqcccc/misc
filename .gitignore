@@ -54,6 +54,11 @@ next-env.d.ts
 
 # 与 Next.js 无关的本地研究/回测产物
 /scripts/*.py
+/scripts/_*
+# TRHRP 部署必需（随 trhrp-data 镜像构建，必须入库）: 对上面的 /scripts/*.py 开例外
+!/scripts/trhrp_backtest_live.py
+!/scripts/refresh_trhrp_cache.py
+
 /btc_ema_15m
 /data
 
@@ -67,6 +72,7 @@ next-env.d.ts
 /eth_sol_bnb_15m/scripts/
 /eth_sol_bnb_15m/reports/
 /eth_sol_bnb_15m/monitor/
+/tencent_ema_15m
 
 # === monitor/ 统一监控入口 ===
 # 运行时产物: 每品种 daemon.pid / log / state, 不入库
@@ -78,3 +84,7 @@ next-env.d.ts
 /monitor/__pycache__/
 /monitor/datasources/__pycache__/
 /monitor/notifiers/__pycache__/
+# 飞书 webhook 含 secret (webhook_url / secret), 不入库; 模板用 *.example 提供
+/monitor/feishu_webhook.json
+# TRHRP 实验性研究产物: 回测脚本 + 生成结果 (与 next 项目无关, 不入库)
+/monitor/research/

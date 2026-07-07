@@ -1,0 +1,227 @@
+{
+  "_comment": "TRHRP 多市场 regime 子系统 - 唯一配置源. 与 EMA 反手 strategies.json 完全独立. 加品种=改本文件 markets 数组, 不动 daemon 代码.",
+  "_schema": {
+    "name": "唯一短名 (用作 caches/<name>/ 目录名和 CLI 标识)",
+    "check_interval_minutes": "daemon 每 N 分钟拉一次快照 (默认 60). 收盘前数据可能 stale; 设太小会冲击 yfinance 限频.",
+    "notify_on_change": "任一市场 regime 变化是否发通知 (true/false)",
+    "_comment_markets": "市场全集 (UNIVERSE). 删除/修改一条 = 改这里. 每条至少要 label/marketGroup/ticker. proxy 字段纯说明可留空.",
+    "markets": [
+      {
+        "label": "人类可读短名 (state.json 和 status 表格展示用)",
+        "marketGroup": "市场分组, 决定走哪条 z-score overlay 规则 (A股/港股 = AH 规则; 美股 = US 规则; 其它分组 = 无叠加)",
+        "ticker": "传给 yfinance 的标的符号 (^HSI/SPY/510300.SS 等)",
+        "proxy": "可空. 标签如 'ETF代理', 仅文档作用"
+      }
+    ],
+    "regime_weights": "三种 regime 各自对应 股票/GLD/SGOV 配比. 加起来需 = 1.0.",
+    "overlay_rules": "各 marketGroup 的标准差偏离阈值 (252 日 z-score). buy_threshold: z<=该值时加仓; sell_threshold: z>=该值时减仓; delta: 触发后股票仓位 ± percentage point (sgov 反向).",
+    "signal_params": "信号计算参数. 改动会影响 regime 判定结果, 与 ba 项目同口径默认值一致."
+  },
+  "name": "TRHRP",
+  "check_interval_minutes": 60,
+  "notify_on_change": true,
+  "markets": [
+    {
+      "label": "沪深300",
+      "marketGroup": "A股",
+      "ticker": "510300.SS",
+      "proxy": "ETF代理"
+    },
+    {
+      "label": "中证500",
+      "marketGroup": "A股",
+      "ticker": "510500.SS",
+      "proxy": "ETF代理"
+    },
+    {
+      "label": "红利低波",
+      "marketGroup": "A股",
+      "ticker": "513630.SS",
+      "proxy": "标普港股通红利低波(513630)"
+    },
+    {
+      "label": "港股通创新药",
+      "marketGroup": "A股",
+      "ticker": "513120.SS",
+      "proxy": "港股通创新药ETF(513120)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "恒生指数",
+      "marketGroup": "港股",
+      "ticker": "^HSI",
+      "proxy": ""
+    },
+    {
+      "label": "恒生科技",
+      "marketGroup": "港股",
+      "ticker": "3033.HK",
+      "proxy": "ETF代理"
+    },
+    {
+      "label": "SPY",
+      "marketGroup": "美股",
+      "ticker": "SPY",
+      "proxy": ""
+    },
+    {
+      "label": "QQQ",
+      "marketGroup": "美股",
+      "ticker": "QQQ",
+      "proxy": ""
+    },
+    {
+      "label": "INTC",
+      "marketGroup": "美股",
+      "ticker": "INTC",
+      "proxy": "EMA监控移交·TRHRP适配✅"
+    },
+    {
+      "label": "MSFT",
+      "marketGroup": "美股",
+      "ticker": "MSFT",
+      "proxy": "EMA监控移交·TRHRP适配✅"
+    },
+    {
+      "label": "GLW",
+      "marketGroup": "美股",
+      "ticker": "GLW",
+      "proxy": "EMA监控移交·TRHRP适配✅"
+    },
+    {
+      "label": "TENCENT",
+      "marketGroup": "港股",
+      "ticker": "0700.HK",
+      "proxy": "EMA监控移交·TRHRP适配✅"
+    },
+    {
+      "label": "BTC",
+      "marketGroup": "crypto",
+      "ticker": "BTC-USD",
+      "proxy": "EMA监控移交·TRHRP适配✅(相对波动率重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "ETH",
+      "marketGroup": "crypto",
+      "ticker": "ETH-USD",
+      "proxy": "EMA监控移交·TRHRP适配✅(相对波动率重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "SOL",
+      "marketGroup": "crypto",
+      "ticker": "SOL-USD",
+      "proxy": "EMA监控移交·TRHRP适配✅(相对波动率重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "BNB",
+      "marketGroup": "crypto",
+      "ticker": "BNB-USD",
+      "proxy": "EMA监控移交·TRHRP适配✅(相对波动率重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "XAU",
+      "marketGroup": "商品",
+      "ticker": "GC=F",
+      "proxy": "EMA监控移交·TRHRP适配✅(相对波动率重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "XAG",
+      "marketGroup": "商品",
+      "ticker": "SI=F",
+      "proxy": "EMA监控移交·TRHRP适配✅(相对波动率重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "CL",
+      "marketGroup": "商品",
+      "ticker": "CL=F",
+      "proxy": "EMA监控移交·TRHRP适配✅(相对波动率重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "SOXL",
+      "marketGroup": "美股杠杆ETF",
+      "ticker": "SOXL",
+      "proxy": "EMA监控移交·TRHRP适配✅(相对波动率重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "KORU",
+      "marketGroup": "韩国杠杆ETF",
+      "ticker": "KORU",
+      "proxy": "EMA监控移交·TRHRP适配✅(相对波动率重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    }
+  ],
+  "regime_weights": {
+    "risk_on": {
+      "equity": 0.8,
+      "GLD": 0.1,
+      "SGOV": 0.1
+    },
+    "moderate": {
+      "equity": 0.5,
+      "GLD": 0.25,
+      "SGOV": 0.25
+    },
+    "risk_off": {
+      "equity": 0.2,
+      "GLD": 0.2,
+      "SGOV": 0.6
+    }
+  },
+  "overlay_rules": {
+    "A股": {
+      "buy_threshold": -3.4,
+      "sell_threshold": 3.0,
+      "delta": 0.2,
+      "label": "A/H"
+    },
+    "港股": {
+      "buy_threshold": -3.4,
+      "sell_threshold": 3.0,
+      "delta": 0.2,
+      "label": "A/H"
+    },
+    "美股": {
+      "buy_threshold": -2.0,
+      "sell_threshold": 2.0,
+      "delta": 0.1,
+      "label": "美股"
+    }
+  },
+  "_defaults_for_unmatched_group": {
+    "buy_threshold": null,
+    "sell_threshold": null,
+    "delta": 0.0,
+    "label": "无叠加"
+  },
+  "signal_params": {
+    "mom_window": 21,
+    "vol_window": 21,
+    "vol_p60_rolling_window": 252,
+    "vol_median_rolling_window": 126,
+    "zscore_rolling_window": 252,
+    "zscore_min_periods": 126,
+    "crash_trigger_vol": 0.3,
+    "trading_days_per_year": 252,
+    "start_date": "2010-01-01",
+    "cache_max_age_hours": 12
+  },
+  "source": "口径与 /Users/gongzhao/code/ba/scripts/trhrp_daily_multi_signal.py 同源; monitor 端独立实现, ba 升级时需手动同步口径变更到本文件 + monitor/trhrp_strategy.py"
+}
