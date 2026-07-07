@@ -218,11 +218,13 @@
   color: var(--accent-strong);
 }
 
+/* 涨跌色工具 class: 必须能覆盖 .statValue / .rangeVal / .table td 的默认 ink 色,
+   否则数字会全部显示为默认颜色失去涨跌信号。 */
 .pos {
-  color: var(--pos);
+  color: var(--pos) !important;
 }
 .neg {
-  color: var(--neg);
+  color: var(--neg) !important;
 }
 
 /* ===== Main ===== */

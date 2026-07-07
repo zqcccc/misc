@@ -166,6 +166,30 @@
       "proxy": "EMA监控移交·TRHRP适配✅(相对波动率重校准)",
       "crashMode": "relative_zscore",
       "crashZscore": 2.5
+    },
+    {
+      "label": "PDD",
+      "marketGroup": "美股",
+      "ticker": "PDD",
+      "proxy": "拼多多(相对波动率重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "YINN",
+      "marketGroup": "美股杠杆ETF",
+      "ticker": "YINN",
+      "proxy": "三倍做多FXI(相对波动率重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "POPMART",
+      "marketGroup": "港股",
+      "ticker": "9992.HK",
+      "proxy": "泡泡玛特(相对波动率重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
     }
   ],
   "regime_weights": {
