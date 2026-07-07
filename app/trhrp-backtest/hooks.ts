@@ -146,6 +146,8 @@ export function useConnectedCharts(
   onRangeRef.current = onRange
   const resultRef = useRef(result)
   resultRef.current = result
+  // 记录上次渲染的标的 label, 用于区分"切换标的(应重置 zoom)"和"同标的自动刷新(应保留 zoom)"
+  const lastLabelRef = useRef<string | null>(null)
 
   const dark = useIsDark()
 
@@ -196,15 +198,51 @@ export function useConnectedCharts(
     if (!ready || !mainChartRef.current || !weightChartRef.current || !result) {
       return
     }
-    mainChartRef.current.setOption(buildMainOption(result, regimeCn, dark), {
-      notMerge: true,
-    })
-    weightChartRef.current.setOption(
-      buildWeightOption(result, regimeCn, dark),
-      {
-        notMerge: true,
-      },
-    )
+
+    // 同标的自动刷新时, 保留用户当前 dataZoom 的百分比区间,
+    // 避免 60s 轮询把用户选好的时间段重置回全量。
+    // 切换标的时(lastLabel 不同)则正常重置为全量。
+    const isSameSymbol = lastLabelRef.current === result.meta.label
+    lastLabelRef.current = result.meta.label
+
+    let savedStart: number | undefined
+    let savedEnd: number | undefined
+    if (isSameSymbol) {
+      try {
+        const opt = mainChartRef.current.getOption()
+        const dzArr = Array.isArray(opt?.dataZoom) ? opt.dataZoom : []
+        const dz: any = dzArr.find(
+          (d: any) => typeof d?.start === 'number' && typeof d?.end === 'number',
+        )
+        if (dz) {
+          savedStart = dz.start
+          savedEnd = dz.end
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
+    const mainOption = buildMainOption(result, regimeCn, dark)
+    const weightOption = buildWeightOption(result, regimeCn, dark)
+
+    if (savedStart != null && savedEnd != null) {
+      // 用百分比而非 startValue/endValue: 数据新增 bar 后百分比位置自适应
+      mainOption.dataZoom = (mainOption.dataZoom || []).map((dz: any) => ({
+        ...dz,
+        start: savedStart,
+        end: savedEnd,
+      }))
+      weightOption.dataZoom = (weightOption.dataZoom || []).map((dz: any) => ({
+        ...dz,
+        start: savedStart,
+        end: savedEnd,
+      }))
+    }
+
+    mainChartRef.current.setOption(mainOption, { notMerge: true })
+    weightChartRef.current.setOption(weightOption, { notMerge: true })
+
     const ec = echartsRef.current
     if (ec) {
       try {
@@ -213,7 +251,7 @@ export function useConnectedCharts(
         /* ignore */
       }
     }
-    // 初次渲染后计算默认(全量)区间统计
+    // setOption 后读取实际 dataZoom 状态计算区间统计(保留了 zoom 则用 zoom, 否则全量)
     const dz = mainChartRef.current.getOption().dataZoom
     const [sv, ev] = resolveRange(dz, result.timeseries)
     onRangeRef.current(computeRangeStats(result.timeseries, sv, ev))
