@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+import { ADS_ENABLED, ADSENSE_CLIENT } from '@/lib/ads'
 
-const AD_CLIENT = 'ca-pub-6426066570730708'
+const AD_CLIENT = ADSENSE_CLIENT
 const OBSERVER_ROOT_MARGIN = '200px'
 const OBSERVER_THRESHOLD = 0
 
@@ -28,6 +29,9 @@ export default function AdUnit({
   className,
 }: AdUnitProps) {
   const insRef = useRef<HTMLModElement | null>(null)
+
+  // 广告已关闭（AdSense 未通过审核），不渲染任何广告位
+  if (!ADS_ENABLED) return null
 
   useEffect(() => {
     const el = insRef.current

@@ -2,7 +2,7 @@
 #
 # 它不依赖宿主机有 Python / yfinance: 镜像自带依赖与 seed 数据,
 # 启动时把 seed 引导进可写卷(离线也能出首份结果), 之后每天 refresh(拉最新行情) + backtest(重算),
-# 把 _all.json 写到共享卷 /data/deliverables, 由 misc 容器只读挂载为 /app/deliverables.
+# 把 _all.json 写到共享卷 /data/trhrp_backtest_all, 由 misc 容器只读挂载为 /app/deliverables.
 FROM python:3.12-slim
 
 WORKDIR /app
@@ -28,7 +28,7 @@ COPY scripts/trhrp_lib/seed/ /app/seed/
 ENV TRHRP_ROOT=/app \
     TRHRP_CFG=/app/monitor/strategies_trhrp.json \
     TRHRP_STRATEGY=/app/monitor \
-    TRHRP_OUT=/data/deliverables/trhrp_backtest_all \
+    TRHRP_OUT=/data/trhrp_backtest_all \
     TRHRP_YF_CACHE=/data/yf_cache \
     TRHRP_DEF_CACHE=/data/def_cache
 

@@ -1,4 +1,5 @@
 import BlogLayout from './blogLayout'
+import { ADS_ENABLED, ADSENSE_CLIENT } from '@/lib/ads'
 
 export default BlogLayout
 
@@ -9,9 +10,7 @@ export const metadata = {
   },
   description: "welcome to ZQC's personal blog, nice to meet you",
   keywords: ['Next.js', 'React', 'JavaScript', 'blog', 'zqc', 'onlylike.work'],
-  other: {
-    'google-adsense-account': 'ca-pub-6426066570730708',
-  },
+  ...(ADS_ENABLED ? { other: { 'google-adsense-account': ADSENSE_CLIENT } } : {}),
 }
 
 export const viewport = {

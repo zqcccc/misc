@@ -7,7 +7,7 @@ set -uo pipefail
 echo "[trhrp-data] starting @ $(date -u)"
 
 # 引导: 仅当目标缺失时复制 seed(no-clobber), 绝不覆盖运行时已刷新的数据
-mkdir -p /data/deliverables /data/yf_cache /data/def_cache
+mkdir -p /data/trhrp_backtest_all /data/yf_cache /data/def_cache
 cp -n /app/seed/def/*    /data/def_cache/   2>/dev/null || true
 cp -n /app/seed/equity/* /data/yf_cache/    2>/dev/null || true
 

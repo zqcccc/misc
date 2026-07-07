@@ -1,6 +1,27 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+
+/** 跟随 <html class="dark"> 的主题开关, 用 MutationObserver 实时响应切换 */
+function useIsDark(): boolean {
+  const [dark, setDark] = useState(() =>
+    typeof document !== 'undefined'
+      ? document.documentElement.classList.contains('dark')
+      : false,
+  )
+  useEffect(() => {
+    const update = () =>
+      setDark(document.documentElement.classList.contains('dark'))
+    update()
+    const ob = new MutationObserver(update)
+    ob.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class'],
+    })
+    return () => ob.disconnect()
+  }, [])
+  return dark
+}
 import type { OverviewPayload, MarketResult, RangeStats } from './types'
 import {
   buildMainOption,
@@ -126,6 +147,8 @@ export function useConnectedCharts(
   const resultRef = useRef(result)
   resultRef.current = result
 
+  const dark = useIsDark()
+
   useEffect(() => {
     let disposed = false
     let main: any
@@ -173,12 +196,15 @@ export function useConnectedCharts(
     if (!ready || !mainChartRef.current || !weightChartRef.current || !result) {
       return
     }
-    mainChartRef.current.setOption(buildMainOption(result, regimeCn), {
+    mainChartRef.current.setOption(buildMainOption(result, regimeCn, dark), {
       notMerge: true,
     })
-    weightChartRef.current.setOption(buildWeightOption(result, regimeCn), {
-      notMerge: true,
-    })
+    weightChartRef.current.setOption(
+      buildWeightOption(result, regimeCn, dark),
+      {
+        notMerge: true,
+      },
+    )
     const ec = echartsRef.current
     if (ec) {
       try {
@@ -191,5 +217,5 @@ export function useConnectedCharts(
     const dz = mainChartRef.current.getOption().dataZoom
     const [sv, ev] = resolveRange(dz, result.timeseries)
     onRangeRef.current(computeRangeStats(result.timeseries, sv, ev))
-  }, [ready, result, regimeCn])
+  }, [ready, result, regimeCn, dark])
 }
