@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useOverview, useMarketResult, useConnectedCharts } from './hooks'
-import type { MarketSummary, RangeStats } from './types'
+import type { MarketResult, MarketSummary, RangeStats } from './types'
 import { signed, pct } from './chart-options'
 import s from './page.module.css'
 
