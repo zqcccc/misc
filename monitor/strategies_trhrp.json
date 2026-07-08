@@ -205,6 +205,21 @@
       "ticker": "07709.HK",
       "proxy": "南方东英两倍做多海力士ETF(相对波动率重校准)",
       "crashMode": "relative_zscore",
+      "crashZscore": 1.5,
+      "signal_overrides": {
+        "_comment": "07709 上市于 2025-10, 数据<252天, 全局窗口(252/126)导致全程moderate无信号. 这里缩短到63/42让短历史也能算出regime. 数据积累到252天后可删除此字段切回默认.",
+        "vol_p60_rolling_window": 63,
+        "vol_median_rolling_window": 63,
+        "zscore_rolling_window": 63,
+        "zscore_min_periods": 42
+      }
+    },
+    {
+      "label": "南方两倍做空MSTR",
+      "marketGroup": "港股杠杆ETF",
+      "ticker": "07399.HK",
+      "proxy": "南方东英两倍做空MicroStrategy ETF(相对波动率重校准)",
+      "crashMode": "relative_zscore",
       "crashZscore": 2.5
     }
   ],
