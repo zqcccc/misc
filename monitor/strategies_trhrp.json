@@ -453,6 +453,38 @@
       "proxy": "券商ETF(relative_zscore重校准)",
       "crashMode": "relative_zscore",
       "crashZscore": 2.5
+    },
+    {
+      "label": "美的集团",
+      "marketGroup": "港股",
+      "ticker": "0300.HK",
+      "proxy": "美的集团港股(relative_zscore重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "中电控股",
+      "marketGroup": "港股",
+      "ticker": "0002.HK",
+      "proxy": "中电控股H股(relative_zscore重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "电能实业",
+      "marketGroup": "港股",
+      "ticker": "0006.HK",
+      "proxy": "电能实业H股(relative_zscore重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "万华化学",
+      "marketGroup": "A股",
+      "ticker": "600309.SS",
+      "proxy": "万华化学上交所主板(relative_zscore重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
     }
   ],
   "regime_weights": {
