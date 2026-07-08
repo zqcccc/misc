@@ -113,6 +113,7 @@ function RangeStatsPanel({ rs }: { rs: RangeStats | null }) {
     { k: '区间天数', v: `${rs.days} 天`, cls: '' },
     { k: '策略收益(区间)', v: fmtPct(rs.sRet), cls: clsColor(rs.sRet) },
     { k: '纯择时收益(区间)', v: fmtPct(rs.tRet), cls: clsColor(rs.tRet) },
+    { k: '极致纯择时收益(区间)', v: fmtPct(rs.eRet), cls: clsColor(rs.eRet) },
     { k: '标的收益(区间)', v: fmtPct(rs.bRet), cls: clsColor(rs.bRet) },
     { k: '超额(策略−标的)', v: fmtPct(rs.excess), cls: clsColor(rs.excess) },
     {
@@ -120,11 +121,18 @@ function RangeStatsPanel({ rs }: { rs: RangeStats | null }) {
       v: fmtPct(rs.tExcess),
       cls: clsColor(rs.tExcess),
     },
+    {
+      k: '温和增益(策略−极致)',
+      v: fmtPct(rs.eExcess),
+      cls: clsColor(rs.eExcess),
+    },
     { k: '策略最大回撤', v: pct(rs.sMdd), cls: s.neg },
     { k: '纯择时最大回撤', v: pct(rs.tMdd), cls: s.neg },
+    { k: '极致最大回撤', v: pct(rs.eMdd), cls: s.neg },
     { k: '标的最大回撤', v: pct(rs.bMdd), cls: s.neg },
     { k: '策略年化', v: fmtPct(rs.sAnn), cls: clsColor(rs.sAnn) },
     { k: '纯择时年化', v: fmtPct(rs.tAnn), cls: clsColor(rs.tAnn) },
+    { k: '极致年化', v: fmtPct(rs.eAnn), cls: clsColor(rs.eAnn) },
     { k: '标的年化', v: fmtPct(rs.bAnn), cls: clsColor(rs.bAnn) },
   ]
   return (
@@ -163,12 +171,15 @@ function SummaryTable({
     { label: '代码', key: 'ticker', fmt: 'text' },
     { label: '策略总收益', key: 'strat_total', fmt: 'signed' },
     { label: '纯择时总收益', key: 'timing_total', fmt: 'signed' },
+    { label: '极致纯择时总收益', key: 'extreme_total', fmt: 'signed' },
     { label: '基准总收益', key: 'bench_total', fmt: 'signed' },
     { label: '超额(策略−基准)', key: 'excess', fmt: 'signed' },
     { label: '择时超额(策略−纯择时)', key: 'timing_excess', fmt: 'signed' },
+    { label: '极致超额(策略−极致)', key: 'extreme_excess', fmt: 'signed' },
     { label: '策略CAGR', key: 'strat_cagr', fmt: 'signed' },
     { label: '策略MDD', key: 'strat_mdd', fmt: 'pct' },
     { label: '纯择时MDD', key: 'timing_mdd', fmt: 'pct' },
+    { label: '极致MDD', key: 'extreme_mdd', fmt: 'pct' },
     { label: '基准MDD', key: 'bench_mdd', fmt: 'pct' },
     { label: '偏好天', key: 'risk_on', fmt: 'int' },
     { label: '中性天', key: 'moderate', fmt: 'int' },
@@ -379,7 +390,8 @@ export default function TrhrpBacktestPage() {
             <div className={s.legend}>
               <b>绿带</b>=风险偏好 · <b>黄带</b>=中性 · <b>红带</b>=风险规避；▲红=加仓，
               ▼绿=减仓（落在归一价曲线上）。左轴净值、右轴归一价。
-              <b style={{ color: '#ef6c00' }}>橙虚线</b>=纯择时净值（equity 权重同策略，其余全 SGOV，不含 GLD 防御腿）。
+              <b style={{ color: '#ef6c00' }}>橙虚线</b>=纯择时净值（equity 权重同策略，其余全 SGOV，不含 GLD 防御腿）；
+              <b style={{ color: '#6a1b9a' }}>紫点线</b>=极致纯择时（risk_on=满仓 / risk_off=空仓 / moderate=半仓，非标的全 SGOV）。
             </div>
           </div>
 

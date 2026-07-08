@@ -1,5 +1,6 @@
 import Script from 'next/script'
 import AdUnit from '@/components/AdUnit'
+import AntiAdblockNotice from '@/components/AntiAdblockNotice'
 import { ADS_ENABLED, ADSENSE_CLIENT } from '@/lib/ads'
 import { Toaster } from 'sonner'
 import './globals.css'
@@ -44,6 +45,7 @@ export default function RootLayout({
       </head>
       <body>
         {children}
+        <AntiAdblockNotice />
         {ADS_ENABLED && (
           <div style={{ margin: '24px auto', maxWidth: '1200px', padding: '0 16px' }}>
             <AdUnit slot={AD_SLOT_FOOTER} />
