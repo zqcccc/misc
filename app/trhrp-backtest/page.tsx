@@ -153,6 +153,109 @@ function RangeStatsPanel({ rs }: { rs: RangeStats | null }) {
   )
 }
 
+/** 把 signal_params 渲染成"策略参数"注释卡片。默认参数标灰, 非默认参数高亮。 */
+function SignalParamsNote({
+  params,
+  meta,
+}: {
+  params: MarketResult['params']
+  meta: MarketResult['meta']
+}) {
+  const sp = params?.signal_params
+  if (!sp) return null
+
+  // 默认值 (与 strategies_trhrp.json signal_params 全局一致)
+  const DEFAULTS: Record<string, number | string> = {
+    mom_window: 21,
+    vol_window: 21,
+    vol_p60_rolling_window: 252,
+    vol_median_rolling_window: 126,
+    zscore_rolling_window: 252,
+    zscore_min_periods: 126,
+    crash_trigger_vol: 0.3,
+    trading_days_per_year: 252,
+    crash_zscore: 2.5,
+  }
+
+  const rows: { k: string; label: string; val: string; isOverride: boolean }[] = [
+    { k: 'crash_mode', label: '崩盘判定模式', val: String(sp.crash_mode ?? 'absolute'), isOverride: false },
+    { k: 'crash_zscore', label: '崩盘 z 阈值', val: String(sp.crash_zscore ?? 2.5), isOverride: Number(sp.crash_zscore) !== 2.5 },
+    { k: 'vol_p60_rolling_window', label: '波动率 p60 窗口', val: String(sp.vol_p60_rolling_window), isOverride: Number(sp.vol_p60_rolling_window) !== 252 },
+    { k: 'vol_median_rolling_window', label: '波动率中位数窗口', val: String(sp.vol_median_rolling_window), isOverride: Number(sp.vol_median_rolling_window) !== 126 },
+    { k: 'zscore_rolling_window', label: 'z-score 窗口', val: String(sp.zscore_rolling_window), isOverride: Number(sp.zscore_rolling_window) !== 252 },
+    { k: 'zscore_min_periods', label: 'z-score 最小周期', val: String(sp.zscore_min_periods), isOverride: Number(sp.zscore_min_periods) !== 126 },
+    { k: 'mom_window', label: '动量窗口', val: String(sp.mom_window), isOverride: Number(sp.mom_window) !== 21 },
+    { k: 'vol_window', label: '波动率窗口', val: String(sp.vol_window), isOverride: Number(sp.vol_window) !== 21 },
+  ]
+
+  const hasOverride = rows.some((r) => r.isOverride)
+  const overlay = params?.overlay
+  const scenario = params?.scenario
+  const commission = params?.commission_mode
+  const overlayText = overlay
+    ? `有（买≤${overlay.buy_z} / 卖≥${overlay.sell_z} / Δ${overlay.delta} / 窗口${overlay.window}）`
+    : '无'
+
+  return (
+    <div className={s.note} style={{ marginTop: 12 }}>
+      <b>{meta.label}（{meta.ticker}）策略参数{hasOverride ? ' · 含自定义覆盖' : ''}</b>
+      {hasOverride && (
+        <span className={s.negKey} style={{ marginLeft: 6 }}>
+          ⚠ 该标的用了非默认窗口（上市不足 252 天，缩短窗口让 regime 可计算）
+        </span>
+      )}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+          gap: '4px 16px',
+          marginTop: 8,
+        }}
+      >
+        {rows.map((r) => (
+          <div key={r.k} style={{ fontSize: 11 }}>
+            <span style={{ color: 'var(--sub)' }}>{r.label}：</span>
+            <span
+              style={{
+                color: r.isOverride ? 'var(--warn, #f57c00)' : 'var(--ink-2)',
+                fontWeight: r.isOverride ? 600 : 400,
+              }}
+            >
+              {r.val}
+              {r.isOverride && (
+                <span style={{ color: 'var(--sub)', fontSize: 10 }}>
+                  {' '}
+                  (默认 {DEFAULTS[r.k]})
+                </span>
+              )}
+            </span>
+          </div>
+        ))}
+        <div style={{ fontSize: 11 }}>
+          <span style={{ color: 'var(--sub)' }}>叠加规则：</span>
+          <span style={{ color: 'var(--ink-2)' }}>{overlayText}</span>
+        </div>
+        <div style={{ fontSize: 11 }}>
+          <span style={{ color: 'var(--sub)' }}>调仓场景：</span>
+          <span style={{ color: 'var(--ink-2)' }}>{scenario}</span>
+        </div>
+        <div style={{ fontSize: 11 }}>
+          <span style={{ color: 'var(--sub)' }}>佣金模式：</span>
+          <span style={{ color: 'var(--ink-2)' }}>{commission}</span>
+        </div>
+      </div>
+      {hasOverride && (
+        <div style={{ marginTop: 8, fontSize: 11, color: 'var(--sub)' }}>
+          说明：该标的上市时间较短，历史数据不足 252 天，全局默认窗口会导致
+          vol_p60 / vol_med / vol_z 全部 NaN，regime 恒为 moderate 无法择时。
+          故缩短滚动窗口到 63 天、z-score 最小周期到 42 天，让短历史也能算出三档 regime。
+          待数据积累到 252 天后可删除 <code>signal_overrides</code> 字段切回默认。
+        </div>
+      )}
+    </div>
+  )
+}
+
 function SummaryTable({
   markets,
   active,
@@ -409,6 +512,8 @@ export default function TrhrpBacktestPage() {
               vol 飙升即触发 risk_off 的核心信号。
             </div>
           </div>
+
+          {result && <SignalParamsNote params={result.params} meta={result.meta} />}
 
           <RangeStatsPanel rs={rangeStats} />
 

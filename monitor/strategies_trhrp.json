@@ -220,7 +220,14 @@
       "ticker": "07399.HK",
       "proxy": "南方东英两倍做空MicroStrategy ETF(相对波动率重校准)",
       "crashMode": "relative_zscore",
-      "crashZscore": 2.5
+      "crashZscore": 1.5,
+      "signal_overrides": {
+        "_comment": "07399 上市于2025-03, 数据<252天, 全局窗口(252/126)导致信号偏moderate. 缩短到63/42让regime更敏感. 数据积累到252天后可删除此字段切回默认.",
+        "vol_p60_rolling_window": 63,
+        "vol_median_rolling_window": 63,
+        "zscore_rolling_window": 63,
+        "zscore_min_periods": 42
+      }
     }
   ],
   "regime_weights": {
