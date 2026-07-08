@@ -326,6 +326,21 @@
       "proxy": "中国移动H股(relative_zscore重校准)",
       "crashMode": "relative_zscore",
       "crashZscore": 2.5
+    },
+    {
+      "label": "HYPE",
+      "marketGroup": "crypto",
+      "ticker": "HYPE-USD",
+      "proxy": "Hyperliquid原生代币永续(HYPE/USDC:USDC, relative_zscore重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 1.5,
+      "signal_overrides": {
+        "_comment": "HYPE 上市于 2024-12, 数据<252天, 全局窗口(252/126)导致全程moderate无信号. 缩短到63/42让短历史也能算出regime. 数据积累到252天后可删除此字段切回默认.",
+        "vol_p60_rolling_window": 63,
+        "vol_median_rolling_window": 63,
+        "zscore_rolling_window": 63,
+        "zscore_min_periods": 42
+      }
     }
   ],
   "regime_weights": {
