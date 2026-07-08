@@ -405,6 +405,54 @@
       "proxy": "汇丰控股H股(relative_zscore重校准)",
       "crashMode": "relative_zscore",
       "crashZscore": 2.5
+    },
+    {
+      "label": "中证红利",
+      "marketGroup": "A股",
+      "ticker": "513100.SS",
+      "proxy": "中证红利ETF(relative_zscore重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "红利低波50",
+      "marketGroup": "A股",
+      "ticker": "515450.SS",
+      "proxy": "红利低波50ETF(relative_zscore重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "红利低波100",
+      "marketGroup": "A股",
+      "ticker": "512890.SS",
+      "proxy": "红利低波100ETF(relative_zscore重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "创业板ETF",
+      "marketGroup": "A股",
+      "ticker": "159915.SZ",
+      "proxy": "创业板ETF(relative_zscore重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "银行ETF",
+      "marketGroup": "A股",
+      "ticker": "512800.SS",
+      "proxy": "银行ETF(relative_zscore重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "券商ETF",
+      "marketGroup": "A股",
+      "ticker": "512000.SS",
+      "proxy": "券商ETF(relative_zscore重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
     }
   ],
   "regime_weights": {
