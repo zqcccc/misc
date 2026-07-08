@@ -241,18 +241,11 @@
     },
     {
       "label": "宁德时代",
-      "marketGroup": "港股",
-      "ticker": "3750.HK",
-      "proxy": "宁德时代(relative_zscore重校准)",
+      "marketGroup": "A股",
+      "ticker": "300750.SZ",
+      "proxy": "宁德时代(深交所创业板, relative_zscore重校准)",
       "crashMode": "relative_zscore",
-      "crashZscore": 1.5,
-      "signal_overrides": {
-        "_comment": "3750.HK 上市于2025-05, 数据<252天, 全局窗口(252/126)导致信号偏moderate. 缩短到63/42让regime更敏感. 数据积累到252天后可删除此字段切回默认.",
-        "vol_p60_rolling_window": 63,
-        "vol_median_rolling_window": 63,
-        "zscore_rolling_window": 63,
-        "zscore_min_periods": 42
-      }
+      "crashZscore": 2.5
     }
   ],
   "regime_weights": {
