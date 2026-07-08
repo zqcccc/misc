@@ -41,6 +41,7 @@ class MarketSpec:
     proxy: str = ""
     crash_mode: str = "absolute"          # absolute | relative_zscore
     crash_zscore: float = 2.5             # 仅 relative_zscore 模式用
+    signal_overrides: Dict[str, Any] = None  # 短历史标的可缩短窗口 (与回测脚本同口径)
 
 
 def load_config(config_path: str) -> Dict[str, Any]:
@@ -51,6 +52,9 @@ def load_config(config_path: str) -> Dict[str, Any]:
 def _markets_from_cfg(cfg: Dict[str, Any]) -> List[MarketSpec]:
     out = []
     for m in cfg.get("markets") or []:
+        # signal_overrides 里 _comment 等非参数键过滤掉
+        so_raw = m.get("signal_overrides") or {}
+        so = {k: v for k, v in so_raw.items() if not k.startswith("_")}
         out.append(MarketSpec(
             label=str(m.get("label", "?")),
             market_group=str(m.get("marketGroup", "?")),
@@ -58,6 +62,7 @@ def _markets_from_cfg(cfg: Dict[str, Any]) -> List[MarketSpec]:
             proxy=str(m.get("proxy", "") or ""),
             crash_mode=str(m.get("crashMode", "absolute") or "absolute"),
             crash_zscore=float(m.get("crashZscore", 2.5) or 2.5),
+            signal_overrides=so or None,
         ))
     return out
 
@@ -453,6 +458,9 @@ def summarize_market(spec: MarketSpec, cfg: Dict[str, Any], cache_dir: Path,
     sp = dict(sp)
     sp["crash_mode"] = spec.crash_mode
     sp["crash_zscore"] = spec.crash_zscore
+    # 短历史标的的窗口覆盖 (与回测脚本同口径)
+    if spec.signal_overrides:
+        sp.update(spec.signal_overrides)
     df = download_ohlc(spec, cache_dir, sp, warnings=warnings,
                        max_retries=max_retries, retry_backoff=retry_backoff)
     sf = build_signal_frame(df["Close"], sp)
