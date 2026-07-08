@@ -246,6 +246,86 @@
       "proxy": "宁德时代(深交所创业板, relative_zscore重校准)",
       "crashMode": "relative_zscore",
       "crashZscore": 2.5
+    },
+    {
+      "label": "VOO",
+      "marketGroup": "美股",
+      "ticker": "VOO",
+      "proxy": "Vanguard标普500ETF(relative_zscore重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "VTI",
+      "marketGroup": "美股",
+      "ticker": "VTI",
+      "proxy": "Vanguard整体股市指数ETF(relative_zscore重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "IVV",
+      "marketGroup": "美股",
+      "ticker": "IVV",
+      "proxy": "iShares标普500ETF(relative_zscore重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "AAPL",
+      "marketGroup": "美股",
+      "ticker": "AAPL",
+      "proxy": "苹果(relative_zscore重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "GOOGL",
+      "marketGroup": "美股",
+      "ticker": "GOOGL",
+      "proxy": "谷歌-A(relative_zscore重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "AMZN",
+      "marketGroup": "美股",
+      "ticker": "AMZN",
+      "proxy": "亚马逊(relative_zscore重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "NVDA",
+      "marketGroup": "美股",
+      "ticker": "NVDA",
+      "proxy": "英伟达(relative_zscore重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "建设银行",
+      "marketGroup": "港股",
+      "ticker": "0939.HK",
+      "proxy": "建设银行H股(relative_zscore重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "工商银行",
+      "marketGroup": "港股",
+      "ticker": "1398.HK",
+      "proxy": "工商银行H股(relative_zscore重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "中国移动",
+      "marketGroup": "港股",
+      "ticker": "0941.HK",
+      "proxy": "中国移动H股(relative_zscore重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
     }
   ],
   "regime_weights": {

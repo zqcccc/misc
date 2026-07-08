@@ -10,6 +10,7 @@ export interface TsPoint {
   b: number // 基准净值 (买入持有)
   c: number // 纯择时净值 (equity 权重同策略, 其余全 SGOV)
   e: number // 极致纯择时净值 (risk_on=满仓, risk_off=空仓, moderate=半仓, 其余 SGOV)
+  ro: number // risk-on满仓净值 (risk_on=满仓, moderate/risk_off 全部 SGOV 空仓)
   v: number | null // vol_21 年化波动率 (0~1, 早期可能为 null)
   r: string // regime: risk_on / moderate / risk_off
   o: string // 操作: add / reduce / hold
@@ -46,15 +47,18 @@ export interface MarketSummary {
   strat_total: number
   timing_total: number
   extreme_total: number
+  ronly_total: number
   bench_total: number
   excess: number
   timing_excess: number
   extreme_excess: number
+  ronly_excess: number
   strat_cagr: number
   bench_cagr: number
   strat_mdd: number
   timing_mdd: number
   extreme_mdd: number
+  ronly_mdd: number
   bench_mdd: number
   risk_on: number
   moderate: number
@@ -63,6 +67,16 @@ export interface MarketSummary {
   adds: number
   reduces: number
   rebalances: number
+  // —— 当前/接下来风险偏好 + 明日操作 (回测快照推演, 见 scripts/trhrp_backtest_live.py) ——
+  last_date?: string | null
+  current_regime?: string | null
+  current_operation?: string | null
+  current_equity_weight?: number | null
+  regime_outlook?: string | null
+  next_regime?: string | null
+  next_operation?: string | null
+  outlook_note?: string | null
+  outlook_dist?: number | null
 }
 
 export interface MarketResult {
@@ -73,18 +87,22 @@ export interface MarketResult {
     benchmark_total_return: number
     timing_total_return: number
     extreme_total_return: number
+    ronly_total_return: number
     excess_total_return: number
     timing_excess_total_return: number
     extreme_excess_total_return: number
+    ronly_excess_total_return: number
     strategy_cagr: number
     benchmark_cagr: number
     timing_cagr: number
     extreme_cagr: number
+    ronly_cagr: number
     excess_cagr: number
     strategy_max_drawdown: number
     benchmark_max_drawdown: number
     timing_max_drawdown: number
     extreme_max_drawdown: number
+    ronly_max_drawdown: number
     strategy_peak_date: string
     strategy_trough_date: string
     benchmark_peak_date: string
@@ -93,6 +111,8 @@ export interface MarketResult {
     timing_trough_date: string
     extreme_peak_date: string
     extreme_trough_date: string
+    ronly_peak_date: string
+    ronly_trough_date: string
     target_regime_changes: number
     rebalance_days: number
     avg_turnover_per_day: number
@@ -105,6 +125,16 @@ export interface MarketResult {
     operation_days: number
     add_days: number
     reduce_days: number
+    // —— 风险偏好推演字段 (与 MarketSummary 对应) ——
+    last_date?: string | null
+    current_regime?: string | null
+    current_operation?: string | null
+    current_equity_weight?: number | null
+    regime_outlook?: string | null
+    next_regime?: string | null
+    next_operation?: string | null
+    outlook_note?: string | null
+    outlook_dist?: number | null
   }
   timeseries: TsPoint[]
 }
@@ -124,15 +154,19 @@ export interface RangeStats {
   bRet: number
   tRet: number // 纯择时收益(区间): equity 权重同策略, 其余全 SGOV
   eRet: number // 极致纯择时收益(区间): risk_on=满仓, risk_off=空仓, moderate=半仓
+  rRet: number // risk-on满仓收益(区间): risk_on=满仓, moderate/risk_off 全部空仓
   excess: number // 策略 - 标的
   tExcess: number // 策略 - 纯择时 (即 GLD 防御腿的区间增益)
   eExcess: number // 策略 - 极致纯择时 (温和调仓相对激进切换的增益)
+  rExcess: number // 策略 - risk-on满仓 (温和调仓相对二元满仓的增益)
   sAnn: number
   bAnn: number
   tAnn: number
   eAnn: number
+  rAnn: number
   sMdd: number
   bMdd: number
   tMdd: number
   eMdd: number
+  rMdd: number
 }
