@@ -143,8 +143,20 @@ def compute_regime_outlook(current_regime, vol, vol_p60, vol_med, mom):
     next_w = _EQ_WEIGHT[next_r]
     cur_w = _EQ_WEIGHT[current_regime]
     next_op = "add" if next_w > cur_w + 1e-6 else ("reduce" if next_w < cur_w - 1e-6 else "hold")
-    note = (f"临近切换: vol {vol*100:.0f}% (风险规避线 vol_p60 {vol_p60*100:.0f}%, "
-            f"差 {(1 - max(0.0, dist))*100:.0f}%), 动量 {mom*100:+.0f}% → 预计转向 {_REGIME_CN_LOCAL.get(next_r, next_r)}")
+    if tgt == "risk_off":
+        line_name, line_val = "风险规避线 vol_p60", vol_p60
+        vol_pp = (vol - vol_p60) * 100.0
+        mom_cond = "需动量<0"
+    else:  # risk_on
+        line_name, line_val = "风险偏好线 vol_med", vol_med
+        vol_pp = (vol - vol_med) * 100.0
+        mom_cond = "需动量>0"
+    via = "" if next_r == tgt else "（经中性）"
+    note = (
+        f"临近切换至 {_REGIME_CN_LOCAL.get(tgt, tgt)}{via}（距触发约 {max(0.0, dist)*100:.0f}%）："
+        f"vol {vol*100:.0f}%（{line_name} {line_val*100:.0f}%，{vol_pp:+.1f}pp），"
+        f"动量 {mom*100:.1f}%（{mom_cond}）"
+    )
     return {
         "regime_outlook": f"watch_{tgt}",
         "next_regime": next_r,

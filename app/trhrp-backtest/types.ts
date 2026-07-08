@@ -6,10 +6,10 @@ export type RegimeCn = Record<string, string>
 
 export interface TsPoint {
   d: string // 日期 "2018-01-03"
-  s: number // 策略净值
+  s: number // 主策略净值
   b: number // 基准净值 (买入持有)
-  c: number // 纯择时净值 (equity 权重同策略, 其余全 SGOV)
-  e: number // 极致纯择时净值 (risk_on=满仓, risk_off=空仓, moderate=半仓, 其余 SGOV)
+  c: number // 股现择时净值 (equity 权重同主策略, 其余全 SGOV 现金)
+  e: number // 极值仓位净值 (risk_on=满仓, risk_off=空仓, moderate=半仓, 其余 SGOV)
   ro: number // risk-on满仓净值 (risk_on=满仓, moderate/risk_off 全部 SGOV 空仓)
   v: number | null // vol_21 年化波动率 (0~1, 早期可能为 null)
   r: string // regime: risk_on / moderate / risk_off
@@ -152,13 +152,13 @@ export interface RangeStats {
   days: number
   sRet: number
   bRet: number
-  tRet: number // 纯择时收益(区间): equity 权重同策略, 其余全 SGOV
-  eRet: number // 极致纯择时收益(区间): risk_on=满仓, risk_off=空仓, moderate=半仓
+  tRet: number // 股现择时收益(区间): equity 权重同主策略, 其余全 SGOV
+  eRet: number // 极值仓位收益(区间): risk_on=满仓, risk_off=空仓, moderate=半仓
   rRet: number // risk-on满仓收益(区间): risk_on=满仓, moderate/risk_off 全部空仓
-  excess: number // 策略 - 标的
-  tExcess: number // 策略 - 纯择时 (即 GLD 防御腿的区间增益)
-  eExcess: number // 策略 - 极致纯择时 (温和调仓相对激进切换的增益)
-  rExcess: number // 策略 - risk-on满仓 (温和调仓相对二元满仓的增益)
+  excess: number // 主策略 - 标的
+  tExcess: number // 主策略 - 股现择时 (即 GLD 防御腿的区间增益)
+  eExcess: number // 主策略 - 极值仓位 (温和调仓相对激进切换的增益)
+  rExcess: number // 主策略 - risk-on满仓 (温和调仓相对二元满仓的增益)
   sAnn: number
   bAnn: number
   tAnn: number
