@@ -341,6 +341,70 @@
         "zscore_rolling_window": 63,
         "zscore_min_periods": 42
       }
+    },
+    {
+      "label": "JPM",
+      "marketGroup": "美股",
+      "ticker": "JPM",
+      "proxy": "摩根大通(relative_zscore重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "BAC",
+      "marketGroup": "美股",
+      "ticker": "BAC",
+      "proxy": "美国银行(relative_zscore重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "MA",
+      "marketGroup": "美股",
+      "ticker": "MA",
+      "proxy": "万事达(relative_zscore重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "V",
+      "marketGroup": "美股",
+      "ticker": "V",
+      "proxy": "Visa(relative_zscore重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "LLY",
+      "marketGroup": "美股",
+      "ticker": "LLY",
+      "proxy": "礼来(relative_zscore重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "COST",
+      "marketGroup": "美股",
+      "ticker": "COST",
+      "proxy": "好市多(relative_zscore重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "DBC",
+      "marketGroup": "商品",
+      "ticker": "DBC",
+      "proxy": "Invesco DB商品ETF(relative_zscore重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "汇丰",
+      "marketGroup": "港股",
+      "ticker": "0005.HK",
+      "proxy": "汇丰控股H股(relative_zscore重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
     }
   ],
   "regime_weights": {
