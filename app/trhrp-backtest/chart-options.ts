@@ -87,9 +87,9 @@ function axisTooltip(regimeCn: RegimeCn) {
       }</span> `
       h += `<b>操作:</b> ${OP_CN[d.o] || d.o}`
       if (d.o !== 'hold') h += ` (Δ股票仓位 ${(d.dw * 100).toFixed(0)}pp)`
-      h += `<br/><b>策略净值:</b> ${d.s.toFixed(3)} &nbsp; <b>基准:</b> ${d.b.toFixed(
+      h += `<br/><b>主策略净值:</b> ${d.s.toFixed(3)} &nbsp; <b>基准:</b> ${d.b.toFixed(
         3,
-      )} &nbsp; <b>纯择时:</b> ${d.c != null ? d.c.toFixed(3) : '—'} &nbsp; <b>极致:</b> ${d.e != null ? d.e.toFixed(3) : '—'} &nbsp; <b>risk-on满仓:</b> ${d.ro != null ? d.ro.toFixed(3) : '—'}`
+      )} &nbsp; <b>股现择时:</b> ${d.c != null ? d.c.toFixed(3) : '—'} &nbsp; <b>极值仓位:</b> ${d.e != null ? d.e.toFixed(3) : '—'} &nbsp; <b>risk-on满仓:</b> ${d.ro != null ? d.ro.toFixed(3) : '—'}`
       h += `<br/><b>股票权重:</b> ${(d.we * 100).toFixed(0)}% &nbsp; <b>标的(归一):</b> ${d.p.toFixed(
         3,
       )} &nbsp; <b>vol21:</b> ${d.v != null ? (d.v * 100).toFixed(1) + '%' : '—'}`
@@ -191,9 +191,9 @@ export function buildMainOption(
     tooltip: axisTooltip(regimeCn),
     legend: {
       data: [
-        { name: '策略净值', icon: 'roundRect' },
-        { name: '纯择时净值', icon: 'roundRect' },
-        { name: '极致纯择时', icon: 'roundRect' },
+        { name: '主策略净值', icon: 'roundRect' },
+        { name: '股现择时净值', icon: 'roundRect' },
+        { name: '极值仓位', icon: 'roundRect' },
         { name: 'risk-on满仓', icon: 'roundRect' },
         { name: '标的价格(归一)', icon: 'roundRect' },
         { name: '加仓', icon: 'triangle' },
@@ -229,7 +229,7 @@ export function buildMainOption(
     dataZoom: [{ type: 'inside' }, { type: 'slider', height: 18, bottom: 24 }],
     series: [
       {
-        name: '策略净值',
+        name: '主策略净值',
         type: 'line',
         yAxisIndex: 0,
         data: navData,
@@ -238,7 +238,7 @@ export function buildMainOption(
         markArea: { silent: true, data: runs },
       },
       {
-        name: '纯择时净值',
+        name: '股现择时净值',
         type: 'line',
         yAxisIndex: 0,
         data: cashData,
@@ -246,7 +246,7 @@ export function buildMainOption(
         lineStyle: { width: 1.4, color: '#ef6c00', type: 'dashed' },
       },
       {
-        name: '极致纯择时',
+        name: '极值仓位',
         type: 'line',
         yAxisIndex: 0,
         data: extremeData,

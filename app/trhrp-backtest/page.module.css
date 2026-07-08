@@ -24,6 +24,11 @@
   --neg-bg: #fef2f2;
   --warn: #b45309;
   --warn-bg: #fffbeb;
+  --best-ink: #92400e;
+  --risk-bg: #ecfdf5;
+  --risk-border: #6ee7b7;
+  --risk-ink: #065f46;
+  --risk-star: #059669;
   --header-bg: #0b1220;
   --header-border: #1e293b;
   --header-sub: #94a3b8;
@@ -56,6 +61,11 @@
   --neg-bg: rgba(248, 113, 113, 0.08);
   --warn: #fbbf24;
   --warn-bg: rgba(251, 191, 36, 0.08);
+  --best-ink: #fcd34d;
+  --risk-bg: rgba(16, 185, 129, 0.16);
+  --risk-border: rgba(16, 185, 129, 0.45);
+  --risk-ink: #6ee7b7;
+  --risk-star: #34d399;
   --header-bg: #060912;
   --header-border: #1e293b;
   --header-sub: #64748b;
@@ -476,6 +486,27 @@
 .tableRowActive {
   background: var(--accent-bg) !important;
   box-shadow: inset 2px 0 0 var(--accent);
+}
+
+/* 每行最高总收益单元格: 仅用字体颜色(琥珀)区分, 不再加底色/星标 */
+.bestReturn {
+  color: var(--best-ink) !important;
+  font-weight: 700 !important;
+}
+
+/* 每行性价比最高(总收益 ÷ |最大回撤|, Calmar 式)单元格: 绿色高亮 + ★。
+   放在 .bestReturn 之后, 同格双命中时绿色底色优先, ★ 仍展示。 */
+.bestRisk {
+  background: var(--risk-bg) !important;
+  color: var(--risk-ink) !important;
+  font-weight: 700 !important;
+  box-shadow: inset 0 0 0 1px var(--risk-border);
+}
+
+.bestRisk::after {
+  content: ' ★';
+  color: var(--risk-star);
+  font-weight: 700;
 }
 
 /* ===== Note ===== */
