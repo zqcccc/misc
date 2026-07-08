@@ -1,18 +1,10 @@
 import Script from 'next/script'
-import AdUnit from '@/components/AdUnit'
-import AntiAdblockNotice from '@/components/AntiAdblockNotice'
-import { ADS_ENABLED, ADSENSE_CLIENT } from '@/lib/ads'
 import { Toaster } from 'sonner'
 import './globals.css'
-
-const AD_SLOT_FOOTER = '4555521397'
-const ADSENSE_SRC = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`
-const CLARITY_ID = 's8lmijoo3v'
 
 export const metadata = {
   description: "welcome to ZQC's personal website, nice to meet you",
   keywords: ['Next.js', 'React', 'JavaScript', 'blog', 'zqc', 'onlylike.work'],
-  ...(ADS_ENABLED ? { other: { 'google-adsense-account': ADSENSE_CLIENT } } : {}),
 }
 
 export const viewport = {
@@ -27,7 +19,6 @@ export default function RootLayout({
   return (
     <html lang='zh-Hans' suppressHydrationWarning>
       <head>
-        <link rel='dns-prefetch' href='https://www.clarity.ms' />
         <Script id='theme-init' strategy='beforeInteractive'>
           {`
             (function() {
@@ -45,34 +36,8 @@ export default function RootLayout({
       </head>
       <body>
         {children}
-        <AntiAdblockNotice />
-        {ADS_ENABLED && (
-          <div style={{ margin: '24px auto', maxWidth: '1200px', padding: '0 16px' }}>
-            <AdUnit slot={AD_SLOT_FOOTER} />
-          </div>
-        )}
         <Toaster richColors position='top-center' />
       </body>
-      {ADS_ENABLED && (
-        <Script
-          id='adsbygoogle'
-          src={ADSENSE_SRC}
-          strategy='afterInteractive'
-          crossOrigin='anonymous'
-        />
-      )}
-      <Script
-        id='adsterra-effectivecpm'
-        src='https://pl30246651.effectivecpmnetwork.com/bd/a4/34/bda4348ec4d86d68ab41a2a23ff03a6c.js'
-        strategy='afterInteractive'
-      />
-      <Script id='ms_clarity' strategy='lazyOnload'>
-        {`(function(c,l,a,r,i,t,y){
-          c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
-          t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
-          y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
-        })(window, document, "clarity", "script", "${CLARITY_ID}");`}
-      </Script>
     </html>
   )
 }
