@@ -198,6 +198,14 @@
       "proxy": "三倍做多QQQ(相对波动率重校准)",
       "crashMode": "relative_zscore",
       "crashZscore": 2.5
+    },
+    {
+      "label": "南方两倍海力士",
+      "marketGroup": "港股杠杆ETF",
+      "ticker": "07709.HK",
+      "proxy": "南方东英两倍做多海力士ETF(相对波动率重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
     }
   ],
   "regime_weights": {
