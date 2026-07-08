@@ -237,9 +237,10 @@ def build_signal_frame(close: pd.Series, sp: Dict[str, Any]) -> pd.DataFrame:
     vol_med = vol.rolling(med_w).median()
     vol_z = None
     if crash_mode == "relative_zscore":
-        # 崩盘 = vol 相对自身 252d 历史偏离 > crash_z 个标准差 (高波动资产用, 避免绝对 0.30 误校准)
-        vol_mean = vol.rolling(252, min_periods=126).mean()
-        vol_std = vol.rolling(252, min_periods=126).std()
+        # 崩盘 = vol 相对自身历史偏离 > crash_z 个标准差 (高波动资产用, 避免绝对 0.30 误校准)
+        # 窗口读 sp 参数, 让短历史标的可缩短 (默认 252/126 与历史行为一致)
+        vol_mean = vol.rolling(zs_w, min_periods=zs_mp).mean()
+        vol_std = vol.rolling(zs_w, min_periods=zs_mp).std()
         vol_z = (vol - vol_mean) / vol_std.replace(0.0, np.nan)
         crash_trig = vol_z > crash_z
     else:

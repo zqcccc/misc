@@ -348,6 +348,9 @@ def main() -> None:
         sp = dict(sp_base)
         sp["crash_mode"] = crash_mode
         sp["crash_zscore"] = crash_z
+        # 短历史标的 (如新上市 ETF) 可在 market 配置里加 signal_overrides 缩短窗口
+        if m.get("signal_overrides"):
+            sp.update(m["signal_overrides"])
 
         spec = eng.Spec(market=grp, label=label, ticker=ticker, currency="USD", proxy=m.get("proxy", ""))
         res = run_backtest_live(spec, usd_equity, usd_gld, usd_sgov,
