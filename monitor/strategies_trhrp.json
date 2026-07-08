@@ -93,7 +93,9 @@
       "label": "TENCENT",
       "marketGroup": "港股",
       "ticker": "0700.HK",
-      "proxy": "EMA监控移交·TRHRP适配✅"
+      "proxy": "EMA监控移交·TRHRP适配✅(relative_zscore重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
     },
     {
       "label": "BTC",
