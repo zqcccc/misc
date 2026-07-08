@@ -485,6 +485,70 @@
       "proxy": "万华化学上交所主板(relative_zscore重校准)",
       "crashMode": "relative_zscore",
       "crashZscore": 2.5
+    },
+    {
+      "label": "尤尼克斯",
+      "marketGroup": "日本个股",
+      "ticker": "7906.T",
+      "proxy": "Yonex 东京证交所(relative_zscore重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "亚玛芬体育",
+      "marketGroup": "美股",
+      "ticker": "AS",
+      "proxy": "Amer Sports 纽交所(relative_zscore重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "伯克希尔B",
+      "marketGroup": "美股",
+      "ticker": "BRK-B",
+      "proxy": "伯克希尔哈撒韦B(relative_zscore重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "强生",
+      "marketGroup": "美股",
+      "ticker": "JNJ",
+      "proxy": "强生Johnson&Johnson(relative_zscore重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "联合健康",
+      "marketGroup": "美股",
+      "ticker": "UNH",
+      "proxy": "联合健康UnitedHealth(relative_zscore重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "奥驰亚",
+      "marketGroup": "美股",
+      "ticker": "MO",
+      "proxy": "奥驰亚Altria(relative_zscore重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "诺和诺德",
+      "marketGroup": "美股",
+      "ticker": "NVO",
+      "proxy": "诺和诺德Novo Nordisk(relative_zscore重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "中信证券",
+      "marketGroup": "A股",
+      "ticker": "600030.SS",
+      "proxy": "中信证券上交所主板(relative_zscore重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
     }
   ],
   "regime_weights": {
