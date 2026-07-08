@@ -89,7 +89,7 @@ function axisTooltip(regimeCn: RegimeCn) {
       if (d.o !== 'hold') h += ` (Δ股票仓位 ${(d.dw * 100).toFixed(0)}pp)`
       h += `<br/><b>策略净值:</b> ${d.s.toFixed(3)} &nbsp; <b>基准:</b> ${d.b.toFixed(
         3,
-      )} &nbsp; <b>纯择时:</b> ${d.c != null ? d.c.toFixed(3) : '—'}`
+      )} &nbsp; <b>纯择时:</b> ${d.c != null ? d.c.toFixed(3) : '—'} &nbsp; <b>极致:</b> ${d.e != null ? d.e.toFixed(3) : '—'}`
       h += `<br/><b>股票权重:</b> ${(d.we * 100).toFixed(0)}% &nbsp; <b>标的(归一):</b> ${d.p.toFixed(
         3,
       )} &nbsp; <b>vol21:</b> ${d.v != null ? (d.v * 100).toFixed(1) + '%' : '—'}`
@@ -115,6 +115,7 @@ export function buildMainOption(
     s: pt.s,
     b: pt.b,
     c: pt.c,
+    e: pt.e,
     v: pt.v,
     p: pt.p / p0,
   }))
@@ -127,6 +128,20 @@ export function buildMainOption(
     s: pt.s,
     b: pt.b,
     c: pt.c,
+    e: pt.e,
+    v: pt.v,
+    p: pt.p / p0,
+  }))
+  const extremeData = ts.map((pt) => ({
+    value: [pt.d, pt.e],
+    r: pt.r,
+    o: pt.o,
+    dw: pt.dw,
+    we: pt.we,
+    s: pt.s,
+    b: pt.b,
+    c: pt.c,
+    e: pt.e,
     v: pt.v,
     p: pt.p / p0,
   }))
@@ -139,6 +154,7 @@ export function buildMainOption(
     s: pt.s,
     b: pt.b,
     c: pt.c,
+    e: pt.e,
     v: pt.v,
     p: pt.p / p0,
   }))
@@ -156,8 +172,17 @@ export function buildMainOption(
     textStyle: { color: t.legend },
     tooltip: axisTooltip(regimeCn),
     legend: {
-      data: ['策略净值', '纯择时净值', '标的价格(归一)', '加仓', '减仓'],
+      data: [
+        { name: '策略净值', icon: 'roundRect' },
+        { name: '纯择时净值', icon: 'roundRect' },
+        { name: '极致纯择时', icon: 'roundRect' },
+        { name: '标的价格(归一)', icon: 'roundRect' },
+        { name: '加仓', icon: 'triangle' },
+        { name: '减仓', icon: 'triangle' },
+      ],
       top: 0,
+      itemWidth: 16,
+      itemHeight: 10,
       textStyle: { color: t.legend, fontSize: 12 },
       selected: { 加仓: true, 减仓: true },
     },
@@ -200,6 +225,14 @@ export function buildMainOption(
         data: cashData,
         showSymbol: false,
         lineStyle: { width: 1.4, color: '#ef6c00', type: 'dashed' },
+      },
+      {
+        name: '极致纯择时',
+        type: 'line',
+        yAxisIndex: 0,
+        data: extremeData,
+        showSymbol: false,
+        lineStyle: { width: 1.4, color: '#6a1b9a', type: 'dotted' },
       },
       {
         name: '标的价格(归一)',
@@ -296,8 +329,15 @@ export function buildWeightOption(
       },
     },
     legend: {
-      data: ['股票仓位%', '波动率%', '加仓', '减仓'],
+      data: [
+        { name: '股票仓位%', icon: 'roundRect' },
+        { name: '波动率%', icon: 'roundRect' },
+        { name: '加仓', icon: 'triangle' },
+        { name: '减仓', icon: 'triangle' },
+      ],
       top: 0,
+      itemWidth: 16,
+      itemHeight: 10,
       textStyle: { color: t.legend, fontSize: 12 },
       selected: { 加仓: true, 减仓: true },
     },
@@ -456,17 +496,21 @@ export function computeRangeStats(
   const sRet = first.s ? last.s / first.s - 1 : 0
   const bRet = first.b ? last.b / first.b - 1 : 0
   const tRet = first.c ? last.c / first.c - 1 : 0
+  const eRet = first.e ? last.e / first.e - 1 : 0
   const excess = sRet - bRet
   const tExcess = sRet - tRet
+  const eExcess = sRet - eRet
   const days = Math.round((Date.parse(last.d) - Date.parse(first.d)) / 86400000) + 1
   const years = days / 365
   const annF = (r: number) => (years > 0 ? Math.pow(1 + r, 1 / years) - 1 : r)
   const sAnn = annF(sRet)
   const bAnn = annF(bRet)
   const tAnn = annF(tRet)
+  const eAnn = annF(eRet)
   const sMdd = maxDD(win.map((p) => p.s))
   const bMdd = maxDD(win.map((p) => p.b))
   const tMdd = maxDD(win.map((p) => p.c))
+  const eMdd = maxDD(win.map((p) => p.e))
   return {
     start: first.d,
     end: last.d,
@@ -474,13 +518,17 @@ export function computeRangeStats(
     sRet,
     bRet,
     tRet,
+    eRet,
     excess,
     tExcess,
+    eExcess,
     sAnn,
     bAnn,
     tAnn,
+    eAnn,
     sMdd,
     bMdd,
     tMdd,
+    eMdd,
   }
 }
