@@ -230,6 +230,29 @@
         "zscore_rolling_window": 63,
         "zscore_min_periods": 42
       }
+    },
+    {
+      "label": "阿里巴巴",
+      "marketGroup": "港股",
+      "ticker": "9988.HK",
+      "proxy": "阿里巴巴-W(relative_zscore重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "宁德时代",
+      "marketGroup": "港股",
+      "ticker": "3750.HK",
+      "proxy": "宁德时代(relative_zscore重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 1.5,
+      "signal_overrides": {
+        "_comment": "3750.HK 上市于2025-05, 数据<252天, 全局窗口(252/126)导致信号偏moderate. 缩短到63/42让regime更敏感. 数据积累到252天后可删除此字段切回默认.",
+        "vol_p60_rolling_window": 63,
+        "vol_median_rolling_window": 63,
+        "zscore_rolling_window": 63,
+        "zscore_min_periods": 42
+      }
     }
   ],
   "regime_weights": {
