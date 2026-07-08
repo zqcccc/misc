@@ -20,6 +20,28 @@ function clsColor(x: number): string {
   return ''
 }
 
+// 风险偏好语义色 (与图表图例一致): 绿=风险偏好/进攻, 黄=中性, 红=风险规避. 非涨跌色.
+const REGIME_BG: Record<string, string> = {
+  risk_on: '#2e7d32',
+  moderate: '#f9a825',
+  risk_off: '#c62828',
+}
+// 操作跟随图表 A股惯例: 加仓=红/up, 减仓=绿/down
+const OP_LABEL: Record<string, string> = { add: '加仓', reduce: '减仓', hold: '持有' }
+const OP_ARROW: Record<string, string> = { add: '▲', reduce: '▼', hold: '—' }
+const OP_COLOR: Record<string, string> = {
+  add: '#c62828',
+  reduce: '#2e7d32',
+  hold: 'var(--sub)',
+}
+function regimeCnLabel(
+  regime: string | null | undefined,
+  cn: Record<string, string>,
+): string {
+  if (!regime) return '—'
+  return cn[regime] || regime
+}
+
 function StatCard({
   label,
   value,
@@ -50,10 +72,12 @@ function Sidebar({
   markets,
   active,
   onSelect,
+  regimeCn,
 }: {
   markets: MarketSummary[]
   active: string
   onSelect: (label: string) => void
+  regimeCn: Record<string, string>
 }) {
   const groups = useMemo(() => {
     const g: Record<string, MarketSummary[]> = {}
@@ -70,15 +94,46 @@ function Sidebar({
           <div className={s.groupHeader}>{grp}</div>
           {items.map((m) => {
             const isActive = m.label === active
-            const excessCls = clsColor(m.excess)
+            // 右侧数字: 极致超额(策略 − 极致纯择时), 取代原"超额"
+            const excessCls = clsColor(m.extreme_excess)
+            const rc = m.current_regime
+            const rcBg = rc ? REGIME_BG[rc] : '#9e9e9e'
+            const no = m.next_operation
+            const nextOpArrow = no && no !== 'hold' ? OP_ARROW[no] : null
+            const nextOpColor = no && no !== 'hold' ? OP_COLOR[no] : null
+            const title = [
+              `当前风险偏好: ${regimeCnLabel(rc, regimeCn)}`,
+              `最新操作: ${OP_LABEL[m.current_operation || 'hold'] || '—'}`,
+              m.next_regime
+                ? `预计明日: ${regimeCnLabel(m.next_regime, regimeCn)} / ${OP_LABEL[no || 'hold']}`
+                : '',
+              m.outlook_note ? `预警: ${m.outlook_note}` : '',
+              m.last_date ? `数据截至 ${m.last_date}` : '',
+            ]
+              .filter(Boolean)
+              .join('\n')
             return (
               <button
                 key={m.label}
                 onClick={() => onSelect(m.label)}
                 className={`${s.symBtn} ${isActive ? s.symBtnActive : ''}`}
+                title={title}
+                style={{ gap: 6 }}
               >
                 <span
                   style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    background: rcBg,
+                    flexShrink: 0,
+                    boxShadow: '0 0 0 1px rgba(0,0,0,0.12) inset',
+                  }}
+                />
+                <span
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap',
@@ -87,11 +142,31 @@ function Sidebar({
                   {m.label}
                 </span>
                 <span
-                  className={`${s.symExcess} ${
-                    isActive ? s.symExcessActive : excessCls
-                  }`}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    flexShrink: 0,
+                  }}
                 >
-                  {fmtPct(m.excess, 0)}
+                  {nextOpArrow && (
+                    <span
+                      style={{
+                        color: nextOpColor,
+                        fontSize: 10,
+                        fontWeight: 700,
+                      }}
+                    >
+                      {nextOpArrow}
+                    </span>
+                  )}
+                  <span
+                    className={`${s.symExcess} ${
+                      isActive ? s.symExcessActive : excessCls
+                    }`}
+                  >
+                    {fmtPct(m.extreme_excess, 0)}
+                  </span>
                 </span>
               </button>
             )
@@ -114,6 +189,7 @@ function RangeStatsPanel({ rs }: { rs: RangeStats | null }) {
     { k: '策略收益(区间)', v: fmtPct(rs.sRet), cls: clsColor(rs.sRet) },
     { k: '纯择时收益(区间)', v: fmtPct(rs.tRet), cls: clsColor(rs.tRet) },
     { k: '极致纯择时收益(区间)', v: fmtPct(rs.eRet), cls: clsColor(rs.eRet) },
+    { k: 'risk-on满仓收益(区间)', v: fmtPct(rs.rRet), cls: clsColor(rs.rRet) },
     { k: '标的收益(区间)', v: fmtPct(rs.bRet), cls: clsColor(rs.bRet) },
     { k: '超额(策略−标的)', v: fmtPct(rs.excess), cls: clsColor(rs.excess) },
     {
@@ -126,13 +202,20 @@ function RangeStatsPanel({ rs }: { rs: RangeStats | null }) {
       v: fmtPct(rs.eExcess),
       cls: clsColor(rs.eExcess),
     },
+    {
+      k: '二元增益(策略−满仓)',
+      v: fmtPct(rs.rExcess),
+      cls: clsColor(rs.rExcess),
+    },
     { k: '策略最大回撤', v: pct(rs.sMdd), cls: s.neg },
     { k: '纯择时最大回撤', v: pct(rs.tMdd), cls: s.neg },
     { k: '极致最大回撤', v: pct(rs.eMdd), cls: s.neg },
+    { k: '满仓最大回撤', v: pct(rs.rMdd), cls: s.neg },
     { k: '标的最大回撤', v: pct(rs.bMdd), cls: s.neg },
     { k: '策略年化', v: fmtPct(rs.sAnn), cls: clsColor(rs.sAnn) },
     { k: '纯择时年化', v: fmtPct(rs.tAnn), cls: clsColor(rs.tAnn) },
     { k: '极致年化', v: fmtPct(rs.eAnn), cls: clsColor(rs.eAnn) },
+    { k: '满仓年化', v: fmtPct(rs.rAnn), cls: clsColor(rs.rAnn) },
     { k: '标的年化', v: fmtPct(rs.bAnn), cls: clsColor(rs.bAnn) },
   ]
   return (
@@ -148,6 +231,84 @@ function RangeStatsPanel({ rs }: { rs: RangeStats | null }) {
             <div className={`${s.rangeVal} ${c.cls}`}>{c.v}</div>
           </div>
         ))}
+      </div>
+    </div>
+  )
+}
+
+function RiskStatusPanel({
+  summary,
+  regimeCn,
+}: {
+  summary: MarketResult['summary']
+  regimeCn: Record<string, string>
+}) {
+  if (!summary) return null
+  const cur = summary.current_regime
+  const next = summary.next_regime
+  const curOp = summary.current_operation || 'hold'
+  const nextOp = summary.next_operation || 'hold'
+  const outlook = summary.regime_outlook
+  const isUnknown = outlook === 'unknown'
+  const badge = (r: string | null | undefined) =>
+    r ? (
+      <span className={s.riskBadge} style={{ background: REGIME_BG[r] }}>
+        {regimeCnLabel(r, regimeCn)}
+      </span>
+    ) : (
+      <span className={s.riskBadgeMuted}>—</span>
+    )
+  return (
+    <div className={s.card}>
+      <div className={s.cardHeader}>
+        <h3 className={s.cardTitle}>风险偏好状态（回测快照推演）</h3>
+      </div>
+      <div className={s.riskGrid}>
+        <div className={s.riskCell}>
+          <div className={s.riskKey}>当前风险偏好</div>
+          <div className={s.riskVal}>{badge(cur)}</div>
+        </div>
+        <div className={s.riskCell}>
+          <div className={s.riskKey}>最新操作</div>
+          <div className={s.riskVal} style={{ color: OP_COLOR[curOp] }}>
+            {OP_ARROW[curOp]} {OP_LABEL[curOp]}
+          </div>
+        </div>
+        <div className={s.riskCell}>
+          <div className={s.riskKey}>
+            预计下一风险偏好<span className={s.riskTag}>预计</span>
+          </div>
+          <div className={s.riskVal}>{badge(next)}</div>
+        </div>
+        <div className={s.riskCell}>
+          <div className={s.riskKey}>
+            预计明日操作<span className={s.riskTag}>预计</span>
+          </div>
+          <div className={s.riskVal} style={{ color: OP_COLOR[nextOp] }}>
+            {OP_ARROW[nextOp]} {OP_LABEL[nextOp]}
+          </div>
+        </div>
+        <div className={s.riskCell}>
+          <div className={s.riskKey}>数据截至</div>
+          <div className={s.riskVal}>{summary.last_date || '—'}</div>
+        </div>
+        <div className={s.riskCell}>
+          <div className={s.riskKey}>当前股票仓位</div>
+          <div className={s.riskVal}>
+            {summary.current_equity_weight != null
+              ? `${(summary.current_equity_weight * 100).toFixed(0)}%`
+              : '—'}
+          </div>
+        </div>
+      </div>
+      {summary.outlook_note && (
+        <div className={isUnknown ? s.riskNote : s.riskWarn}>
+          {summary.outlook_note}
+        </div>
+      )}
+      <div className={s.riskNote}>
+        说明：回测为历史快照，无明日行情，故“预计”项为按最新收盘信号黏性外推、非实时交易指令；仅当最新信号临近切换阈值（10%
+        缓冲）才向前推一档。风险偏好色：绿=偏好·黄=中性·红=规避（语义色，非涨跌）；操作色：红=加仓·绿=减仓（A股惯例）。
       </div>
     </div>
   )
@@ -279,10 +440,13 @@ function SummaryTable({
     { label: '超额(策略−基准)', key: 'excess', fmt: 'signed' },
     { label: '择时超额(策略−纯择时)', key: 'timing_excess', fmt: 'signed' },
     { label: '极致超额(策略−极致)', key: 'extreme_excess', fmt: 'signed' },
+    { label: 'risk-on满仓总收益', key: 'ronly_total', fmt: 'signed' },
+    { label: '满仓超额(策略−满仓)', key: 'ronly_excess', fmt: 'signed' },
     { label: '策略CAGR', key: 'strat_cagr', fmt: 'signed' },
     { label: '策略MDD', key: 'strat_mdd', fmt: 'pct' },
     { label: '纯择时MDD', key: 'timing_mdd', fmt: 'pct' },
     { label: '极致MDD', key: 'extreme_mdd', fmt: 'pct' },
+    { label: '满仓MDD', key: 'ronly_mdd', fmt: 'pct' },
     { label: '基准MDD', key: 'bench_mdd', fmt: 'pct' },
     { label: '偏好天', key: 'risk_on', fmt: 'int' },
     { label: '中性天', key: 'moderate', fmt: 'int' },
@@ -429,6 +593,7 @@ export default function TrhrpBacktestPage() {
             markets={data.markets}
             active={activeLabel}
             onSelect={setActiveLabel}
+            regimeCn={data?.regime_cn || {}}
           />
         </aside>
 
@@ -449,6 +614,11 @@ export default function TrhrpBacktestPage() {
                 label='超额收益'
                 value={signed(sm.excess_total_return)}
                 tone={sm.excess_total_return >= 0 ? 'pos' : 'neg'}
+              />
+              <StatCard
+                label='risk-on满仓总收益'
+                value={signed(sm.ronly_total_return)}
+                tone={sm.ronly_total_return >= 0 ? 'pos' : 'neg'}
               />
               <StatCard
                 label='策略 CAGR'
@@ -485,6 +655,13 @@ export default function TrhrpBacktestPage() {
             </div>
           )}
 
+          {sm && (
+            <RiskStatusPanel
+              summary={sm}
+              regimeCn={data?.regime_cn || {}}
+            />
+          )}
+
           <div className={s.card}>
             {resultLoading && !result && (
               <div className={s.loadingHint}>加载标的序列…</div>
@@ -494,7 +671,8 @@ export default function TrhrpBacktestPage() {
               <b>绿带</b>=风险偏好 · <b>黄带</b>=中性 · <b>红带</b>=风险规避；▲红=加仓，
               ▼绿=减仓（落在归一价曲线上）。左轴净值、右轴归一价。
               <b style={{ color: '#ef6c00' }}>橙虚线</b>=纯择时净值（equity 权重同策略，其余全 SGOV，不含 GLD 防御腿）；
-              <b style={{ color: '#6a1b9a' }}>紫点线</b>=极致纯择时（risk_on=满仓 / risk_off=空仓 / moderate=半仓，非标的全 SGOV）。
+              <b style={{ color: '#6a1b9a' }}>紫点线</b>=极致纯择时（risk_on=满仓 / risk_off=空仓 / moderate=半仓，非标的全 SGOV）；
+              <b style={{ color: '#00838f' }}>青虚线</b>=risk-on满仓（仅 risk_on 满仓 equity，moderate/risk_off 全部 SGOV 空仓，二元择时）。
             </div>
           </div>
 

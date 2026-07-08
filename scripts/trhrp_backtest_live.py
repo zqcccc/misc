@@ -64,6 +64,7 @@ def compact_ts(ts_rows: list) -> list:
             "b": r["benchmark_nav"],
             "c": r["cash_nav"],
             "e": r["extreme_nav"],
+            "ro": r["ronly_nav"],
             "v": r["vol_21"],
             "r": r["regime"],
             "o": r["operation"],
@@ -72,6 +73,85 @@ def compact_ts(ts_rows: list) -> list:
             "p": r["equity_close"],
         })
     return out
+
+
+_REGIME_CN_LOCAL = {"risk_on": "风险偏好", "moderate": "中性", "risk_off": "风险规避"}
+# 三档基础股票权重 (与 eng.REGIME_WEIGHTS 一致); overlay 微调不影响"黏性投影"的方向判断
+_EQ_WEIGHT = {"risk_on": 0.80, "moderate": 0.50, "risk_off": 0.20}
+
+
+def compute_regime_outlook(current_regime, vol, vol_p60, vol_med, mom):
+    """基于最新一日信号分量, 推演"接下来风险偏好"与"明日操作".
+
+    重要边界: 回测是历史快照, 无 T+1 数据, 故 next_regime / next_operation 是
+    **按当前信号黏性外推的"预计"**, 非确定事实. 仅当最新信号分量已临近切换阈值
+    (10% 缓冲内) 时才把 next 推到相邻档, 否则 next = 当前 (维持/持有).
+
+    返回 dict:
+      regime_outlook: 'stable' | 'watch_risk_off' | 'watch_risk_on' | 'unknown'
+      next_regime:    str | None  (预计下一档; 黏性=当前, 临近切换时取相邻档)
+      next_operation: 'hold' | 'add' | 'reduce'
+      outlook_note:    str  (中文说明, 含分量与阈值对比)
+      outlook_dist:    float (0~1, 越小越临近切换; stable/unknown 时为 1.0)
+    """
+    if current_regime is None or vol is None or vol_p60 is None or vol_med is None or mom is None:
+        return {
+            "regime_outlook": "unknown",
+            "next_regime": current_regime,
+            "next_operation": "hold",
+            "outlook_note": "最新信号分量不足 (warm-up 未跑完或数据缺失), 无法推演",
+            "outlook_dist": 1.0,
+        }
+
+    WATCH = 0.10  # 距阈值 10% 内视为"临近切换"
+
+    # 到 risk_off 的距离: 需 (vol > vol_p60) 且 (mom < 0). 两约束都要满足,
+    # 取"更不紧迫"的那个 (max of normalized gaps).
+    vol_gap_off = (vol_p60 - vol) / vol_p60 if vol_p60 > 0 else 1.0
+    mom_gap_off = mom  # 动量需 <0; 当前 >0 表示还差这么远
+    dist_off = max(vol_gap_off, mom_gap_off)
+    # 到 risk_on 的距离: 需 (vol <= vol_med) 且 (mom > 0) (crash 已含在 regime 里)
+    vol_gap_on = (vol - vol_med) / vol_med if vol_med > 0 else 1.0
+    mom_gap_on = -mom  # 动量需 >0
+    dist_on = max(vol_gap_on, mom_gap_on)
+
+    candidates = []
+    if current_regime != "risk_off":
+        candidates.append(("risk_off", dist_off))
+    if current_regime != "risk_on":
+        candidates.append(("risk_on", dist_on))
+
+    best = None
+    for tgt, dist in candidates:
+        d = max(0.0, dist)
+        if d < WATCH and (best is None or d < best[1]):
+            best = (tgt, d)
+
+    if best is None:
+        return {
+            "regime_outlook": "stable",
+            "next_regime": current_regime,
+            "next_operation": "hold",
+            "outlook_note": (f"信号稳定 ({_REGIME_CN_LOCAL.get(current_regime, current_regime)}), "
+                             f"距切换阈值尚远, 预计明日维持"),
+            "outlook_dist": 1.0,
+        }
+
+    tgt, dist = best
+    # risk_on<->risk_off 之间必经 moderate, 投影下一档取其相邻档
+    next_r = "moderate" if {current_regime, tgt} == {"risk_on", "risk_off"} else tgt
+    next_w = _EQ_WEIGHT[next_r]
+    cur_w = _EQ_WEIGHT[current_regime]
+    next_op = "add" if next_w > cur_w + 1e-6 else ("reduce" if next_w < cur_w - 1e-6 else "hold")
+    note = (f"临近切换: vol {vol*100:.0f}% (风险规避线 vol_p60 {vol_p60*100:.0f}%, "
+            f"差 {(1 - max(0.0, dist))*100:.0f}%), 动量 {mom*100:+.0f}% → 预计转向 {_REGIME_CN_LOCAL.get(next_r, next_r)}")
+    return {
+        "regime_outlook": f"watch_{tgt}",
+        "next_regime": next_r,
+        "next_operation": next_op,
+        "outlook_note": note,
+        "outlook_dist": max(0.0, dist),
+    }
 
 
 def run_backtest_live(spec, usd_equity, usd_gld, usd_sgov, scenario, overlay,
@@ -130,6 +210,15 @@ def run_backtest_live(spec, usd_equity, usd_gld, usd_sgov, scenario, overlay,
         "equity": _EXTREME_EQ[str(target_regime.iloc[0])],
         "GLD": 0.0,
         "SGOV": 1.0 - _EXTREME_EQ[str(target_regime.iloc[0])],
+    }
+    # 「risk-on 满仓」: 只在 risk_on 时满仓(1.0)进标的, 其余情况(moderate+risk_off)全 SGOV 不进.
+    # 即最严格的二元择时: 非风险偏好时段一律空仓(防御腿), 只看"risk_on 信号"是否值得满仓跟随.
+    _RONLY_EQ = {"risk_on": 1.0, "moderate": 0.0, "risk_off": 0.0}
+    ronly_close = [initial_capital]
+    ronly_current_weights = {
+        "equity": _RONLY_EQ[str(target_regime.iloc[0])],
+        "GLD": 0.0,
+        "SGOV": 1.0 - _RONLY_EQ[str(target_regime.iloc[0])],
     }
     target_regime_changes = int((target_regime != target_regime.shift(1)).sum())
     rebalance_days = 0
@@ -202,6 +291,18 @@ def run_backtest_live(spec, usd_equity, usd_gld, usd_sgov, scenario, overlay,
         ext_day_close = (ext_eq_next * float(equity_ret.loc[date, "close"])
                          + (1.0 - ext_eq_next) * float(sgov_ret.loc[date, "close"]))
         extreme_close.append(ext_nav_after_cost * (1.0 + ext_day_close))
+
+        # risk-on 满仓: 仅 risk_on 满仓(1.0), moderate+risk_off 全 SGOV 不进, 同口径扣成本
+        ronly_eq_next = _RONLY_EQ[state]
+        ronly_next_weights = {"equity": ronly_eq_next, "GLD": 0.0, "SGOV": 1.0 - ronly_eq_next}
+        ronly_nav_before = float(ronly_close[-1])
+        ronly_trade_cost = eng.calc_trade_cost(spec.market, ronly_nav_before,
+                                               ronly_current_weights, ronly_next_weights, prices)
+        ronly_nav_after_cost = max(ronly_nav_before - ronly_trade_cost, 0.0)
+        ronly_current_weights = ronly_next_weights
+        ronly_day_close = (ronly_eq_next * float(equity_ret.loc[date, "close"])
+                           + (1.0 - ronly_eq_next) * float(sgov_ret.loc[date, "close"]))
+        ronly_close.append(ronly_nav_after_cost * (1.0 + ronly_day_close))
         prev_bench = float(bench_close[-1])
         bench_high.append(prev_bench * (1.0 + float(equity_ret.loc[date, "high"])))
         bench_low.append(prev_bench * (1.0 + float(equity_ret.loc[date, "low"])))
@@ -225,6 +326,7 @@ def run_backtest_live(spec, usd_equity, usd_gld, usd_sgov, scenario, overlay,
             "benchmark_nav": round(bench_close[-1] / initial_capital, 6),
             "cash_nav": round(cash_close[-1] / initial_capital, 6),
             "extreme_nav": round(extreme_close[-1] / initial_capital, 6),
+            "ronly_nav": round(ronly_close[-1] / initial_capital, 6),
             "vol_21": None if pd.isna(vol_val) else round(float(vol_val), 6),
             "regime": state,
             "regime_changed": prev_regime is not None and state != prev_regime,
@@ -246,20 +348,24 @@ def run_backtest_live(spec, usd_equity, usd_gld, usd_sgov, scenario, overlay,
     bl = pd.Series(bench_low, index=frame.index)
     cc = pd.Series(cash_close[1:], index=frame.index)
     ec = pd.Series(extreme_close[1:], index=frame.index)
+    rcc = pd.Series(ronly_close[1:], index=frame.index)
     strat_total = float(sc.iloc[-1] / initial_capital - 1.0)
     bench_total = float(bc.iloc[-1] / initial_capital - 1.0)
     timing_total = float(cc.iloc[-1] / initial_capital - 1.0)
     extreme_total = float(ec.iloc[-1] / initial_capital - 1.0)
+    ronly_total = float(rcc.iloc[-1] / initial_capital - 1.0)
     years = max(len(frame) / 252.0, 1e-9)
     strat_cagr = float(sc.iloc[-1] / initial_capital) ** (1.0 / years) - 1.0
     bench_cagr = float(bc.iloc[-1] / initial_capital) ** (1.0 / years) - 1.0
     timing_cagr = float(cc.iloc[-1] / initial_capital) ** (1.0 / years) - 1.0
     extreme_cagr = float(ec.iloc[-1] / initial_capital) ** (1.0 / years) - 1.0
+    ronly_cagr = float(rcc.iloc[-1] / initial_capital) ** (1.0 / years) - 1.0
     strat_mdd, sp_d, st_d = eng.scan_max_drawdown(sh / initial_capital, sl / initial_capital)
     bench_mdd, bp, bt = eng.scan_max_drawdown(bh / initial_capital, bl / initial_capital)
     # 纯择时只有 close 序列, 用 close 自身做 peak/through 近似 MDD (与策略同口径的 close-only MDD)
     timing_mdd, tp_d, tt_d = eng.scan_max_drawdown(cc / initial_capital, cc / initial_capital)
     extreme_mdd, ep_d, et_d = eng.scan_max_drawdown(ec / initial_capital, ec / initial_capital)
+    ronly_mdd, rp_d, rt_d = eng.scan_max_drawdown(rcc / initial_capital, rcc / initial_capital)
     n_ops = sum(1 for r in daily_records if r["operation"] != "hold")
     n_add = sum(1 for r in daily_records if r["operation"] == "add")
     n_reduce = sum(1 for r in daily_records if r["operation"] == "reduce")
@@ -267,20 +373,25 @@ def run_backtest_live(spec, usd_equity, usd_gld, usd_sgov, scenario, overlay,
         "strategy_total_return": strat_total, "benchmark_total_return": bench_total,
         "timing_total_return": timing_total,
         "extreme_total_return": extreme_total,
+        "ronly_total_return": ronly_total,
         "excess_total_return": float(strat_total - bench_total),
         "timing_excess_total_return": float(strat_total - timing_total),
         "extreme_excess_total_return": float(strat_total - extreme_total),
+        "ronly_excess_total_return": float(strat_total - ronly_total),
         "strategy_cagr": strat_cagr, "benchmark_cagr": bench_cagr,
         "timing_cagr": timing_cagr,
         "extreme_cagr": extreme_cagr,
+        "ronly_cagr": ronly_cagr,
         "excess_cagr": float(strat_cagr - bench_cagr),
         "strategy_max_drawdown": float(strat_mdd), "benchmark_max_drawdown": float(bench_mdd),
         "timing_max_drawdown": float(timing_mdd),
         "extreme_max_drawdown": float(extreme_mdd),
+        "ronly_max_drawdown": float(ronly_mdd),
         "strategy_peak_date": sp_d, "strategy_trough_date": st_d,
         "benchmark_peak_date": bp, "benchmark_trough_date": bt,
         "timing_peak_date": tp_d, "timing_trough_date": tt_d,
         "extreme_peak_date": ep_d, "extreme_trough_date": et_d,
+        "ronly_peak_date": rp_d, "ronly_trough_date": rt_d,
         "target_regime_changes": target_regime_changes, "rebalance_days": rebalance_days,
         "avg_turnover_per_day": float(turnover_sum / max(len(frame), 1)),
         "strategy_total_commission": float(total_commission),
@@ -290,6 +401,32 @@ def run_backtest_live(spec, usd_equity, usd_gld, usd_sgov, scenario, overlay,
         "risk_off_days": int(regime_days["risk_off"]),
         "operation_days": n_ops, "add_days": n_add, "reduce_days": n_reduce,
     }
+
+    # —— 当前/接下来风险偏好 + 明日操作 推演 (详见 compute_regime_outlook 边界说明) ——
+    last_rec = daily_records[-1]
+    last_date = last_rec["date"]
+    current_regime = last_rec["regime"]
+    current_operation = last_rec["operation"]
+    current_equity_weight = last_rec["weight_equity"]
+    try:
+        _ls = sig_frame.loc[frame.index[-1]]
+    except (KeyError, IndexError):
+        _ls = sig_frame.iloc[-1]
+    vol_T = None if pd.isna(_ls.get("vol")) else float(_ls["vol"])
+    vol_p60_T = None if pd.isna(_ls.get("vol_p60")) else float(_ls["vol_p60"])
+    vol_med_T = None if pd.isna(_ls.get("vol_med")) else float(_ls["vol_med"])
+    mom_T = None if pd.isna(_ls.get("mom")) else float(_ls["mom"])
+    outlook = compute_regime_outlook(current_regime, vol_T, vol_p60_T, vol_med_T, mom_T)
+    summary["last_date"] = last_date
+    summary["current_regime"] = current_regime
+    summary["current_operation"] = current_operation
+    summary["current_equity_weight"] = current_equity_weight
+    summary["regime_outlook"] = outlook["regime_outlook"]
+    summary["next_regime"] = outlook["next_regime"]
+    summary["next_operation"] = outlook["next_operation"]
+    summary["outlook_note"] = outlook["outlook_note"]
+    summary["outlook_dist"] = outlook["outlook_dist"]
+
     return {
         "meta": {"market": spec.market, "label": spec.label, "ticker": spec.ticker,
                  "proxy": spec.proxy, "scenario": scenario, "currency": spec.currency,
@@ -367,14 +504,23 @@ def main() -> None:
             "strat_total": s["strategy_total_return"], "bench_total": s["benchmark_total_return"],
             "timing_total": s["timing_total_return"],
             "extreme_total": s["extreme_total_return"],
+            "ronly_total": s["ronly_total_return"],
             "excess": s["excess_total_return"], "timing_excess": s["timing_excess_total_return"],
             "extreme_excess": s["extreme_excess_total_return"],
+            "ronly_excess": s["ronly_excess_total_return"],
             "strat_cagr": s["strategy_cagr"], "bench_cagr": s["benchmark_cagr"],
             "strat_mdd": s["strategy_max_drawdown"], "bench_mdd": s["benchmark_max_drawdown"],
             "timing_mdd": s["timing_max_drawdown"],
             "extreme_mdd": s["extreme_max_drawdown"],
+            "ronly_mdd": s["ronly_max_drawdown"],
             "risk_on": s["risk_on_days"], "moderate": s["moderate_days"], "risk_off": s["risk_off_days"],
             "ops": s["operation_days"], "adds": s["add_days"], "reduces": s["reduce_days"], "rebalances": s["rebalance_days"],
+            # —— 当前/接下来风险偏好 + 明日操作 (供 Sidebar/详情展示) ——
+            "last_date": s["last_date"], "current_regime": s["current_regime"],
+            "current_operation": s["current_operation"], "current_equity_weight": s["current_equity_weight"],
+            "regime_outlook": s["regime_outlook"], "next_regime": s["next_regime"],
+            "next_operation": s["next_operation"], "outlook_note": s["outlook_note"],
+            "outlook_dist": s["outlook_dist"],
         })
         all_results.append({"meta": res["meta"], "params": res["params"], "summary": res["summary"],
                             "timeseries": compact_ts(res["timeseries"])})
