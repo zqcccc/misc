@@ -4,8 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { useOverview, useMarketResult, useConnectedCharts } from './hooks'
 import type { MarketResult, MarketSummary, RangeStats } from './types'
-import { signed, pct } from './chart-options'
-import s from './page.module.css'
+import { signed, pct, fmtPrice } from './chart-options'
 
 const REFRESH_MS = 60_000
 
@@ -16,8 +15,8 @@ function fmtPct(v: number | undefined | null, digits = 2): string {
 }
 
 function clsColor(x: number): string {
-  if (x > 0.0001) return s.pos
-  if (x < -0.0001) return s.neg
+  if (x > 0.0001) return '!text-[var(--pos)]'
+  if (x < -0.0001) return '!text-[var(--neg)]'
   return ''
 }
 
@@ -74,15 +73,23 @@ function StatCard({
 }) {
   const valueCls =
     tone === 'pos'
-      ? s.pos
+      ? '!text-[var(--pos)]'
       : tone === 'neg'
-        ? s.neg
+        ? '!text-[var(--neg)]'
         : ''
   return (
-    <div className={s.stat}>
-      <div className={s.statLabel}>{label}</div>
-      <div className={`${s.statValue} ${valueCls}`}>{value}</div>
-      {sub && <div className={s.statSub}>{sub}</div>}
+    <div className="bg-[var(--surface-2)] border border-transparent rounded-lg px-3 py-2.5 flex flex-col gap-0.5 hover:bg-[var(--surface-hover)] hover:border-[color:var(--border-trhrp)] transition">
+      <div className="text-[10.5px] font-medium text-[var(--sub-2)] uppercase tracking-[0.06em]">
+        {label}
+      </div>
+      <div
+        className={`text-[18px] font-semibold tracking-tight text-[var(--ink)] tabular-nums leading-tight ${valueCls}`}
+      >
+        {value}
+      </div>
+      {sub && (
+        <div className="text-[11px] text-[var(--sub-2)] tabular-nums">{sub}</div>
+      )}
     </div>
   )
 }
@@ -110,7 +117,9 @@ function Sidebar({
     <>
       {Object.entries(groups).map(([grp, items]) => (
         <div key={grp}>
-          <div className={s.groupHeader}>{grp}</div>
+          <div className="px-4 pt-3.5 pb-1.5 text-[10.5px] font-semibold text-[var(--sub-2)] uppercase tracking-[0.08em] max-md:hidden">
+            {grp}
+          </div>
           {items.map((m) => {
             const isActive = m.label === active
             // 右侧数字: risk-on满仓 相对 基准(buy&hold) 的超额 = ronly_total − bench_total
@@ -137,7 +146,11 @@ function Sidebar({
               <button
                 key={m.label}
                 onClick={() => onSelect(m.label)}
-                className={`${s.symBtn} ${isActive ? s.symBtnActive : ''}`}
+                className={`flex items-center justify-between gap-2 w-full pl-3 pr-4 py-[7px] border-l-2 border-l-transparent bg-transparent text-[var(--ink-2)] text-[13px] text-left cursor-pointer hover:bg-[var(--surface-hover)] transition max-md:w-auto max-md:shrink-0 max-md:border-l-0 max-md:border-b-2 max-md:border-b-transparent max-md:px-2.5 max-md:py-1.5 ${
+                  isActive
+                    ? 'bg-[var(--accent-bg)] border-l-[color:var(--accent-trhrp)] text-[var(--accent-strong)] font-semibold max-md:border-l-0 max-md:border-b-[color:var(--accent-trhrp)]'
+                    : ''
+                }`}
                 title={title}
                 style={{ gap: 6 }}
               >
@@ -182,8 +195,8 @@ function Sidebar({
                     </span>
                   )}
                   <span
-                    className={`${s.symExcess} ${
-                      isActive ? s.symExcessActive : excessCls
+                    className={`text-[11.5px] tabular-nums text-[var(--sub-2)] shrink-0 ${
+                      isActive ? 'text-[var(--accent-strong)]' : excessCls
                     }`}
                   >
                     {fmtPct(ronlyVsBase, 0)}
@@ -228,11 +241,11 @@ function RangeStatsPanel({ rs }: { rs: RangeStats | null }) {
       v: fmtPct(rs.rExcess),
       cls: clsColor(rs.rExcess),
     },
-    { k: '主策略最大回撤', v: pct(rs.sMdd), cls: s.neg },
-    { k: '股现择时最大回撤', v: pct(rs.tMdd), cls: s.neg },
-    { k: '极值仓位最大回撤', v: pct(rs.eMdd), cls: s.neg },
-    { k: 'risk-on满仓最大回撤', v: pct(rs.rMdd), cls: s.neg },
-    { k: '标的最大回撤', v: pct(rs.bMdd), cls: s.neg },
+    { k: '主策略最大回撤', v: pct(rs.sMdd), cls: '!text-[var(--neg)]' },
+    { k: '股现择时最大回撤', v: pct(rs.tMdd), cls: '!text-[var(--neg)]' },
+    { k: '极值仓位最大回撤', v: pct(rs.eMdd), cls: '!text-[var(--neg)]' },
+    { k: 'risk-on满仓最大回撤', v: pct(rs.rMdd), cls: '!text-[var(--neg)]' },
+    { k: '标的最大回撤', v: pct(rs.bMdd), cls: '!text-[var(--neg)]' },
     { k: '主策略年化', v: fmtPct(rs.sAnn), cls: clsColor(rs.sAnn) },
     { k: '股现择时年化', v: fmtPct(rs.tAnn), cls: clsColor(rs.tAnn) },
     { k: '极值仓位年化', v: fmtPct(rs.eAnn), cls: clsColor(rs.eAnn) },
@@ -240,16 +253,22 @@ function RangeStatsPanel({ rs }: { rs: RangeStats | null }) {
     { k: '标的年化', v: fmtPct(rs.bAnn), cls: clsColor(rs.bAnn) },
   ]
   return (
-    <div className={s.rangePanel}>
-      <h3 className={s.rangeTitle}>
-        <span style={{ color: 'var(--accent)' }}>●</span>
+    <div className="bg-gradient-to-r from-[var(--accent-bg)] to-[var(--surface)] border border-[color:var(--accent-border)] border-l-[3px] border-l-[color:var(--accent-trhrp)] rounded-[10px] px-4 py-3.5">
+      <h3 className="text-[13px] font-semibold text-[var(--ink)] m-0 mb-2.5 flex items-center gap-1.5">
+        <span style={{ color: 'var(--accent-trhrp)' }}>●</span>
         区间收益统计（拖动下方缩放条选择区间）
       </h3>
-      <div className={s.rangeGrid}>
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-x-4 gap-y-2.5">
         {cards.map((c) => (
-          <div key={c.k} className={s.rangeItem}>
-            <div className={s.rangeKey}>{c.k}</div>
-            <div className={`${s.rangeVal} ${c.cls}`}>{c.v}</div>
+          <div key={c.k} className="flex flex-col gap-px">
+            <div className="text-[10.5px] text-[var(--sub-2)] uppercase tracking-[0.05em]">
+              {c.k}
+            </div>
+            <div
+              className={`text-[13.5px] font-semibold tabular-nums text-[var(--ink)] ${c.cls}`}
+            >
+              {c.v}
+            </div>
           </div>
         ))}
       </div>
@@ -273,11 +292,16 @@ function RiskStatusPanel({
   const isUnknown = outlook === 'unknown'
   const badge = (r: string | null | undefined) =>
     r ? (
-      <span className={s.riskBadge} style={{ background: REGIME_BG[r] }}>
+      <span
+        className="text-white px-2.5 py-0.5 rounded-md text-[13px] font-semibold inline-block whitespace-nowrap"
+        style={{ background: REGIME_BG[r] }}
+      >
         {regimeCnLabel(r, regimeCn)}
       </span>
     ) : (
-      <span className={s.riskBadgeMuted}>—</span>
+      <span className="bg-slate-400 text-white px-2.5 py-0.5 rounded-md text-[13px] font-semibold inline-block">
+        —
+      </span>
     )
 
   // —— 最新一日信号分量 (驱动当前 regime 的原始信号) ——
@@ -370,42 +394,70 @@ function RiskStatusPanel({
   }
 
   return (
-    <div className={s.card}>
-      <div className={s.cardHeader}>
-        <h3 className={s.cardTitle}>风险偏好状态（回测快照推演）</h3>
+    <div className="bg-[var(--surface)] border border-[color:var(--border-trhrp)] rounded-xl px-4 py-4 shadow-[var(--shadow-md)] min-w-0 max-w-full">
+      <div className="flex items-baseline justify-between gap-3 mb-2">
+        <h3 className="text-sm font-semibold text-[var(--ink)] tracking-tight m-0">
+          风险偏好状态（回测快照推演）
+        </h3>
       </div>
-      <div className={s.riskGrid}>
-        <div className={s.riskCell}>
-          <div className={s.riskKey}>当前风险偏好</div>
-          <div className={s.riskVal}>{badge(cur)}</div>
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-x-5 gap-y-3 mt-0.5">
+        <div className="flex flex-col gap-1">
+          <div className="text-[10.5px] text-[var(--sub-2)] uppercase tracking-[0.05em] inline-flex items-center">
+            当前风险偏好
+          </div>
+          <div className="text-sm font-semibold text-[var(--ink)] inline-flex items-center gap-1.5 flex-wrap">
+            {badge(cur)}
+          </div>
         </div>
-        <div className={s.riskCell}>
-          <div className={s.riskKey}>最新操作</div>
-          <div className={s.riskVal} style={{ color: OP_COLOR[curOp] }}>
+        <div className="flex flex-col gap-1">
+          <div className="text-[10.5px] text-[var(--sub-2)] uppercase tracking-[0.05em] inline-flex items-center">
+            最新操作
+          </div>
+          <div
+            className="text-sm font-semibold text-[var(--ink)] inline-flex items-center gap-1.5 flex-wrap"
+            style={{ color: OP_COLOR[curOp] }}
+          >
             {OP_ARROW[curOp]} {OP_LABEL[curOp]}
           </div>
         </div>
-        <div className={s.riskCell}>
-          <div className={s.riskKey}>
-            预计下一风险偏好<span className={s.riskTag}>预计</span>
+        <div className="flex flex-col gap-1">
+          <div className="text-[10.5px] text-[var(--sub-2)] uppercase tracking-[0.05em] inline-flex items-center">
+            预计下一风险偏好
+            <span className="text-[10px] text-[var(--sub-2)] border border-[color:var(--border-trhrp)] rounded px-[5px] ml-1 font-normal normal-case tracking-normal">
+              预计
+            </span>
           </div>
-          <div className={s.riskVal}>{badge(next)}</div>
+          <div className="text-sm font-semibold text-[var(--ink)] inline-flex items-center gap-1.5 flex-wrap">
+            {badge(next)}
+          </div>
         </div>
-        <div className={s.riskCell}>
-          <div className={s.riskKey}>
-            预计明日操作<span className={s.riskTag}>预计</span>
+        <div className="flex flex-col gap-1">
+          <div className="text-[10.5px] text-[var(--sub-2)] uppercase tracking-[0.05em] inline-flex items-center">
+            预计明日操作
+            <span className="text-[10px] text-[var(--sub-2)] border border-[color:var(--border-trhrp)] rounded px-[5px] ml-1 font-normal normal-case tracking-normal">
+              预计
+            </span>
           </div>
-          <div className={s.riskVal} style={{ color: OP_COLOR[nextOp] }}>
+          <div
+            className="text-sm font-semibold text-[var(--ink)] inline-flex items-center gap-1.5 flex-wrap"
+            style={{ color: OP_COLOR[nextOp] }}
+          >
             {OP_ARROW[nextOp]} {OP_LABEL[nextOp]}
           </div>
         </div>
-        <div className={s.riskCell}>
-          <div className={s.riskKey}>数据截至</div>
-          <div className={s.riskVal}>{summary.last_date || '—'}</div>
+        <div className="flex flex-col gap-1">
+          <div className="text-[10.5px] text-[var(--sub-2)] uppercase tracking-[0.05em] inline-flex items-center">
+            数据截至
+          </div>
+          <div className="text-sm font-semibold text-[var(--ink)] inline-flex items-center gap-1.5 flex-wrap">
+            {summary.last_date || '—'}
+          </div>
         </div>
-        <div className={s.riskCell}>
-          <div className={s.riskKey}>当前股票仓位</div>
-          <div className={s.riskVal}>
+        <div className="flex flex-col gap-1">
+          <div className="text-[10.5px] text-[var(--sub-2)] uppercase tracking-[0.05em] inline-flex items-center">
+            当前股票仓位
+          </div>
+          <div className="text-sm font-semibold text-[var(--ink)] inline-flex items-center gap-1.5 flex-wrap">
             {summary.current_equity_weight != null
               ? `${(summary.current_equity_weight * 100).toFixed(0)}%`
               : '—'}
@@ -419,7 +471,7 @@ function RiskStatusPanel({
             style={{
               marginTop: 14,
               paddingTop: 12,
-              borderTop: '1px dashed var(--border)',
+              borderTop: '1px dashed var(--border-trhrp)',
             }}
           >
             <div
@@ -433,13 +485,15 @@ function RiskStatusPanel({
             >
               最新信号分量（截至 {summary.last_date || '—'}，驱动上方风险偏好判定）
             </div>
-            <div className={s.riskGrid}>
-              <div className={s.riskCell}>
-                <div className={s.riskKey}>
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-x-5 gap-y-3 mt-0.5">
+              <div className="flex flex-col gap-1">
+                <div className="text-[10.5px] text-[var(--sub-2)] uppercase tracking-[0.05em] inline-flex items-center">
                   当前波动率 vol
-                  <span className={s.riskTag}>vol_21 年化</span>
+                  <span className="text-[10px] text-[var(--sub-2)] border border-[color:var(--border-trhrp)] rounded px-[5px] ml-1 font-normal normal-case tracking-normal">
+                    vol_21 年化
+                  </span>
                 </div>
-                <div className={s.riskVal}>
+                <div className="text-sm font-semibold text-[var(--ink)] inline-flex items-center gap-1.5 flex-wrap">
                   <span
                     style={{
                       color: '#fff',
@@ -465,30 +519,42 @@ function RiskStatusPanel({
                   )}
                 </div>
               </div>
-              <div className={s.riskCell}>
-                <div className={s.riskKey}>
+              <div className="flex flex-col gap-1">
+                <div className="text-[10.5px] text-[var(--sub-2)] uppercase tracking-[0.05em] inline-flex items-center">
                   波动率 p60
-                  <span className={s.riskTag}>risk_off 触发线</span>
+                  <span className="text-[10px] text-[var(--sub-2)] border border-[color:var(--border-trhrp)] rounded px-[5px] ml-1 font-normal normal-case tracking-normal">
+                    risk_off 触发线
+                  </span>
                 </div>
-                <div className={s.riskVal} style={{ color: 'var(--neg)' }}>
+                <div
+                  className="text-sm font-semibold text-[var(--ink)] inline-flex items-center gap-1.5 flex-wrap"
+                  style={{ color: 'var(--neg)' }}
+                >
                   {fmtVol(volP60)}
                 </div>
               </div>
-              <div className={s.riskCell}>
-                <div className={s.riskKey}>
+              <div className="flex flex-col gap-1">
+                <div className="text-[10.5px] text-[var(--sub-2)] uppercase tracking-[0.05em] inline-flex items-center">
                   波动率中位数
-                  <span className={s.riskTag}>risk_on 触发线</span>
+                  <span className="text-[10px] text-[var(--sub-2)] border border-[color:var(--border-trhrp)] rounded px-[5px] ml-1 font-normal normal-case tracking-normal">
+                    risk_on 触发线
+                  </span>
                 </div>
-                <div className={s.riskVal} style={{ color: 'var(--pos)' }}>
+                <div
+                  className="text-sm font-semibold text-[var(--ink)] inline-flex items-center gap-1.5 flex-wrap"
+                  style={{ color: 'var(--pos)' }}
+                >
                   {fmtVol(volMed)}
                 </div>
               </div>
-              <div className={s.riskCell}>
-                <div className={s.riskKey}>
+              <div className="flex flex-col gap-1">
+                <div className="text-[10.5px] text-[var(--sub-2)] uppercase tracking-[0.05em] inline-flex items-center">
                   动量 mom
-                  <span className={s.riskTag}>21 日</span>
+                  <span className="text-[10px] text-[var(--sub-2)] border border-[color:var(--border-trhrp)] rounded px-[5px] ml-1 font-normal normal-case tracking-normal">
+                    21 日
+                  </span>
                 </div>
-                <div className={s.riskVal}>
+                <div className="text-sm font-semibold text-[var(--ink)] inline-flex items-center gap-1.5 flex-wrap">
                   <span
                     style={{
                       color: '#fff',
@@ -504,7 +570,7 @@ function RiskStatusPanel({
                 </div>
               </div>
             </div>
-            <div className={s.riskNote} style={{ marginTop: 6 }}>
+            <div className="mt-2 text-[11px] leading-relaxed text-[var(--sub-2)]" style={{ marginTop: 6 }}>
               判定规则：vol &gt; p60 且 mom &lt; 0 → 风险规避；vol ≤ 中位数 且 mom
               &gt; 0 → 风险偏好；其余 → 中性。vol 色块按当前落点着色（绿=偏好区 /
               黄=中性区 / 红=规避区），mom 色块按涨跌着色。
@@ -516,7 +582,7 @@ function RiskStatusPanel({
                   marginTop: 10,
                   padding: '8px 12px',
                   background: 'var(--surface-2)',
-                  border: '1px solid var(--border)',
+                  border: '1px solid var(--border-trhrp)',
                   borderRadius: 8,
                   fontSize: 12,
                 }}
@@ -586,11 +652,17 @@ function RiskStatusPanel({
       )}
 
       {summary.outlook_note && (
-        <div className={isUnknown ? s.riskNote : s.riskWarn}>
+        <div
+          className={
+            isUnknown
+              ? 'mt-2 text-[11px] leading-relaxed text-[var(--sub-2)]'
+              : 'mt-2.5 text-xs leading-relaxed text-[var(--warn)] bg-[var(--warn-bg)] border border-[color:var(--warn)] rounded-lg px-3 py-2'
+          }
+        >
           {summary.outlook_note}
         </div>
       )}
-      <div className={s.riskNote}>
+      <div className="mt-2 text-[11px] leading-relaxed text-[var(--sub-2)]">
         说明：回测为历史快照，无明日行情，故“预计”项为按最新收盘信号黏性外推、非实时交易指令；仅当最新信号临近切换阈值（10%
         缓冲）才向前推一档。风险偏好色：绿=偏好·黄=中性·红=规避（语义色，非涨跌）；操作色：红=加仓·绿=减仓（A股惯例）。
       </div>
@@ -642,10 +714,13 @@ function SignalParamsNote({
     : '无'
 
   return (
-    <div className={s.note} style={{ marginTop: 12 }}>
+    <div
+      className="bg-[var(--surface-2)] border border-[color:var(--border-trhrp)] border-l-[3px] border-l-[color:var(--sub-2)] rounded-lg px-4 py-3 text-xs leading-[1.7] text-[var(--sub)] [&_b]:text-[var(--ink-2)] [&_b]:font-semibold [&_strong]:text-[var(--ink-2)] [&_strong]:font-semibold"
+      style={{ marginTop: 12 }}
+    >
       <b>{meta.label}（{meta.ticker}）策略参数{hasOverride ? ' · 含自定义覆盖' : ''}</b>
       {hasOverride && (
-        <span className={s.negKey} style={{ marginLeft: 6 }}>
+        <span className="text-[var(--neg)] font-semibold" style={{ marginLeft: 6 }}>
           ⚠ 该标的用了非默认窗口（上市不足 252 天，缩短窗口让 regime 可计算）
         </span>
       )}
@@ -814,10 +889,10 @@ function SummaryTable({
     return set
   }
   return (
-    <div className={s.tableWrap}>
-      <div className={s.tableHead}>
-        <h3 className={s.tableTitle}>全市场汇总</h3>
-        <span className={s.tableHint}>
+    <div className="bg-[var(--surface)] border border-[color:var(--border-trhrp)] rounded-xl shadow-[var(--shadow-md)] overflow-hidden min-w-0 max-w-full">
+      <div className="px-4 pt-3 pb-2 flex items-baseline justify-between">
+        <h3 className="text-sm font-semibold text-[var(--ink)] m-0">全市场汇总</h3>
+        <span className="text-[11.5px] text-[var(--sub-2)]">
           点击行跳转到该标的图表 ·{' '}
           <span
             style={{
@@ -851,12 +926,19 @@ function SummaryTable({
           </span>
         </span>
       </div>
-      <div className={s.tableScroll}>
-        <table className={s.table}>
+      <div className="overflow-auto max-h-[72vh]">
+        <table className="w-full border-separate border-spacing-0 text-[12.5px]">
           <thead>
             <tr>
-              {cols.map((c) => (
-                <th key={c.key as string}>{c.label}</th>
+              {cols.map((c, idx) => (
+                <th
+                  key={c.key as string}
+                  className={`sticky top-0 z-[3] bg-[var(--surface-2)] text-[var(--sub)] font-medium uppercase text-[10.5px] tracking-[0.05em] px-3 py-2 border-b border-[color:var(--border-strong)] whitespace-nowrap shadow-[0_2px_4px_-2px_rgba(15,23,42,0.12)] ${
+                    idx < 2 ? 'text-left' : 'text-right'
+                  }`}
+                >
+                  {c.label}
+                </th>
               ))}
             </tr>
           </thead>
@@ -869,17 +951,29 @@ function SummaryTable({
                 <tr
                   key={m.label}
                   onClick={() => onSelect(m.label)}
-                  className={
-                    m.label === active ? s.tableRowActive : undefined
-                  }
+                  className={`cursor-pointer transition-colors hover:bg-[var(--surface-hover)] ${
+                    m.label === active
+                      ? '!bg-[var(--accent-bg)] shadow-[inset_2px_0_0_var(--accent-trhrp)]'
+                      : ''
+                  }`}
                 >
-                  {cols.map((c) => {
+                  {cols.map((c, idx) => {
                     const isBest = best.has(c.key)
                     const isRisk = risk.has(c.key)
+                    const alignCls = idx < 2 ? 'text-left' : 'text-right'
+                    const inkCls =
+                      idx === 0
+                        ? 'font-semibold text-[var(--ink)]'
+                        : 'text-[var(--ink-2)]'
+                    const tabularCls = idx < 2 ? '' : 'tabular-nums'
+                    const tdBase = `px-3 py-[7px] border-b border-[color:var(--border-trhrp)] whitespace-nowrap ${alignCls} ${inkCls} ${tabularCls}`.replace(
+                      /\s+/g,
+                      ' ',
+                    ).trim()
                     const cellCls = [
+                      tdBase,
                       clsFor(v, c),
-                      isBest ? s.bestReturn : '',
-                      isRisk ? s.bestRisk : '',
+                      isBest ? '!text-[var(--best-ink)] !font-bold' : '',
                     ]
                       .filter(Boolean)
                       .join(' ')
@@ -894,6 +988,11 @@ function SummaryTable({
                         style={cellStyle}
                       >
                         {fmtVal(v, c)}
+                        {isRisk && (
+                          <span className="text-[var(--best-star)] font-bold">
+                            {' ★'}
+                          </span>
+                        )}
                       </td>
                     )
                   })}
@@ -954,14 +1053,25 @@ export default function TrhrpBacktestPage() {
   }, [data, activeLabel, selectLabel])
 
   if (state === 'loading' && !data) {
-    return <div className={s.centerMsg}>加载回测数据中…</div>
+    return (
+      <div className="my-20 mx-auto max-w-[560px] text-center text-[var(--sub)] text-sm">
+        加载回测数据中…
+      </div>
+    )
   }
   if (state === 'error' && !data) {
     return (
-      <div className={s.errorCard}>
-        <h1 className={s.errorTitle}>数据加载失败</h1>
-        <p className={s.errorMsg}>{error}</p>
-        <button onClick={refresh} className={s.retryBtn}>
+      <div className="my-20 mx-auto max-w-[560px] bg-[var(--surface)] border border-[color:var(--border-trhrp)] border-l-[3px] border-l-[color:var(--neg)] rounded-[10px] px-7 py-6 shadow-[var(--shadow-lg)]">
+        <h1 className="text-lg font-semibold text-[var(--neg)] m-0 mb-2">
+          数据加载失败
+        </h1>
+        <p className="text-[var(--sub)] text-[13px] mb-4 leading-relaxed">
+          {error}
+        </p>
+        <button
+          onClick={refresh}
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-[color:var(--accent-trhrp)] bg-[var(--accent-trhrp)] text-white text-[13px] font-medium cursor-pointer hover:bg-[var(--accent-strong)] active:translate-y-px focus-visible:outline-2 focus-visible:outline-[var(--accent-trhrp)] focus-visible:outline-offset-2 transition"
+        >
           重试
         </button>
       </div>
@@ -970,20 +1080,33 @@ export default function TrhrpBacktestPage() {
   if (!data || !activeLabel) return null
 
   const sm = result?.summary
+  // 标的最新价 + 区间涨跌 (来自 timeseries 首尾原始价格 p)
+  const tsArr = result?.timeseries
+  const lastPt = tsArr && tsArr.length ? tsArr[tsArr.length - 1] : undefined
+  const firstPt = tsArr && tsArr.length ? tsArr[0] : undefined
+  const lastPrice = lastPt?.p
+  const priceChg =
+    lastPrice != null && firstPt?.p ? lastPrice / firstPt.p - 1 : null
   const lastPoll = new Date().toLocaleTimeString('zh-CN', {
     hour12: false,
   })
 
   return (
-    <div className={s.page}>
-      <header className={s.header}>
-        <div className={s.brand}>
-          <div className={s.brandBar} aria-hidden />
+    <div
+      className="min-h-[100dvh] bg-[var(--page-bg)] text-[var(--ink)]"
+      style={{ fontFeatureSettings: "'tnum' 1, 'cv11' 1" }}
+    >
+      <header className="bg-[var(--header-bg)] border-b border-[color:var(--header-border)] px-6 py-3.5 flex items-center justify-between gap-4 sticky top-0 z-20 backdrop-blur">
+        <div className="flex items-center gap-3 min-w-0">
+          <div
+            className="w-[3px] h-[26px] rounded-sm bg-gradient-to-b from-[var(--accent-trhrp)] to-cyan-500 shrink-0"
+            aria-hidden
+          />
           <div>
-            <h1 className={s.title}>
+            <h1 className="text-[17px] font-semibold tracking-tight text-slate-100 leading-tight m-0">
               TRHRP 多市场回测 · 策略 vs 买入持有
             </h1>
-            <div className={s.subtitle}>
+            <div className="mt-[3px] text-xs text-[var(--header-sub)] tabular-nums">
               {generatedAt
                 ? `数据生成于 ${generatedAt.slice(0, 19).replace('T', ' ')} UTC`
                 : ''}
@@ -991,7 +1114,10 @@ export default function TrhrpBacktestPage() {
             </div>
           </div>
         </div>
-        <button onClick={refresh} className={s.refreshBtn}>
+        <button
+          onClick={refresh}
+          className="inline-flex items-center gap-1.5 px-3.5 py-[7px] rounded-lg border border-slate-400/25 bg-slate-400/10 text-slate-200 text-[13px] font-medium cursor-pointer hover:bg-slate-400/16 hover:border-slate-400/40 active:translate-y-px focus-visible:outline-2 focus-visible:outline-[var(--accent-trhrp)] focus-visible:outline-offset-2 transition"
+        >
           <svg
             width='13'
             height='13'
@@ -1010,8 +1136,8 @@ export default function TrhrpBacktestPage() {
         </button>
       </header>
 
-      <div className={s.layout}>
-        <aside className={s.sidebar}>
+      <div className="flex items-start min-h-[calc(100dvh-64px)] max-md:flex-col">
+        <aside className="sticky top-16 h-[calc(100dvh-64px)] w-56 shrink-0 overflow-y-auto bg-[var(--surface)] border-r border-[color:var(--border-trhrp)] py-2 pb-6 max-md:static max-md:top-0 max-md:h-auto max-md:w-full max-md:border-r-0 max-md:border-b max-md:border-[color:var(--border-trhrp)] max-md:flex max-md:overflow-x-auto max-md:px-3 max-md:py-2 max-md:gap-1 max-md:shrink-0">
           <Sidebar
             markets={data.markets}
             active={activeLabel}
@@ -1020,9 +1146,9 @@ export default function TrhrpBacktestPage() {
           />
         </aside>
 
-        <main className={s.main}>
+        <main className="flex-1 min-w-0 max-w-full overflow-hidden flex flex-col gap-3 px-3 pb-8 pt-3 sm:gap-4 sm:px-6 sm:pb-10 sm:pt-5">
           {sm && (
-            <div className={s.statbar}>
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-2">
               <StatCard
                 label='主策略总收益'
                 value={signed(sm.strategy_total_return)}
@@ -1071,6 +1197,12 @@ export default function TrhrpBacktestPage() {
                 value={`${sm.risk_on_days}/${sm.moderate_days}/${sm.risk_off_days}`}
               />
               <StatCard
+                label={`最新价${sm?.last_date ? ` ${sm.last_date.slice(5)}` : ''}`}
+                value={fmtPrice(lastPrice)}
+                sub={priceChg != null ? `区间 ${fmtPct(priceChg)}` : undefined}
+                tone={priceChg != null ? (priceChg >= 0 ? 'pos' : 'neg') : 'plain'}
+              />
+              <StatCard
                 label='区间 / 天数'
                 value={`${result?.meta.start ?? ''}~${result?.meta.end?.slice(0, 4) ?? ''}`}
                 sub={`${result?.meta.days ?? 0} 天`}
@@ -1087,12 +1219,14 @@ export default function TrhrpBacktestPage() {
 
           <RangeStatsPanel rs={rangeStats} />
 
-          <div className={s.card}>
+          <div className="rounded-xl border border-[color:var(--border-trhrp)] bg-[var(--surface)] shadow-md p-2 sm:p-4">
             {resultLoading && !result && (
-              <div className={s.loadingHint}>加载标的序列…</div>
+              <div className="text-xs text-[var(--sub-2)] py-1 pb-2">
+                加载标的序列…
+              </div>
             )}
-            <div ref={mainRef} style={{ width: '100%', height: 520 }} />
-            <div className={s.legend}>
+            <div ref={mainRef} className="w-full h-[360px] sm:h-[520px]" />
+            <div className="text-xs text-[var(--sub)] leading-relaxed mt-2 [&_b]:text-[var(--ink-2)] [&_b]:font-semibold">
               <b>绿带</b>=风险偏好 · <b>黄带</b>=中性 · <b>红带</b>=风险规避；▲红=加仓，
               ▼绿=减仓（落在归一价曲线上）。左轴净值、右轴归一价。
               <b style={{ color: '#ef6c00' }}>橙虚线</b>=股现择时净值（equity 权重同主策略，其余全现金 SGOV，不含 GLD 防御腿）；
@@ -1101,12 +1235,14 @@ export default function TrhrpBacktestPage() {
             </div>
           </div>
 
-          <div className={s.card}>
-            <div className={s.cardHeader}>
-              <h3 className={s.cardTitle}>股票仓位 % 与波动率%（与上方联动缩放）</h3>
+          <div className="rounded-xl border border-[color:var(--border-trhrp)] bg-[var(--surface)] shadow-md p-2 sm:p-4">
+            <div className="flex items-baseline justify-between gap-3 mb-2">
+              <h3 className="text-sm font-semibold text-[var(--ink)] tracking-tight m-0">
+                股票仓位 % 与波动率%（与上方联动缩放）
+              </h3>
             </div>
-            <div ref={weightRef} style={{ width: '100%', height: 200 }} />
-            <div className={s.legend}>
+            <div ref={weightRef} className="w-full h-[150px] sm:h-[200px]" />
+            <div className="text-xs text-[var(--sub)] leading-relaxed mt-2 [&_b]:text-[var(--ink-2)] [&_b]:font-semibold">
               紫线 = 每日股票仓位（左轴）；<b style={{ color: '#00838f' }}>青线</b>=vol21 年化波动率（右轴）；
               虚线参考
               <b style={{ color: 'var(--neg)' }}> 清仓 0%</b> /
@@ -1124,7 +1260,7 @@ export default function TrhrpBacktestPage() {
             onSelect={selectLabel}
           />
 
-          <div className={s.note}>
+          <div className="bg-[var(--surface-2)] border border-[color:var(--border-trhrp)] border-l-[3px] border-l-[color:var(--sub-2)] rounded-lg px-4 py-3 text-xs leading-[1.7] text-[var(--sub)] [&_b]:text-[var(--ink-2)] [&_b]:font-semibold [&_strong]:text-[var(--ink-2)] [&_strong]:font-semibold">
             <b>策略家族说明（均基于同一套风险偏好择时信号：risk_on / moderate / risk_off）：</b>
             <ul style={{ margin: '6px 0 0', paddingLeft: 18 }}>
               <li>
@@ -1145,13 +1281,13 @@ export default function TrhrpBacktestPage() {
             </ul>
           </div>
 
-          <div className={s.note}>
+          <div className="bg-[var(--surface-2)] border border-[color:var(--border-trhrp)] border-l-[3px] border-l-[color:var(--sub-2)] rounded-lg px-4 py-3 text-xs leading-[1.7] text-[var(--sub)] [&_b]:text-[var(--ink-2)] [&_b]:font-semibold [&_strong]:text-[var(--ink-2)] [&_strong]:font-semibold">
             <b>口径与数据说明：</b>
             FX 约定：全部按 USD 计价。策略与基准同币种，相对价值（超额/回撤改善）不受影响；
             A/H 标的绝对收益含轻微汇率漂移（港股近似无，人民币有）。操作点 = 股票仓位变动（加仓▲/减仓▼），
             来自当前 monitor/trhrp_strategy 口径（高波动资产 relative_zscore 重校准 + 分组 z 叠加）。
             <br />
-            <span className={s.negKey}>数据修正：</span>
+            <span className="text-[var(--neg)] font-semibold">数据修正：</span>
             原 SGOV_combined.csv 已损坏（价格反复锯齿、单日 ±12% 数百次），已全部 22 标的改用干净的
             <b> SHY.csv</b> 作短债防御腿（等价替代，覆盖 2018–2026）。
             此前 risk_off 期间净值的异常暴跌/尖刺均因此坏数据，现已消除。
