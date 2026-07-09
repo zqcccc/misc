@@ -550,6 +550,22 @@
       "proxy": "中信证券上交所主板(relative_zscore重校准)",
       "crashMode": "relative_zscore",
       "crashZscore": 2.5
+    },
+    {
+      "label": "中巨芯",
+      "marketGroup": "A股",
+      "ticker": "688549.SS",
+      "proxy": "中巨芯科创板(relative_zscore重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "春秋航空",
+      "marketGroup": "A股",
+      "ticker": "601021.SS",
+      "proxy": "春秋航空上交所主板(relative_zscore重校准)",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
     }
   ],
   "regime_weights": {
