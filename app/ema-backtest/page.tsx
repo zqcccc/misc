@@ -55,6 +55,10 @@ function InstrumentTabs({ instruments, active, onSelect }: {
         const accent = fwdRet > 0.001 ? 'text-emerald-600 dark:text-emerald-400'
           : fwdRet < -0.001 ? 'text-rose-600 dark:text-rose-400'
           : 'text-gray-500 dark:text-gray-400'
+        const livePrice = inst.current.live_price
+        const priceStr = livePrice != null
+          ? (livePrice >= 1000 ? livePrice.toFixed(1) : livePrice >= 1 ? livePrice.toFixed(2) : livePrice.toFixed(4))
+          : null
         return (
           <button
             key={inst.name}
@@ -67,6 +71,11 @@ function InstrumentTabs({ instruments, active, onSelect }: {
           >
             <span>{posEmoji}</span>
             <span className="ml-1">{inst.name}</span>
+            {priceStr && (
+              <span className={`ml-1.5 text-xs ${isActive ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'}`}>
+                @{priceStr}
+              </span>
+            )}
             <span className={`ml-1.5 text-xs ${isActive ? 'text-blue-100' : accent}`}>
               {fwdRet >= 0 ? '+' : ''}{(fwdRet * 100).toFixed(1)}%
             </span>
@@ -219,8 +228,71 @@ function ChartArea({ inst }: { inst: InstrumentPayload }) {
     chartRef.current.setOption(option, { notMerge: true })
   }, [chartReady, inst])
 
+  // 价格摘要
+  const cur = inst.current
+  const livePrice = cur.live_price
+  const entryPrice = cur.entry_price
+  const priceSeries = inst.series.price
+  let hi: number | null = null
+  let lo: number | null = null
+  let firstPrice: number | null = null
+  if (priceSeries.length > 0) {
+    for (const [, p] of priceSeries) {
+      if (hi == null || p > hi) hi = p
+      if (lo == null || p < lo) lo = p
+    }
+    firstPrice = priceSeries[0][1]
+  }
+  const fmtP = (n: number | null | undefined) => {
+    if (n == null || Number.isNaN(n)) return '-'
+    if (n >= 1000) return n.toFixed(2)
+    if (n >= 1) return n.toFixed(4)
+    return n.toFixed(6)
+  }
+  const pos = cur.position ?? 0
+  const entryVsLive = livePrice != null && entryPrice != null && entryPrice > 0
+    ? (livePrice - entryPrice) / entryPrice
+    : null
+  const totalChg = livePrice != null && firstPrice != null && firstPrice > 0
+    ? (livePrice - firstPrice) / firstPrice
+    : null
+
   return (
     <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#282c35] p-3">
+      {/* 价格摘要 */}
+      <div className="flex flex-wrap items-end gap-x-6 gap-y-1 mb-2 px-1 text-sm">
+        <div>
+          <span className="text-xs text-gray-500 dark:text-gray-400">现价 </span>
+          <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{fmtP(livePrice)}</span>
+        </div>
+        {entryVsLive != null && pos !== 0 && (
+          <div>
+            <span className="text-xs text-gray-500 dark:text-gray-400">vs 入场 </span>
+            <span className={`font-semibold ${entryVsLive >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+              {entryVsLive >= 0 ? '+' : ''}{(entryVsLive * 100).toFixed(2)}%
+            </span>
+            <span className="ml-1 text-xs text-gray-400">({fmtP(entryPrice)})</span>
+          </div>
+        )}
+        {totalChg != null && (
+          <div>
+            <span className="text-xs text-gray-500 dark:text-gray-400">回测区间 </span>
+            <span className={`font-semibold ${totalChg >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+              {totalChg >= 0 ? '+' : ''}{(totalChg * 100).toFixed(1)}%
+            </span>
+          </div>
+        )}
+        {hi != null && lo != null && (
+          <div className="text-xs text-gray-500 dark:text-gray-400">
+            区间高/低: <span className="text-gray-700 dark:text-gray-300">{fmtP(hi)} / {fmtP(lo)}</span>
+          </div>
+        )}
+        {cur.ema != null && (
+          <div className="text-xs text-gray-500 dark:text-gray-400">
+            EMA{inst.config.ema_span}: <span className="text-gray-700 dark:text-gray-300">{fmtP(cur.ema)}</span>
+          </div>
+        )}
+      </div>
       <div ref={chartNode} style={{ width: '100%', height: 560 }} />
     </div>
   )

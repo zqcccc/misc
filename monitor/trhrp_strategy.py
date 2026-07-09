@@ -42,6 +42,7 @@ class MarketSpec:
     crash_mode: str = "absolute"          # absolute | relative_zscore
     crash_zscore: float = 2.5             # 仅 relative_zscore 模式用
     signal_overrides: Dict[str, Any] = None  # 短历史标的可缩短窗口 (与回测脚本同口径)
+    source: str = "yfinance"              # 数据源: yfinance (默认) | ccxt_perp (币安永续, yfinance 没收录的 crypto 用)
 
 
 def load_config(config_path: str) -> Dict[str, Any]:
@@ -63,6 +64,7 @@ def _markets_from_cfg(cfg: Dict[str, Any]) -> List[MarketSpec]:
             crash_mode=str(m.get("crashMode", "absolute") or "absolute"),
             crash_zscore=float(m.get("crashZscore", 2.5) or 2.5),
             signal_overrides=so or None,
+            source=str(m.get("source", "yfinance") or "yfinance"),
         ))
     return out
 
@@ -72,7 +74,7 @@ def _sp_from_cfg(cfg: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _cache_path(ticker: str, cache_dir: Path) -> Path:
-    safe = ticker.replace("^", "IDX_").replace("=", "_").replace("/", "_")
+    safe = ticker.replace("^", "IDX_").replace("=", "_").replace("/", "_").replace(":", "_")
     return cache_dir / f"{safe}.csv"
 
 
@@ -114,18 +116,41 @@ def _normalize_ohlc(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def _ccxt_df_to_ohlc(df: pd.DataFrame) -> pd.DataFrame:
+    """ccxt_perp.fetch_recent 返回 [timestamp,open,high,low,close,volume] (timestamp UTC tz-aware),
+    转成 Open/High/Low/Close, index 为 tz-naive Date (与 _normalize_ohlc 输出同口径)."""
+    if df is None or df.empty:
+        return pd.DataFrame()
+    idx = pd.to_datetime(df["timestamp"])
+    # ccxt_perp 返回 tz-aware UTC; 去掉时区转成 naive (保留 UTC 数值), 与 yfinance 路径一致
+    if getattr(idx.dt, "tz", None) is not None:
+        idx = idx.dt.tz_convert(None)
+    out = pd.DataFrame({
+        "Open": df["open"].to_numpy(dtype=float),
+        "High": df["high"].to_numpy(dtype=float),
+        "Low": df["low"].to_numpy(dtype=float),
+        "Close": df["close"].to_numpy(dtype=float),
+    }, index=idx)
+    out.index.name = "Date"
+    return out[~out.index.duplicated(keep="last")].sort_index()
+
+
 def download_ohlc(spec: MarketSpec, cache_dir: Path, sp: Dict[str, Any],
                   warnings: Optional[List[str]] = None,
                   max_retries: int = 3, retry_backoff: float = 3.0) -> pd.DataFrame:
-    """拉 OHLC. 带重试 + 缓存回退, 避免 yfinance 间歇性限频/空返回导致整市场 null.
+    """拉 OHLC. 带重试 + 缓存回退, 避免数据源间歇性限频/空返回导致整市场 null.
 
-    - 缓存新鲜则直接返回 (不碰 yfinance).
-    - 缓存过期/缺失: 重试 yf.download (指数退避), 任一成功即用.
+    按 spec.source 分发:
+      - "yfinance" (默认): yf.download (auto_adjust 按需), 适配 ETF/指数/股票/常规 crypto.
+      - "ccxt_perp": 币安 USDT-M 永续 K 线 (datasources.ccxt_perp), 用于 yfinance 没收录的
+        crypto 永续 (如 HYPE/USDT:USDT, Hyperliquid 原生代币 yfinance 无对应符号).
+
+    - 缓存新鲜则直接返回 (不碰数据源).
+    - 缓存过期/缺失: 重试拉取 (指数退避), 任一成功即用.
     - 全部重试仍空: 若本地存在(即使过期)的缓存 CSV, 回退用之并写一条 warning,
       这样至少能算出 regime, 而不是让该市场变成 null 引发下游崩溃.
     - 既无重试成功也无任何缓存: 才 raise (真正的硬失败).
     """
-    import yfinance as yf
     path = _cache_path(spec.ticker, cache_dir)
     max_age = float(sp.get("cache_max_age_hours", 12))
     if _is_cache_fresh(path, max_age):
@@ -135,25 +160,44 @@ def download_ohlc(spec: MarketSpec, cache_dir: Path, sp: Dict[str, Any],
                 return cached
         except Exception:
             pass
-    start = str(sp.get("start_date", "2010-01-01"))
-    end = (datetime.now(timezone.utc).date() + timedelta(days=1)).isoformat()
-    # 加密(-USD)与期货(含 '=' 如 GC=F/CL=F/SI=F)在 auto_adjust=False 下 yfinance 返回空,
-    # 必须用 auto_adjust=True 才能拉到数据; 常规 ETF/指数保持原行为不变.
-    auto_adjust = bool(spec.ticker.endswith("-USD") or "=" in spec.ticker)
-    raw = None
+    source = (getattr(spec, "source", "yfinance") or "yfinance").strip()
+    norm = None
     last_err = None
-    for attempt in range(1, max_retries + 1):
-        try:
-            raw = yf.download(spec.ticker, start=start, end=end, auto_adjust=auto_adjust,
-                              progress=False, threads=False)
-        except Exception as e:  # yfinance 偶尔会直接抛 (429/连接重置), 当作空处理并重试
-            last_err = e
-            raw = None
-        if raw is not None and not raw.empty:
-            break
-        if attempt < max_retries:
-            time.sleep(retry_backoff * attempt)
-    if raw is None or raw.empty:
+    if source == "ccxt_perp":
+        # 币安永续: ccxt_perp.fetch_recent 内部已分页+限频, 这里只加外层重试
+        from monitor.datasources import ccxt_perp as _ccxt
+        for attempt in range(1, max_retries + 1):
+            try:
+                raw = _ccxt.fetch_recent(spec.ticker, "1d", limit=1500)
+            except Exception as e:
+                last_err = e
+                raw = None
+            if raw is not None and not raw.empty:
+                norm = _ccxt_df_to_ohlc(raw)
+                break
+            if attempt < max_retries:
+                time.sleep(retry_backoff * attempt)
+    else:
+        import yfinance as yf
+        start = str(sp.get("start_date", "2010-01-01"))
+        end = (datetime.now(timezone.utc).date() + timedelta(days=1)).isoformat()
+        # 加密(-USD)与期货(含 '=' 如 GC=F/CL=F/SI=F)在 auto_adjust=False 下 yfinance 返回空,
+        # 必须用 auto_adjust=True 才能拉到数据; 常规 ETF/指数保持原行为不变.
+        auto_adjust = bool(spec.ticker.endswith("-USD") or "=" in spec.ticker)
+        raw = None
+        for attempt in range(1, max_retries + 1):
+            try:
+                raw = yf.download(spec.ticker, start=start, end=end, auto_adjust=auto_adjust,
+                                  progress=False, threads=False)
+            except Exception as e:  # yfinance 偶尔会直接抛 (429/连接重置), 当作空处理并重试
+                last_err = e
+                raw = None
+            if raw is not None and not raw.empty:
+                norm = _normalize_ohlc(raw)
+                break
+            if attempt < max_retries:
+                time.sleep(retry_backoff * attempt)
+    if norm is None or norm.empty:
         # 重试仍空 -> 回退到已存在的本地缓存 (即使过期), 保证不出现 null regime
         if path.exists():
             try:
@@ -161,13 +205,13 @@ def download_ohlc(spec: MarketSpec, cache_dir: Path, sp: Dict[str, Any],
                 if not cached.empty:
                     if warnings is not None:
                         warnings.append(
-                            f"{spec.label} ({spec.ticker}): yfinance 连续 {max_retries} 次返回空/异常"
+                            f"{spec.label} ({spec.ticker}): {source} 连续 {max_retries} 次返回空/异常"
                             f"{(' (' + str(last_err) + ')') if last_err else ''}, 回退到本地缓存(可能过期)")
                     return cached
             except Exception:
                 pass
-        raise RuntimeError(f"yfinance 返回空: {spec.ticker}")
-    norm = _normalize_ohlc(raw)
+        raise RuntimeError(f"{source} 返回空: {spec.ticker}"
+                           + (f" ({last_err})" if last_err else ""))
     norm = _clean_ohlc_prices(norm)
     norm.to_csv(path, index_label="Date")
     return norm

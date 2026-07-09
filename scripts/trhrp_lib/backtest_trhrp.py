@@ -147,7 +147,7 @@ def _normalize_ohlc(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _cache_path(cache_dir: Path, ticker: str) -> Path:
-    safe = ticker.replace("/", "_").replace("^", "IDX_").replace("=", "_")
+    safe = ticker.replace("/", "_").replace("^", "IDX_").replace("=", "_").replace(":", "_")
     return cache_dir / f"{safe}.csv"
 
 

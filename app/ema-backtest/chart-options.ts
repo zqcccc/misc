@@ -229,13 +229,42 @@ export function buildChartOption(inst: InstrumentPayload): Record<string, unknow
         if (!Array.isArray(params) || params.length === 0) return ''
         const ts = new Date(params[0].axisValue)
         const tsStr = `${ts.getUTCFullYear()}-${String(ts.getUTCMonth() + 1).padStart(2, '0')}-${String(ts.getUTCDate()).padStart(2, '0')} ${String(ts.getUTCHours()).padStart(2, '0')}:${String(ts.getUTCMinutes()).padStart(2, '0')} UTC`
-        const lines = params.map((p) => {
+        // 按量级选择小数位
+        const fmt = (n: number) => {
+          if (Number.isNaN(n)) return '-'
+          if (n >= 1000) return n.toFixed(2)
+          if (n >= 1) return n.toFixed(4)
+          return n.toFixed(6)
+        }
+        // 价格区 series 名称集合
+        const priceNames = new Set(['价格', `EMA${cfg.ema_span}`])
+        const equityNames = new Set(['策略净值', '买入持有', '前向净值(真实)'])
+        const priceLines: string[] = []
+        const equityLines: string[] = []
+        const otherLines: string[] = []
+        for (const p of params) {
           const v = Array.isArray(p.value) ? p.value[1] : p.value
-          if (v == null) return null
+          if (v == null) continue
           const num = typeof v === 'number' ? v : Number(v)
-          return `<span style="color:${c.legend}">${p.seriesName}</span>: <b>${num.toFixed(4)}</b>`
-        }).filter(Boolean)
-        return `${tsStr}<br/>${lines.join('<br/>')}`
+          const line = `<span style="color:${c.legend}">${p.seriesName}</span>: <b style="color:${c.tooltipText}">${fmt(num)}</b>`
+          if (priceNames.has(p.seriesName)) priceLines.push(line)
+          else if (equityNames.has(p.seriesName)) {
+            const pct = ((num - 1) * 100)
+            const pctStr = `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`
+            equityLines.push(`${line} <span style="color:${c.legend};font-size:11px">(${pctStr})</span>`)
+          } else otherLines.push(line)
+        }
+        const parts: string[] = [tsStr]
+        if (priceLines.length > 0) {
+          parts.push(`<span style="color:${c.price};font-weight:600">▸ 价格</span>`)
+          parts.push(priceLines.join('<br/>'))
+        }
+        if (equityLines.length > 0) {
+          parts.push(`<span style="color:${c.equity};font-weight:600">▸ 净值</span>`)
+          parts.push(equityLines.join('<br/>'))
+        }
+        if (otherLines.length > 0) parts.push(otherLines.join('<br/>'))
+        return parts.join('<br/>')
       },
     },
     axisPointer: { link: [{ xAxisIndex: 'all' }] },

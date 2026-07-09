@@ -31,6 +31,7 @@ EMA 趋势反手策略 · 统一监控入口
   - caches/<name>/{daemon.pid, state.json, monitor.log, stdout.log}
 """
 import os
+import re
 import sys
 import json
 import time
@@ -371,6 +372,84 @@ def _load_trhrp_config():
         return json.load(f)
 
 
+# 段二使用的短档位名映射与颜色, 让标题/触发条件更紧凑.
+_TRHRP_SHORT_REGIME = {"RISK_ON": "ON", "MODERATE": "MOD", "RISK_OFF": "OFF"}
+_TRHRP_REGIME_COLOR = {
+    "RISK_ON": "\033[32m",    # 绿
+    "MODERATE": "\033[33m",   # 黄
+    "RISK_OFF": "\033[31m",   # 红
+}
+_RESET = "\033[0m"
+
+
+def _trhrp_short_regime(r):
+    r = (r or "?").upper()
+    return _TRHRP_SHORT_REGIME.get(r, r[:4])
+
+
+def _trhrp_color_regime(r):
+    r = (r or "?").upper()
+    return _TRHRP_REGIME_COLOR.get(r, "")
+
+
+def _trhrp_compact_reason(text):
+    """压缩 nextRegimeReason 文本: 去掉冗余注释, 保留关键判断."""
+    if not text or text == "-":
+        return "-"
+    t = text
+    t = t.replace("不满足 risk_on 的 vol 收敛条件", "未满足 ON")
+    t = t.replace("不满足 risk_off 的 mom<0 条件", "未满足 OFF")
+    t = t.replace("两档触发条件均未达成", "两档均未触发")
+    t = t.replace("波动率相对自身252d历史 z-score > 2.5σ (非绝对 30% 崩盘线)", "z>2.5σ (相对历史)")
+    t = t.replace("波动率相对自身252d历史 z-score > 1.5σ (非绝对 30% 崩盘线)", "z>1.5σ (相对历史)")
+    t = t.replace("→ 强制 risk_off", "→ 强制 OFF")
+    t = t.replace("→ risk_on", "→ ON")
+    t = t.replace("→ risk_off", "→ OFF")
+    t = t.replace("→ moderate", "→ MOD")
+    t = t.replace("risk_on", "ON")
+    t = t.replace("risk_off", "OFF")
+    t = t.replace("moderate:", "MOD:")
+    t = re.sub(r"\s+", " ", t).strip()
+    return t
+
+
+def _trhrp_compact_trigger(text):
+    """压缩 nextRegimeNextTrigger 文本: 去掉 '当前...' 重复注释与冗余说明."""
+    if not text or text == "-":
+        return "-"
+    t = text
+    # 删除括号内 "当前..." 的注释 (例: "(当前 mom +1.77%, vol 24.81%)")
+    t = re.sub(r"\(当前[^)]*\)", "", t)
+    # 删除整句 "当前 vol 距 p60 还需降 X% ... 或 mom 转正 (当前 ...)" — 一直吃到 '|' 或结尾
+    t = re.sub(r"当前 vol 距 p60 还需降[^|]*", "", t)
+    # 删除尾巴上的 "当前仍超崩盘触发线"
+    t = t.replace("当前仍超崩盘触发线", "")
+    # 短语替换 — 注意顺序: 先替换复合短语, 再替换单词
+    t = t.replace("切回 risk_on", "→ ON")
+    t = t.replace("切到 risk_on", "→ ON")
+    t = t.replace("切回 risk_off", "→ OFF")
+    t = t.replace("切到 risk_off 任一即可", "→ OFF 任一即可")
+    t = t.replace("切到 risk_off", "→ OFF")
+    t = t.replace("波动率 z-score", "z")
+    t = t.replace("(崩盘线)", "(crash)")
+    # vol_med (中位 vol) 整体替换为 "中位", 避免重复; 再单独处理 vol_med N% 的情况
+    t = t.replace("vol_med (中位 vol)", "中位")
+    t = t.replace("vol_med", "中位")
+    t = t.replace("且 mom>0 转正", "且 mom>0")
+    t = t.replace("且 vol 不超崩盘线", "")
+    t = t.replace("vol 退到 < 30%", "vol<30%")
+    t = t.replace("mom转负", "mom<0")
+    # 折叠空格
+    t = re.sub(r"\s+", " ", t).strip()
+    # 去掉行尾多余的 ".;" 残留
+    t = re.sub(r"[.;\s]+$", "", t)
+    # 清理孤立的 "." 残留 (例: "mom>0 . " — 句号被孤立)
+    t = re.sub(r"\s+\.\s*", " ", t)
+    # 多个连续空格的分隔符统一为 " | "
+    t = re.sub(r"\s*\|\s*", " | ", t)
+    return t
+
+
 def _trhrp_status_section():
     """构建 TRHRP 子系统 status 段落. 没配置或没数据时返回 None (不打印)."""
     cfg = _load_trhrp_config()
@@ -388,79 +467,256 @@ def _trhrp_status_section():
     lines.append("-" * 110)
     if not os.path.exists(state_file):
         lines.append(f"{name:<8} {'✓' if rn else '-':<4} {pid:<6} {'-':<18} {'-':<4} {'-':<11} {'-':<40} {'-':<17}")
-    else:
-        try:
-            with open(state_file) as f:
-                st = json.load(f)
-            regime_summary = f"🟢{st.get('riskOnCount',0)} 🟡{st.get('moderateCount',0)} 🔴{st.get('riskOffCount',0)}"
-            as_of = (st.get("asOfDate") or "-")[:10]
-            changed = st.get("changedMarkets", 0)
-            fetched = (st.get("fetchedAt") or "")[:16].replace("T", " ")
-            la_short, _ = _fmt_action_from_log(name, st)
-            run_flag = "✓" if rn else "-"
-            lines.append(f"{name:<8} {run_flag:<4} {pid:<6} {regime_summary:<18} {changed:<4} {as_of:<11} {la_short:<40} {fetched:<17}")
-            # 名词速查 (一次出现, 供各市场行参照):
-            #   REGIME: 风险档 — RISK_ON 偏多仓 / MODERATE 中性 / RISK_OFF 避险
-            #   cur→nxt: 当前生效档 → 次日交易档 (T 日信号, T+1 生效); ⚠️=次日档已变化, 待执行
-            #   vol: 21d realized vol 年化; p60 = 252 日窗口 60 分位; 中位 = 126 日窗口中位; mom = 21d 动量
-            #   崩盘线: 强制 RISK_OFF 的 vol 阈值; z: 252 日 log 价 z-score (均值回归极端偏差)
-            #   基础配比: regime → 股票/GLD/SGOV; 叠加后: 经 z-score overlay 调整后配比 (抄底加 / 高位减)
-            lines.append("")
-            lines.append(f"  ── 段一·当前 {len(st.get('markets') or [])} 个市场仓位水平 ──")
-            lines.append(f"  {'市场':<10} {'分组':<6} {'REGIME':<20} {'基础配比':<24} {'叠加后配比':<26} {'z-score':<10} {'叠加提示'}")
-            for raw_m in (st.get("markets") or []):
-                m = {k: (v if v is not None else "-") for k, v in (raw_m or {}).items()}
-                cur_r = (m.get("currentRegime") or "?")[:8].upper()
-                nxt_r = (m.get("nextRegime") or "?")[:8].upper()
-                regime_cell = f"{cur_r} → {nxt_r}"
-                z = m.get("priceZScore252")
-                z_str = f"{z:+.2f}σ" if isinstance(z, (int, float)) else "-"
-                marker = " ⚠️" if m.get("changed") else ""
-                lines.append(f"  {m.get('label','-'):<10} {m.get('marketGroup','-'):<6} {regime_cell:<20} "
-                             f"{m.get('allocationText','-'):<24} "
-                             f"{m.get('overlayAdjustedAllocationText','-'):<26} {z_str:<10} "
-                             f"{m.get('overlayRecommendationText','-')}{marker}")
-            # 段二: 各市场当前→次日档对比 (原因只在次日档与当前档不同时再展开, 避免重复)
-            lines.append("")
-            lines.append(f"  ── 段二·各市场档位原因 + 下一步触发条件 (次日档 ≠ 当前档时高亮) ──")
-            for raw_m in (st.get("markets") or []):
-                m = {k: (v if v is not None else "-") for k, v in (raw_m or {}).items()}
-                cur_r = (m.get("currentRegime") or "?").upper()
-                nxt_r = (m.get("nextRegime") or "?").upper()
-                vol_pct = m.get("volPct")
-                p60 = m.get("volP60Pct")
-                med = m.get("medianVolPct")
-                mom = m.get("momPct")
-                crash = m.get("crashTriggerVolPct")
-                z = m.get("priceZScore252")
-                z_str = f"{z:+.2f}σ" if isinstance(z, (int, float)) else "-"
+        return "\n".join(lines)
+    try:
+        with open(state_file) as f:
+            st = json.load(f)
+    except Exception as e:
+        lines.append(f"(TRHRP state.json 读取失败: {e})")
+        return "\n".join(lines)
 
-                def _f(x, d=2):
-                    return f"{x:.{d}f}%" if isinstance(x, (int, float)) else "-"
-                marker = " ⚠️变化" if m.get("changed") else ""
-                lines.append(f"  • {m.get('label','-'):<10} {cur_r} → {nxt_r}{marker}")
-                lines.append(f"      指标: vol={_f(vol_pct)} p60={_f(p60)} 中位={_f(med)} "
-                             f"mom={(f'{mom:+.2f}%' if isinstance(mom, (int, float)) else '-')} "
-                             f"崩盘线={_f(crash, 0)} z={z_str}")
-                if m.get("changed") or cur_r != nxt_r:
-                    nxt_reason = m.get("nextRegimeReason") or "-"
-                    nxt_nt = m.get("nextRegimeNextTrigger") or "-"
-                    lines.append(f"      次日档原因: {nxt_reason}")
-                    lines.append(f"      下一步: {nxt_nt}")
-                else:
-                    # 同档, 原因其实一样 — 给一句话 "维持当前档" + 简短 next trigger
-                    cur_nt = m.get("nextRegimeNextTrigger") or "-"
-                    lines.append(f"      维持 {cur_r}: {cur_nt}")
-            if st.get("error"):
-                lines.append("")
-                lines.append(f"  ⚠️ error: {st.get('error')}")
-            if st.get("warnings"):
-                lines.append("")
-                for w in st.get("warnings") or []:
-                    lines.append(f"  ⚠️ 缓存回退: {w}")
-        except Exception as e:
-            lines.append(f"(TRHRP state.json 读取失败: {e})")
+    regime_summary = f"🟢{st.get('riskOnCount',0)} 🟡{st.get('moderateCount',0)} 🔴{st.get('riskOffCount',0)}"
+    as_of = (st.get("asOfDate") or "-")[:10]
+    changed = st.get("changedMarkets", 0)
+    fetched = (st.get("fetchedAt") or "")[:16].replace("T", " ")
+    la_short, _ = _fmt_action_from_log(name, st)
+    run_flag = "✓" if rn else "-"
+    lines.append(f"{name:<8} {run_flag:<4} {pid:<6} {regime_summary:<18} {changed:<4} {as_of:<11} {la_short:<40} {fetched:<17}")
+    # 名词速查 (一次出现, 供各市场行参照):
+    #   REGIME: 风险档 — RISK_ON 偏多仓 / MODERATE 中性 / RISK_OFF 避险
+    #   cur→nxt: 当前生效档 → 次日交易档 (T 日信号, T+1 生效); ⚠️=次日档已变化, 待执行
+    #   vol: 21d realized vol 年化; p60 = 252 日窗口 60 分位; 中位 = 126 日窗口中位; mom = 21d 动量
+    #   崩盘线: 强制 RISK_OFF 的 vol 阈值; z: 252 日 log 价 z-score (均值回归极端偏差)
+    #   基础配比: regime → 股票/GLD/SGOV; 叠加后: 经 z-score overlay 调整后配比 (抄底加 / 高位减)
+    lines.append("")
+    lines.append(f"  ── 段一·当前 {len(st.get('markets') or [])} 个市场仓位水平 ──")
+    lines.append(f"  {'市场':<10} {'分组':<6} {'REGIME':<20} {'基础配比':<24} {'叠加后配比':<26} {'z-score':<10} {'叠加提示'}")
+    for raw_m in (st.get("markets") or []):
+        m = {k: (v if v is not None else "-") for k, v in (raw_m or {}).items()}
+        cur_r = (m.get("currentRegime") or "?")[:8].upper()
+        nxt_r = (m.get("nextRegime") or "?")[:8].upper()
+        regime_cell = f"{cur_r} → {nxt_r}"
+        z = m.get("priceZScore252")
+        z_str = f"{z:+.2f}σ" if isinstance(z, (int, float)) else "-"
+        marker = " ⚠️" if m.get("changed") else ""
+        lines.append(f"  {m.get('label','-'):<10} {m.get('marketGroup','-'):<6} {regime_cell:<20} "
+                     f"{m.get('allocationText','-'):<24} "
+                     f"{m.get('overlayAdjustedAllocationText','-'):<26} {z_str:<10} "
+                     f"{m.get('overlayRecommendationText','-')}{marker}")
+    _append_trhrp_section_two(lines, st)
+    _append_trhrp_section_three(lines)
+    if st.get("error"):
+        lines.append("")
+        lines.append(f"  ⚠️ error: {st.get('error')}")
+    if st.get("warnings"):
+        lines.append("")
+        for w in st.get("warnings") or []:
+            lines.append(f"  ⚠️ 缓存回退: {w}")
     return "\n".join(lines)
+
+
+def _append_trhrp_section_two(lines, st):
+    """段二: 次日档变化与触发条件. 拆成变化组 (展开) + 维持组 (按档分组, 每市场一行)."""
+    lines.append("")
+    markets = st.get("markets") or []
+    changed_markets = []
+    stable_markets = []
+    for raw_m in markets:
+        m = {k: (v if v is not None else "-") for k, v in (raw_m or {}).items()}
+        cur_r = (m.get("currentRegime") or "?").upper()
+        nxt_r = (m.get("nextRegime") or "?").upper()
+        is_changed = bool(m.get("changed")) or cur_r != nxt_r
+        (changed_markets if is_changed else stable_markets).append(m)
+
+    def _f(x, d=1):
+        return f"{x:.{d}f}%" if isinstance(x, (int, float)) else "-"
+
+    def _mom(x):
+        return (f"{x:+.2f}%" if isinstance(x, (int, float)) else "-")
+
+    def _z(x):
+        return (f"{x:+.2f}σ" if isinstance(x, (int, float)) else "-")
+
+    def _disp_label(label, width=14):
+        s = str(label) if label != "-" else "-"
+        w = sum(2 if ord(c) > 127 else 1 for c in s)
+        if w < width:
+            return s + " " * (width - w)
+        if w > width:
+            out = ""
+            cur_w = 0
+            for c in s:
+                cw = 2 if ord(c) > 127 else 1
+                if cur_w + cw > width:
+                    break
+                out += c
+                cur_w += cw
+            return out + " " * (width - cur_w)
+        return s
+
+    lines.append(f"  ── 段二·次日档变化与触发条件 (共 {len(markets)} 个市场 · 变化 {len(changed_markets)} · 维持 {len(stable_markets)}) ──")
+
+    if changed_markets:
+        lines.append("")
+        lines.append(f"  ⚠️ 次日档变化 {len(changed_markets)} 个 — 次日开盘需调仓:")
+        for m in changed_markets:
+            cur_r = (m.get("currentRegime") or "?").upper()
+            nxt_r = (m.get("nextRegime") or "?").upper()
+            vol_pct = m.get("volPct")
+            p60 = m.get("volP60Pct")
+            med = m.get("medianVolPct")
+            mom = m.get("momPct")
+            z = m.get("priceZScore252")
+            label = m.get("label", "-")
+            cur_c = _trhrp_color_regime(cur_r)
+            nxt_c = _trhrp_color_regime(nxt_r)
+            lines.append(
+                f"    • {_disp_label(label)} "
+                f"{cur_c}{_trhrp_short_regime(cur_r):>3}{_RESET} → {nxt_c}{_trhrp_short_regime(nxt_r):>3}{_RESET}  "
+                f"vol {_f(vol_pct):>6} p60 {_f(p60):>6} 中位 {_f(med):>6} "
+                f"mom {_mom(mom):>7} z {_z(z):>7}"
+            )
+            reason = _trhrp_compact_reason(m.get("nextRegimeReason") or "-")
+            if reason != "-":
+                lines.append(f"        原因: {reason}")
+            trig = _trhrp_compact_trigger(m.get("nextRegimeNextTrigger") or "-")
+            if trig != "-":
+                lines.append(f"        触发: {trig}")
+
+    if stable_markets:
+        lines.append("")
+        lines.append(f"  ✓ 维持当前档 {len(stable_markets)} 个 (按档位分组):")
+        by_regime = {}
+        for m in stable_markets:
+            cur_r = (m.get("currentRegime") or "?").upper()
+            by_regime.setdefault(cur_r, []).append(m)
+        for regime in ["RISK_ON", "MODERATE", "RISK_OFF"]:
+            if regime not in by_regime:
+                continue
+            ms = by_regime[regime]
+            rc = _trhrp_color_regime(regime)
+            lines.append(f"    [{rc}{_trhrp_short_regime(regime)}{_RESET}] {len(ms)} 个:")
+            for m in ms:
+                vol_pct = m.get("volPct")
+                mom = m.get("momPct")
+                z = m.get("priceZScore252")
+                label = m.get("label", "-")
+                trig = _trhrp_compact_trigger(m.get("nextRegimeNextTrigger") or "-")
+                lines.append(
+                    f"       {_disp_label(label)} "
+                    f"vol {_f(vol_pct):>6} mom {_mom(mom):>7} z {_z(z):>7}  "
+                    f"{trig}"
+                )
+
+
+# ── 段三: 历史回测最佳策略 (数据源 deliverables/trhrp_backtest_all/_all.json) ──
+_TRHRP_BT_PATH = os.path.normpath(os.path.join(HERE, "..", "deliverables", "trhrp_backtest_all", "_all.json"))
+# 5 个策略变体 → (显示名, summary cagr 字段, summary mdd 字段)
+_TRHRP_VARIANTS = [
+    ("strategy",  "主策略",   "strategy_cagr",  "strategy_max_drawdown"),
+    ("benchmark", "买入持有", "benchmark_cagr", "benchmark_max_drawdown"),
+    ("timing",    "股现择时", "timing_cagr",    "timing_max_drawdown"),
+    ("extreme",   "极值仓位", "extreme_cagr",   "extreme_max_drawdown"),
+    ("ronly",     "ON满仓",   "ronly_cagr",     "ronly_max_drawdown"),
+]
+_trhrp_bt_cache = None  # {label: {variant, name, cagr, mdd, calmar, strat_calmar}}
+
+
+def _load_trhrp_backtest():
+    """懒加载 _all.json, 返回 {label: best_info}. 文件缺失/解析失败返回 None."""
+    global _trhrp_bt_cache
+    if _trhrp_bt_cache is not None:
+        return _trhrp_bt_cache
+    if not os.path.exists(_TRHRP_BT_PATH):
+        _trhrp_bt_cache = {}
+        return _trhrp_bt_cache
+    try:
+        with open(_TRHRP_BT_PATH) as f:
+            data = json.load(f)
+    except Exception:
+        _trhrp_bt_cache = {}
+        return _trhrp_bt_cache
+    out = {}
+    for r in data.get("results", []):
+        meta = r.get("meta") or {}
+        label = meta.get("label")
+        if not label:
+            continue
+        s = r.get("summary") or {}
+        best = None
+        strat_calmar = None
+        for key, disp, cagr_k, mdd_k in _TRHRP_VARIANTS:
+            cagr = s.get(cagr_k)
+            mdd = s.get(mdd_k)
+            if not isinstance(cagr, (int, float)) or not isinstance(mdd, (int, float)):
+                continue
+            if mdd >= 0:
+                # mdd==0 除零, 跳过; mdd>0 数据异常也跳过
+                continue
+            calmar = cagr / abs(mdd)
+            if key == "strategy":
+                strat_calmar = calmar
+            if best is None or calmar > best["calmar"]:
+                best = {"variant": key, "name": disp, "cagr": cagr, "mdd": mdd, "calmar": calmar}
+        if best is not None:
+            best["strat_calmar"] = strat_calmar
+            out[label] = best
+    _trhrp_bt_cache = out
+    return out
+
+
+def _append_trhrp_section_three(lines):
+    """段三: 各标的历史回测最佳策略 (按 Calmar=CAGR/|MDD| 评选, 突出最佳≠主策略的标的)."""
+    bt = _load_trhrp_backtest()
+    if not bt:
+        return
+    total = len(bt)
+    non_strat = [(label, info) for label, info in bt.items() if info["variant"] != "strategy"]
+    is_strat_count = total - len(non_strat)
+
+    lines.append("")
+    lines.append(f"  ── 段三·历史回测最佳策略 (Calmar = CAGR/|MDD| · 共 {total} 个标的 · 最佳非主策略 {len(non_strat)} 个) ──")
+
+    def _disp_label(label, width=14):
+        s = str(label)
+        w = sum(2 if ord(c) > 127 else 1 for c in s)
+        if w < width:
+            return s + " " * (width - w)
+        if w > width:
+            out = ""
+            cur_w = 0
+            for c in s:
+                cw = 2 if ord(c) > 127 else 1
+                if cur_w + cw > width:
+                    break
+                out += c
+                cur_w += cw
+            return out + " " * (width - cur_w)
+        return s
+
+    def _pct(x, sign=False):
+        if not isinstance(x, (int, float)):
+            return "-"
+        return (f"{x*100:+.1f}%" if sign else f"{x*100:.1f}%")
+
+    if non_strat:
+        lines.append("")
+        lines.append(f"  💡 最佳策略非主策略的标的 (改用该变体风险收益比更高):")
+        lines.append(f"     {'市场':<14} {'最佳策略':<8} {'CAGR':>7} {'MDD':>7} {'Calmar':>7} {'主Calmar':>12} {'差值':>7}")
+        # 按 Calmar 差值 (best - strategy) 降序, 差值越大越值得切换
+        non_strat.sort(key=lambda kv: (kv[1]["calmar"] - (kv[1]["strat_calmar"] or 0)), reverse=True)
+        for label, info in non_strat:
+            diff = info["calmar"] - (info["strat_calmar"] or 0)
+            lines.append(
+                f"     {_disp_label(label)} {info['name']:<8} "
+                f"{_pct(info['cagr']):>7} {_pct(info['mdd']):>7} {info['calmar']:>7.2f} "
+                f"{(info['strat_calmar'] or 0):>12.2f} {diff:>+7.2f}"
+            )
+
+    if is_strat_count:
+        lines.append("")
+        lines.append(f"  ✓ 最佳策略即主策略的标的 {is_strat_count} 个 (主策略已是该标的风险收益比最优变体)")
+
 
 
 def cmd_trhrp_list(name="TRHRP"):
@@ -643,7 +899,6 @@ _NAME_COLORS = [
     "\033[96m",  # 亮青
     "\033[91m",  # 亮红
 ]
-_RESET = "\033[0m"
 _DIM = "\033[2m"
 
 

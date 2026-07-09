@@ -235,6 +235,7 @@ export function buildMainOption(
         data: navData,
         showSymbol: false,
         lineStyle: { width: 1.8, color: '#2e7d32' },
+        itemStyle: { color: '#2e7d32' },
         markArea: { silent: true, data: runs },
       },
       {
@@ -244,6 +245,7 @@ export function buildMainOption(
         data: cashData,
         showSymbol: false,
         lineStyle: { width: 1.4, color: '#ef6c00', type: 'dashed' },
+        itemStyle: { color: '#ef6c00' },
       },
       {
         name: '极值仓位',
@@ -252,6 +254,7 @@ export function buildMainOption(
         data: extremeData,
         showSymbol: false,
         lineStyle: { width: 1.4, color: '#6a1b9a', type: 'dotted' },
+        itemStyle: { color: '#6a1b9a' },
       },
       {
         name: 'risk-on满仓',
@@ -260,6 +263,7 @@ export function buildMainOption(
         data: ronlyData,
         showSymbol: false,
         lineStyle: { width: 1.4, color: '#00838f', type: 'dashed' },
+        itemStyle: { color: '#00838f' },
       },
       {
         name: '标的价格(归一)',
@@ -268,6 +272,7 @@ export function buildMainOption(
         data: priceData,
         showSymbol: false,
         lineStyle: { width: 1.4, color: '#1565c0' },
+        itemStyle: { color: '#1565c0' },
       },
       {
         name: '加仓',
@@ -400,6 +405,7 @@ export function buildWeightOption(
         data: wData,
         showSymbol: false,
         lineStyle: { width: 1.8, color: '#6a1b9a' },
+        itemStyle: { color: '#6a1b9a' },
         markArea: { silent: true, data: runs },
         markLine: {
           silent: true,
@@ -446,6 +452,7 @@ export function buildWeightOption(
         showSymbol: false,
         smooth: true,
         lineStyle: { width: 1.2, color: '#00838f' },
+        itemStyle: { color: '#00838f' },
         areaStyle: { color: 'rgba(0,131,143,0.06)' },
       },
       {

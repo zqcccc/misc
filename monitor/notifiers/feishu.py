@@ -32,6 +32,11 @@ _SECRET_ENV = os.environ.get("MONITOR_FEISHU_SECRET")
 
 _MAX_CHARS = 1500  # 飞书 text 消息 content 上限(字符, 非字节)
 
+# open.feishu.cn 是国内域名, 必须直连. EMA daemon 进程可能继承了 HTTP(S)_PROXY
+# (启动 monitor.py start 时 shell 里开着代理), 走代理会对国内地址超时.
+# TRHRP daemon 没继承代理所以正常 —— 两者差异就在这里. 强制不走代理.
+_NO_PROXY_OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+
 
 def _load():
     webhook = None
@@ -100,7 +105,7 @@ def notify(title, message, important=True, **_kw):
             req = urllib.request.Request(
                 webhook, data=data, headers={"Content-Type": "application/json"}
             )
-            resp = urllib.request.urlopen(req, timeout=10)
+            resp = _NO_PROXY_OPENER.open(req, timeout=10)
             if resp.status != 200:
                 print(f"[notifier:feishu] http {resp.status}", flush=True)
                 ok = False
