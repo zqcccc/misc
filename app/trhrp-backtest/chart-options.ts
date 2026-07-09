@@ -23,6 +23,38 @@ const isDark = () =>
   typeof document !== 'undefined' &&
   document.documentElement.classList.contains('dark')
 
+/** 窄屏(移动端)收紧图表 grid 边距, 避免左右留白压缩绘图区 */
+function responsiveGrid(base: { left: number; right: number; top: number; bottom: number }) {
+  if (typeof window === 'undefined') return base
+  const w = window.innerWidth
+  if (w <= 380) return { ...base, left: 34, right: 38 }
+  if (w <= 480) return { ...base, left: 40, right: 44 }
+  if (w <= 768) return { ...base, left: 46, right: 50 }
+  return base
+}
+
+/**
+ * 窄屏(移动端)图例改成分页滚动模式, 避免多个图例项挤在一行互相重叠。
+ * type=scroll 时 ECharts 会自动按宽度截断、显示翻页箭头, 桌面端宽屏仍用 plain。
+ */
+function responsiveLegend<T extends Record<string, any>>(base: T): T {
+  if (typeof window === 'undefined') return base
+  const w = window.innerWidth
+  if (w <= 768) {
+    return {
+      ...base,
+      type: 'scroll',
+      pageIconSize: 10,
+      pageIconColor: '#94a3b8',
+      pageIconInactiveColor: '#475569',
+      pageTextStyle: { fontSize: 10 },
+      pageButtonItemGap: 2,
+      pageButtonGap: 6,
+    }
+  }
+  return base
+}
+
 /** 图表文字配色: 跟随页面 light/dark 主题, 保证图例/坐标轴在两种模式下都清晰 */
 function themeColors(d: boolean) {
   return {
@@ -42,6 +74,13 @@ export function pct(x: number): string {
 }
 export function signed(x: number): string {
   return (x >= 0 ? '+' : '') + (x * 100).toFixed(1) + '%'
+}
+/** 标的现价自适应格式化: 大价(>=1000)去小数加千分位, 常规(>=1)两位小数, 小价(<1)四位小数 */
+export function fmtPrice(v: number | null | undefined): string {
+  if (v == null || Number.isNaN(v)) return '—'
+  if (v >= 1000) return v.toLocaleString('en-US', { maximumFractionDigits: 0 })
+  if (v >= 1) return v.toFixed(2)
+  return v.toFixed(4)
 }
 
 /** 把连续相同 regime 的时段合并成 markArea 区间 */
@@ -90,7 +129,7 @@ function axisTooltip(regimeCn: RegimeCn) {
       h += `<br/><b>主策略净值:</b> ${d.s.toFixed(3)} &nbsp; <b>基准:</b> ${d.b.toFixed(
         3,
       )} &nbsp; <b>股现择时:</b> ${d.c != null ? d.c.toFixed(3) : '—'} &nbsp; <b>极值仓位:</b> ${d.e != null ? d.e.toFixed(3) : '—'} &nbsp; <b>risk-on满仓:</b> ${d.ro != null ? d.ro.toFixed(3) : '—'}`
-      h += `<br/><b>股票权重:</b> ${(d.we * 100).toFixed(0)}% &nbsp; <b>标的(归一):</b> ${d.p.toFixed(
+      h += `<br/><b>股票权重:</b> ${(d.we * 100).toFixed(0)}% &nbsp; <b>标的现价:</b> ${fmtPrice(d.pp)} &nbsp; <b>归一价:</b> ${d.p.toFixed(
         3,
       )} &nbsp; <b>vol21:</b> ${d.v != null ? (d.v * 100).toFixed(1) + '%' : '—'}`
       return h
@@ -119,6 +158,7 @@ export function buildMainOption(
     ro: pt.ro,
     v: pt.v,
     p: pt.p / p0,
+    pp: pt.p,
   }))
   const cashData = ts.map((pt) => ({
     value: [pt.d, pt.c],
@@ -133,6 +173,7 @@ export function buildMainOption(
     ro: pt.ro,
     v: pt.v,
     p: pt.p / p0,
+    pp: pt.p,
   }))
   const extremeData = ts.map((pt) => ({
     value: [pt.d, pt.e],
@@ -147,6 +188,7 @@ export function buildMainOption(
     ro: pt.ro,
     v: pt.v,
     p: pt.p / p0,
+    pp: pt.p,
   }))
   const priceData = ts.map((pt) => ({
     value: [pt.d, pt.p / p0],
@@ -161,6 +203,7 @@ export function buildMainOption(
     ro: pt.ro,
     v: pt.v,
     p: pt.p / p0,
+    pp: pt.p,
   }))
   const ronlyData = ts.map((pt) => ({
     value: [pt.d, pt.ro],
@@ -175,6 +218,7 @@ export function buildMainOption(
     ro: pt.ro,
     v: pt.v,
     p: pt.p / p0,
+    pp: pt.p,
   }))
   // 操作点标记必须落在归一价曲线上(同量纲), 否则会飞出轴外
   const mPrice = { add: [] as any[], red: [] as any[] }
@@ -189,7 +233,7 @@ export function buildMainOption(
     backgroundColor: 'transparent',
     textStyle: { color: t.legend },
     tooltip: axisTooltip(regimeCn),
-    legend: {
+    legend: responsiveLegend({
       data: [
         { name: '主策略净值', icon: 'roundRect' },
         { name: '股现择时净值', icon: 'roundRect' },
@@ -204,8 +248,8 @@ export function buildMainOption(
       itemHeight: 10,
       textStyle: { color: t.legend, fontSize: 12 },
       selected: { 加仓: true, 减仓: true },
-    },
-    grid: { left: 58, right: 64, top: 38, bottom: 64 },
+    }),
+    grid: responsiveGrid({ left: 58, right: 64, top: 38, bottom: 64 }),
     xAxis: { type: 'time', axisLabel: { fontSize: 11, color: t.axis } },
     yAxis: [
       {
@@ -317,6 +361,7 @@ export function buildWeightOption(
     s: pt.s,
     b: pt.b,
     p: pt.p / p0,
+    pp: pt.p,
   }))
   // vol_21 年化波动率 -> 百分比, 早期 null 过滤掉(否则 echarts 会画到 0)
   const volData = ts
@@ -356,11 +401,12 @@ export function buildWeightOption(
         h += `<b>操作:</b> ${OP_CN[d.o] || d.o}`
         if (d.o !== 'hold') h += ` (Δ ${(d.dw * 100).toFixed(0)}pp)`
         h += `<br/><b>股票仓位:</b> ${d.value[1].toFixed(0)}%`
+        if (d.pp != null) h += ` &nbsp; <b>标的现价:</b> ${fmtPrice(d.pp)}`
         if (d.v != null) h += ` &nbsp; <b>vol21:</b> ${(d.v * 100).toFixed(1)}%`
         return h
       },
     },
-    legend: {
+    legend: responsiveLegend({
       data: [
         { name: '股票仓位%', icon: 'roundRect' },
         { name: '波动率%', icon: 'roundRect' },
@@ -372,8 +418,8 @@ export function buildWeightOption(
       itemHeight: 10,
       textStyle: { color: t.legend, fontSize: 12 },
       selected: { 加仓: true, 减仓: true },
-    },
-    grid: { left: 58, right: 64, top: 34, bottom: 48 },
+    }),
+    grid: responsiveGrid({ left: 58, right: 64, top: 34, bottom: 48 }),
     xAxis: { type: 'time', axisLabel: { fontSize: 11, color: t.axis } },
     yAxis: [
       {

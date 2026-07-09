@@ -7,7 +7,7 @@
   --max-width: 1100px;
   --border-radius: 12px;
   --font-mono: ui-monospace, Menlo, Monaco, 'Cascadia Mono', 'Segoe UI Mono',
-    'Roboto Mono', 'Oxygen Mono', 'Ubuntu Monospace', 'Source Code Pro',
+    'Roboto Mono', 'Oxygen Mono', 'Ubuntu Mono', 'Source Code Pro',
     'Fira Mono', 'Droid Sans Mono', 'Courier New', monospace;
 
   --radius: 0.5rem;
@@ -63,6 +63,43 @@
   --callout-border-rgb: 172, 175, 176;
   --card-rgb: 180, 185, 188;
   --card-border-rgb: 131, 134, 135;
+
+  /* TRHRP 回测看板配色 (从 page.module.css 迁移, tailwind 通过 var() 引用) */
+  --page-bg: #f4f6fb;
+  --surface: #ffffff;
+  --surface-2: #f8fafc;
+  --surface-hover: #f1f5f9;
+  --border-trhrp: #e6eaf0;
+  --border-strong: #d4dae3;
+  --ink: #0b1220;
+  --ink-2: #1e293b;
+  --sub: #5b6678;
+  --sub-2: #8593a6;
+  --accent-trhrp: #0369a1;
+  --accent-strong: #075985;
+  --accent-bg: #e8f4fd;
+  --accent-bg-strong: #d6ebfb;
+  --accent-border: #bae6fd;
+  --pos: #047857;
+  --pos-bg: #ecfdf5;
+  --neg: #b91c1c;
+  --neg-bg: #fef2f2;
+  --warn: #b45309;
+  --warn-bg: #fffbeb;
+  --best-star: #d97706;
+  --best-ink: #c2410c;
+  --risk-bg: #ecfdf5;
+  --risk-border: #6ee7b7;
+  --risk-ink: #065f46;
+  --risk-star: #059669;
+  --header-bg: #0b1220;
+  --header-border: #1e293b;
+  --header-sub: #94a3b8;
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 1px 3px rgba(15, 23, 42, 0.05),
+    0 1px 2px rgba(15, 23, 42, 0.03);
+  --shadow-lg: 0 10px 24px -8px rgba(15, 23, 42, 0.12),
+    0 4px 8px -4px rgba(15, 23, 42, 0.06);
 }
 
 .dark {
@@ -114,12 +151,58 @@
   --callout-border-rgb: 108, 108, 108;
   --card-rgb: 100, 100, 100;
   --card-border-rgb: 200, 200, 200;
+
+  /* TRHRP 回测看板 dark 配色 */
+  --page-bg: #0a0f1a;
+  --surface: #111827;
+  --surface-2: #161f30;
+  --surface-hover: #1c2638;
+  --border-trhrp: #1f2a3d;
+  --border-strong: #2a3750;
+  --ink: #e7ecf3;
+  --ink-2: #cbd5e1;
+  --sub: #94a3b8;
+  --sub-2: #64748b;
+  --accent-trhrp: #38bdf8;
+  --accent-strong: #7dd3fc;
+  --accent-bg: rgba(56, 189, 248, 0.08);
+  --accent-bg-strong: rgba(56, 189, 248, 0.14);
+  --accent-border: rgba(56, 189, 248, 0.25);
+  --pos: #34d399;
+  --pos-bg: rgba(52, 211, 153, 0.08);
+  --neg: #f87171;
+  --neg-bg: rgba(248, 113, 113, 0.08);
+  --warn: #fbbf24;
+  --warn-bg: rgba(251, 191, 36, 0.08);
+  --best-star: #fbbf24;
+  --best-ink: #fb923c;
+  --risk-bg: rgba(16, 185, 129, 0.16);
+  --risk-border: rgba(16, 185, 129, 0.45);
+  --risk-ink: #6ee7b7;
+  --risk-star: #34d399;
+  --header-bg: #060912;
+  --header-border: #1e293b;
+  --header-sub: #64748b;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 24px -8px rgba(0, 0, 0, 0.6),
+    0 4px 8px -4px rgba(0, 0, 0, 0.4);
 }
 
 * {
   box-sizing: border-box;
   padding: 0;
   margin: 0;
+}
+
+button {
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  border: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
 }
 
 html,
