@@ -135,6 +135,11 @@ export interface MarketResult {
     next_operation?: string | null
     outlook_note?: string | null
     outlook_dist?: number | null
+    // —— 最新一日信号分量 (与 outlook_note 同源, 详情区展示用) ——
+    latest_vol?: number | null // 当日 vol_21 年化波动率 (0~1)
+    latest_vol_p60?: number | null // 波动率 60 分位 (risk_off 触发线)
+    latest_vol_med?: number | null // 波动率中位数 (risk_on 触发线)
+    latest_mom?: number | null // 21 日动量 (0~1)
   }
   timeseries: TsPoint[]
 }

@@ -24,7 +24,8 @@
   --neg-bg: #fef2f2;
   --warn: #b45309;
   --warn-bg: #fffbeb;
-  --best-ink: #92400e;
+  --best-star: #d97706;
+  --best-ink: #c2410c;
   --risk-bg: #ecfdf5;
   --risk-border: #6ee7b7;
   --risk-ink: #065f46;
@@ -61,7 +62,8 @@
   --neg-bg: rgba(248, 113, 113, 0.08);
   --warn: #fbbf24;
   --warn-bg: rgba(251, 191, 36, 0.08);
-  --best-ink: #fcd34d;
+  --best-star: #fbbf24;
+  --best-ink: #fb923c;
   --risk-bg: rgba(16, 185, 129, 0.16);
   --risk-border: rgba(16, 185, 129, 0.45);
   --risk-ink: #6ee7b7;
@@ -488,24 +490,19 @@
   box-shadow: inset 2px 0 0 var(--accent);
 }
 
-/* 每行最高总收益单元格: 仅用字体颜色(琥珀)区分, 不再加底色/星标 */
+/* 最佳收益(最高总收益): 仅橙色字体, 不加 ★。
+   ★ 专属于"策略 / 性价比"概念, 不挂在本格。 */
 .bestReturn {
   color: var(--best-ink) !important;
   font-weight: 700 !important;
 }
 
-/* 每行性价比最高(总收益 ÷ |最大回撤|, Calmar 式)单元格: 绿色高亮 + ★。
-   放在 .bestReturn 之后, 同格双命中时绿色底色优先, ★ 仍展示。 */
-.bestRisk {
-  background: var(--risk-bg) !important;
-  color: var(--risk-ink) !important;
-  font-weight: 700 !important;
-  box-shadow: inset 0 0 0 1px var(--risk-border);
-}
-
+/* 最佳策略 = 最高性价比策略: 4 个策略变体(主策略/股现择时/极值仓位/risk-on满仓)中
+   总收益 ÷ |最大回撤|(Calmar 式风险收益比) 最高 → 仅一枚金色 ★。
+   与「最佳收益」(最高总收益, 橙色字体无★) 是不同概念, 故只此一枚 ★。 */
 .bestRisk::after {
   content: ' ★';
-  color: var(--risk-star);
+  color: var(--best-star);
   font-weight: 700;
 }
 

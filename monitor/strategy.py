@@ -651,7 +651,13 @@ def heartbeat_line(s, cfg, cb_threshold):
 def notify_message(s, cfg, cb_threshold, changes):
     scenario_short, _ = build_scenarios(s, cfg, cb_threshold)
     change_str = " | ".join(changes) if changes else "状态更新"
+    # 显式标注当前持仓方向, 避免止盈通知只写"仓位 80%→65%"时用户不知道是多还是空
+    pos_emoji = {1: "🟢", -1: "🔴", 0: "⚪"}
+    pos_line = f"持仓: {pos_emoji[s['position']]} {s['position_str']} {s['pos_size']*100:.0f}%"
+    if s["position"] != 0 and s.get("entry_price"):
+        pos_line += f" @ 开仓{s['entry_price']:.4g}"
     return (f"{cfg.get('name','?')}: {change_str}\n"
+            f"{pos_line}\n"
             f"现价{s['live_price']:.4g} 浮盈{s['unreal_pct']*100:+.2f}%\n"
             f"下一步: {scenario_short}")
 

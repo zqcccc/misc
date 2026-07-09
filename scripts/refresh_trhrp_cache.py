@@ -41,7 +41,7 @@ HYNIX = {
 
 
 def safe_name(t: str) -> str:
-    return t.replace("^", "IDX_").replace("=", "_").replace("/", "_")
+    return t.replace("^", "IDX_").replace("=", "_").replace("/", "_").replace(":", "_")
 
 
 def _dl(ticker: str, start: str) -> pd.DataFrame:

@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { CSSProperties } from 'react'
 import { useOverview, useMarketResult, useConnectedCharts } from './hooks'
 import type { MarketResult, MarketSummary, RangeStats } from './types'
 import { signed, pct } from './chart-options'
@@ -18,6 +19,24 @@ function clsColor(x: number): string {
   if (x > 0.0001) return s.pos
   if (x < -0.0001) return s.neg
   return ''
+}
+
+// 最大回撤按严重程度着色(热力): 回撤越深红色越浓, 深档文本转白保证可读。
+// 仅用于表格 MDD 列(fmt: 'pct'); 与最优总收益/性价比高亮的字体色互不冲突(二者落在收益列)。
+const MDD_TIERS: [number, string, boolean][] = [
+  [0.1, 'rgba(229,57,53,0.07)', false],
+  [0.2, 'rgba(229,57,53,0.15)', false],
+  [0.35, 'rgba(229,57,53,0.27)', false],
+  [0.55, 'rgba(229,57,53,0.43)', true],
+  [Infinity, 'rgba(229,57,53,0.64)', true],
+]
+function mddSeverityStyle(absPct: number): CSSProperties | undefined {
+  if (!absPct || absPct < 0.0001) return undefined
+  for (const [thr, bg, white] of MDD_TIERS) {
+    if (absPct < thr)
+      return white ? { background: bg, color: '#fff' } : { background: bg }
+  }
+  return undefined
 }
 
 // 风险偏好语义色 (与图表图例一致): 绿=风险偏好/进攻, 黄=中性, 红=风险规避. 非涨跌色.
@@ -260,6 +279,96 @@ function RiskStatusPanel({
     ) : (
       <span className={s.riskBadgeMuted}>—</span>
     )
+
+  // —— 最新一日信号分量 (驱动当前 regime 的原始信号) ——
+  // vol: 当日 21 日年化波动率; vol_p60: 波动率 60 分位 (risk_off 触发线);
+  // vol_med: 波动率中位数 (risk_on 触发线); mom: 21 日动量.
+  const vol = summary.latest_vol
+  const volP60 = summary.latest_vol_p60
+  const volMed = summary.latest_vol_med
+  const mom = summary.latest_mom
+  const hasSignal =
+    vol != null || volP60 != null || volMed != null || mom != null
+  const fmtVol = (v: number | null | undefined) =>
+    v == null ? '—' : `${(v * 100).toFixed(1)}%`
+  // vol 落点色: vol > vol_p60 红(规避区), vol <= vol_med 绿(偏好区), 否则黄(中性)
+  const volZoneColor = (() => {
+    if (vol == null) return undefined
+    if (volP60 != null && vol > volP60) return REGIME_BG.risk_off
+    if (volMed != null && vol <= volMed) return REGIME_BG.risk_on
+    return REGIME_BG.moderate
+  })()
+  // mom 色: >0 绿(上行), <0 红(下行)
+  const momColor =
+    mom == null
+      ? undefined
+      : mom > 0.0001
+        ? REGIME_BG.risk_on
+        : mom < -0.0001
+          ? REGIME_BG.risk_off
+          : REGIME_BG.moderate
+  // vol vs 阈值差 (pp), 用来直观显示距离 risk_off 触发线多远
+  const ppVsP60 =
+    vol != null && volP60 != null ? (vol - volP60) * 100 : null
+
+  // —— 切换条件分解 (解释 outlook_dist "距触发 X%" 的来源) ——
+  // risk_off 触发 = vol>p60 且 mom<0; risk_on 触发 = vol≤中位数 且 mom>0.
+  // 距离 = max(各条件的归一化 gap): 已满足条件 gap<0(负, 不构成约束),
+  //        未满足条件 gap>0(正, 是瓶颈). 取 max → 瓶颈条件决定距离.
+  const outlookState = summary.regime_outlook // 'stable'|'watch_risk_off'|'watch_risk_on'|'unknown'
+  const watchTarget =
+    outlookState === 'watch_risk_off'
+      ? 'risk_off'
+      : outlookState === 'watch_risk_on'
+        ? 'risk_on'
+        : null
+  type CondStatus = {
+    label: string
+    met: boolean
+    detail: string
+    gap: number | null // 归一化距离, 负=已超阈值, 正=还差这么远
+    binding: boolean // 是否瓶颈(决定 outlook_dist 的那个)
+  }
+  const conds: CondStatus[] = []
+  if (watchTarget === 'risk_off' && vol != null && volP60 != null && mom != null) {
+    const volGap = (volP60 - vol) / volP60 // >0=未满足(vol<p60), <0=已满足(vol>p60)
+    const momGap = mom // >0=未满足(mom>0), <0=已满足(mom<0)
+    const dist = Math.max(volGap, momGap)
+    conds.push({
+      label: 'vol > p60',
+      met: vol > volP60,
+      detail: `vol ${fmtVol(vol)} ${vol > volP60 ? '>' : '≤'} p60 ${fmtVol(volP60)}（${ppVsP60! >= 0 ? '+' : ''}${ppVsP60!.toFixed(1)}pp）`,
+      gap: volGap,
+      binding: Math.abs(volGap - dist) < 1e-9,
+    })
+    conds.push({
+      label: 'mom < 0',
+      met: mom < 0,
+      detail: `mom ${fmtPct(mom, 1)} ${mom < 0 ? '<' : '≥'} 0`,
+      gap: momGap,
+      binding: Math.abs(momGap - dist) < 1e-9,
+    })
+  } else if (watchTarget === 'risk_on' && vol != null && volMed != null && mom != null) {
+    const volGap = (vol - volMed) / volMed // >0=未满足(vol>中位), <0=已满足
+    const momGap = -mom // >0=未满足(mom<0), <0=已满足(mom>0)
+    const dist = Math.max(volGap, momGap)
+    const ppVsMed = (vol - volMed) * 100
+    conds.push({
+      label: 'vol ≤ 中位数',
+      met: vol <= volMed,
+      detail: `vol ${fmtVol(vol)} ${vol <= volMed ? '≤' : '>'} 中位数 ${fmtVol(volMed)}（${ppVsMed >= 0 ? '+' : ''}${ppVsMed.toFixed(1)}pp）`,
+      gap: volGap,
+      binding: Math.abs(volGap - dist) < 1e-9,
+    })
+    conds.push({
+      label: 'mom > 0',
+      met: mom > 0,
+      detail: `mom ${fmtPct(mom, 1)} ${mom > 0 ? '>' : '≤'} 0`,
+      gap: momGap,
+      binding: Math.abs(momGap - dist) < 1e-9,
+    })
+  }
+
   return (
     <div className={s.card}>
       <div className={s.cardHeader}>
@@ -303,6 +412,179 @@ function RiskStatusPanel({
           </div>
         </div>
       </div>
+
+      {hasSignal && (
+        <>
+          <div
+            style={{
+              marginTop: 14,
+              paddingTop: 12,
+              borderTop: '1px dashed var(--border)',
+            }}
+          >
+            <div
+              style={{
+                fontSize: 11,
+                color: 'var(--sub-2)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                marginBottom: 8,
+              }}
+            >
+              最新信号分量（截至 {summary.last_date || '—'}，驱动上方风险偏好判定）
+            </div>
+            <div className={s.riskGrid}>
+              <div className={s.riskCell}>
+                <div className={s.riskKey}>
+                  当前波动率 vol
+                  <span className={s.riskTag}>vol_21 年化</span>
+                </div>
+                <div className={s.riskVal}>
+                  <span
+                    style={{
+                      color: '#fff',
+                      background: volZoneColor || '#9e9e9e',
+                      padding: '2px 10px',
+                      borderRadius: 6,
+                      fontSize: 13,
+                      fontWeight: 600,
+                    }}
+                  >
+                    {fmtVol(vol)}
+                  </span>
+                  {ppVsP60 != null && (
+                    <span
+                      style={{
+                        fontSize: 11,
+                        color: ppVsP60 > 0 ? 'var(--neg)' : 'var(--sub-2)',
+                      }}
+                    >
+                      vs p60 {ppVsP60 >= 0 ? '+' : ''}
+                      {ppVsP60.toFixed(1)}pp
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className={s.riskCell}>
+                <div className={s.riskKey}>
+                  波动率 p60
+                  <span className={s.riskTag}>risk_off 触发线</span>
+                </div>
+                <div className={s.riskVal} style={{ color: 'var(--neg)' }}>
+                  {fmtVol(volP60)}
+                </div>
+              </div>
+              <div className={s.riskCell}>
+                <div className={s.riskKey}>
+                  波动率中位数
+                  <span className={s.riskTag}>risk_on 触发线</span>
+                </div>
+                <div className={s.riskVal} style={{ color: 'var(--pos)' }}>
+                  {fmtVol(volMed)}
+                </div>
+              </div>
+              <div className={s.riskCell}>
+                <div className={s.riskKey}>
+                  动量 mom
+                  <span className={s.riskTag}>21 日</span>
+                </div>
+                <div className={s.riskVal}>
+                  <span
+                    style={{
+                      color: '#fff',
+                      background: momColor || '#9e9e9e',
+                      padding: '2px 10px',
+                      borderRadius: 6,
+                      fontSize: 13,
+                      fontWeight: 600,
+                    }}
+                  >
+                    {mom == null ? '—' : fmtPct(mom, 1)}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className={s.riskNote} style={{ marginTop: 6 }}>
+              判定规则：vol &gt; p60 且 mom &lt; 0 → 风险规避；vol ≤ 中位数 且 mom
+              &gt; 0 → 风险偏好；其余 → 中性。vol 色块按当前落点着色（绿=偏好区 /
+              黄=中性区 / 红=规避区），mom 色块按涨跌着色。
+            </div>
+
+            {conds.length > 0 && (
+              <div
+                style={{
+                  marginTop: 10,
+                  padding: '8px 12px',
+                  background: 'var(--surface-2)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 8,
+                  fontSize: 12,
+                }}
+              >
+                <div style={{ marginBottom: 6, color: 'var(--sub)' }}>
+                  切换至「{regimeCnLabel(watchTarget, regimeCn)}」条件分解
+                  <span style={{ color: 'var(--sub-2)', marginLeft: 6 }}>
+                    （距触发约 {(summary.outlook_dist ?? 0) * 100 | 0}%，瓶颈条件见 ▼ 标记）
+                  </span>
+                </div>
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                    gap: '4px 16px',
+                  }}
+                >
+                  {conds.map((c) => (
+                    <div
+                      key={c.label}
+                      style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                    >
+                      <span
+                        style={{
+                          color: '#fff',
+                          background: c.met ? 'var(--pos)' : 'var(--neg)',
+                          padding: '1px 6px',
+                          borderRadius: 4,
+                          fontSize: 10,
+                          fontWeight: 700,
+                          minWidth: 18,
+                          textAlign: 'center',
+                        }}
+                      >
+                        {c.met ? '✓' : '✗'}
+                      </span>
+                      <span style={{ color: 'var(--ink-2)', fontWeight: 500 }}>
+                        {c.label}
+                      </span>
+                      {c.binding && (
+                        <span
+                          style={{
+                            color: 'var(--warn)',
+                            fontSize: 11,
+                            fontWeight: 700,
+                          }}
+                          title="此条件未满足且是瓶颈，决定了上方「距触发」的百分比"
+                        >
+                          ▼ 瓶颈
+                        </span>
+                      )}
+                      <span style={{ color: 'var(--sub)', fontSize: 11 }}>
+                        {c.detail}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ marginTop: 6, fontSize: 11, color: 'var(--sub-2)' }}>
+                  触发需<b>两个条件同时满足</b>。距离 = max(各条件归一化差距)：
+                  已满足条件差距为负（不构成约束），未满足条件差距为正（是瓶颈）。
+                  所以「距触发 X%」= 最不紧迫的那个未满足条件还差多少。
+                </div>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
       {summary.outlook_note && (
         <div className={isUnknown ? s.riskNote : s.riskWarn}>
           {summary.outlook_note}
@@ -481,11 +763,10 @@ function SummaryTable({
   }
   const clsFor = (m: TableView, c: (typeof cols)[number]) => {
     if (c.fmt === 'signed') return clsColor(m[c.key] as number)
-    if (c.fmt === 'pct')
-      return (m[c.key] as number) < -0.0001 ? s.neg : ''
+    // MDD 列(pct)改用热力背景着色, 见下方 cellStyle, 此处不再铺红字
     return ''
   }
-  // 每行最高总收益: 在 5 个总收益列中取最大, 用于 ★ 高亮
+  // 最佳收益(最高总收益): 在「全部 5 个总收益列(含基准)」中取最大, 仅橙色字体标出、不加 ★
   const RETURN_KEYS: (keyof MarketSummary)[] = [
     'strat_total',
     'timing_total',
@@ -502,24 +783,31 @@ function SummaryTable({
     })
     return set
   }
-  // 每行性价比最高: 总收益 ÷ |最大回撤| (Calmar 式风险收益比),
-  // 在 5 个总收益列中取最大, 用于 ◆ 高亮。无波动/Sharpe 字段, 这是可计算的最合理风险调整指标。
-  const RETURN_TO_MDD: Record<string, keyof MarketSummary> = {
+  // 最佳策略 = 最高性价比策略: 只在 4 个「策略」变体(主策略/股现择时/极值仓位/risk-on满仓)中取最优,
+  // 不含基准(buy&hold 不算策略)。用一枚金色 ★ 标出。
+  // 判定口径 = 总收益 ÷ |最大回撤| (Calmar 式风险收益比) 最高。
+  const STRATEGY_KEYS: (keyof MarketSummary)[] = [
+    'strat_total',
+    'timing_total',
+    'extreme_total',
+    'ronly_total',
+  ]
+  const STRATEGY_TO_MDD: Record<string, keyof MarketSummary> = {
     strat_total: 'strat_mdd',
     timing_total: 'timing_mdd',
     extreme_total: 'extreme_mdd',
-    bench_total: 'bench_mdd',
     ronly_total: 'ronly_mdd',
   }
+  // 最佳策略(最高性价比): 4 个策略变体中 总收益÷|最大回撤| 最高 → 金色 ★
   const bestRiskKeysFor = (m: TableView): Set<keyof TableView> => {
-    const vals = RETURN_KEYS.map((k) => {
+    const vals = STRATEGY_KEYS.map((k) => {
       const tot = Number(m[k]) || 0
-      const mdd = Math.abs(Number(m[RETURN_TO_MDD[k as string]]) || 0)
+      const mdd = Math.abs(Number(m[STRATEGY_TO_MDD[k as string]]) || 0)
       return mdd > 1e-9 ? tot / mdd : Number.NEGATIVE_INFINITY
     })
     const max = Math.max(...vals)
     const set = new Set<keyof MarketSummary>()
-    RETURN_KEYS.forEach((k, i) => {
+    STRATEGY_KEYS.forEach((k, i) => {
       if (max > Number.NEGATIVE_INFINITY && Math.abs(vals[i] - max) < 1e-6)
         set.add(k)
     })
@@ -531,14 +819,36 @@ function SummaryTable({
         <h3 className={s.tableTitle}>全市场汇总</h3>
         <span className={s.tableHint}>
           点击行跳转到该标的图表 ·{' '}
-          <span style={{ color: 'var(--risk-star)', fontWeight: 700 }}>
-            ★
-          </span>{' '}
-          性价比最高（总收益 ÷ |最大回撤|，主策略/股现择时/极值仓位/risk-on满仓/基准 五者取最大）·{' '}
-          <strong style={{ color: 'var(--best-ink)' }}>最高总收益</strong>
-          （琥珀色字）·{' '}
+          <span
+            style={{
+              color: 'var(--best-ink)',
+              fontWeight: 700,
+            }}
+          >
+            最佳收益(最高总收益)
+          </span>
+          （橙色字体，无 ★）·{' '}
+          <span
+            style={{
+              color: 'var(--best-star)',
+              fontWeight: 700,
+            }}
+          >
+            ★ 最佳策略
+          </span>
+          （金色 ★：4 策略变体中 总收益÷|最大回撤| 最高，即最佳策略=最高性价比策略）·{' '}
+          基准(buy&amp;hold) 仅参与「最佳收益」排名，不参与「最佳策略」（买入持有不算策略）·{' '}
           <strong>所有「超额」列均为相对基准(buy&amp;hold) 的超额收益</strong>
-          （主策略/股现择时/极值仓位/risk-on满仓 各自 − 基准）
+          （主策略/股现择时/极值仓位/risk-on满仓 各自 − 基准）·{' '}
+          <span
+            style={{
+              background: 'rgba(229,57,53,0.18)',
+              padding: '0 5px',
+              borderRadius: 3,
+            }}
+          >
+            最大回撤列按严重程度深浅红着色
+          </span>
         </span>
       </div>
       <div className={s.tableScroll}>
@@ -573,8 +883,16 @@ function SummaryTable({
                     ]
                       .filter(Boolean)
                       .join(' ')
+                    const cellStyle =
+                      c.fmt === 'pct'
+                        ? mddSeverityStyle(Math.abs(Number(v[c.key]) || 0))
+                        : undefined
                     return (
-                      <td key={c.key as string} className={cellCls}>
+                      <td
+                        key={c.key as string}
+                        className={cellCls}
+                        style={cellStyle}
+                      >
                         {fmtVal(v, c)}
                       </td>
                     )
@@ -591,7 +909,16 @@ function SummaryTable({
 
 export default function TrhrpBacktestPage() {
   const { data, state, error, generatedAt, refresh } = useOverview(REFRESH_MS)
-  const [activeLabel, setActiveLabel] = useState<string | null>(null)
+  // 记住上次选中的标的, 刷新页面后仍停留在该标的而非列表第一个。
+  const STORAGE_KEY = 'trhrp-backtest:activeLabel'
+  const [activeLabel, setActiveLabel] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null
+    try {
+      return window.localStorage.getItem(STORAGE_KEY) || null
+    } catch {
+      return null
+    }
+  })
   const { result, loading: resultLoading } = useMarketResult(
     activeLabel,
     generatedAt,
@@ -608,11 +935,23 @@ export default function TrhrpBacktestPage() {
     setRangeStats,
   )
 
-  useEffect(() => {
-    if (data && !activeLabel && data.markets.length) {
-      setActiveLabel(data.markets[0].label)
+  // activeLabel 变化时持久化到 localStorage
+  const selectLabel = useCallback((label: string) => {
+    setActiveLabel(label)
+    try {
+      window.localStorage.setItem(STORAGE_KEY, label)
+    } catch {
+      /* ignore */
     }
-  }, [data, activeLabel])
+  }, [])
+
+  useEffect(() => {
+    if (!data || !data.markets.length) return
+    // 存储的标的已不在列表里(被下线) → 回退到第一个
+    if (!activeLabel || !data.markets.some((m) => m.label === activeLabel)) {
+      selectLabel(data.markets[0].label)
+    }
+  }, [data, activeLabel, selectLabel])
 
   if (state === 'loading' && !data) {
     return <div className={s.centerMsg}>加载回测数据中…</div>
@@ -676,7 +1015,7 @@ export default function TrhrpBacktestPage() {
           <Sidebar
             markets={data.markets}
             active={activeLabel}
-            onSelect={setActiveLabel}
+            onSelect={selectLabel}
             regimeCn={data?.regime_cn || {}}
           />
         </aside>
@@ -746,6 +1085,8 @@ export default function TrhrpBacktestPage() {
             />
           )}
 
+          <RangeStatsPanel rs={rangeStats} />
+
           <div className={s.card}>
             {resultLoading && !result && (
               <div className={s.loadingHint}>加载标的序列…</div>
@@ -777,12 +1118,10 @@ export default function TrhrpBacktestPage() {
 
           {result && <SignalParamsNote params={result.params} meta={result.meta} />}
 
-          <RangeStatsPanel rs={rangeStats} />
-
           <SummaryTable
             markets={data.markets}
             active={activeLabel}
-            onSelect={setActiveLabel}
+            onSelect={selectLabel}
           />
 
           <div className={s.note}>
