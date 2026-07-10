@@ -275,6 +275,16 @@ function Sidebar({
                         gap: 4,
                       }}
                     >
+                      <span
+                        style={{
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          minWidth: 0,
+                        }}
+                      >
+                        {m.label}
+                      </span>
                       {/* 优质标的: label 后跟小 tag */}
                       {m.quality && (
                         <span
@@ -293,16 +303,6 @@ function Sidebar({
                           优质
                         </span>
                       )}
-                      <span
-                        style={{
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          minWidth: 0,
-                        }}
-                      >
-                        {m.label}
-                      </span>
                       {is7x24 && (
                         <span
                           title="7×24 连续交易, 信号即时生效无 T+1 延迟"
