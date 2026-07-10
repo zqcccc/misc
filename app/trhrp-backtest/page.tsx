@@ -1046,7 +1046,8 @@ function SummaryTable({
   }
   // 最佳策略 = 最高性价比策略: 只在 4 个「策略」变体(主策略/股现择时/极值仓位/risk-on满仓)中取最优,
   // 不含基准(buy&hold 不算策略)。用一枚金色 ★ 标出。
-  // 判定口径 = 总收益 ÷ |最大回撤| (Calmar 式风险收益比) 最高。
+  // 判定口径 = 总收益 ÷ |最大回撤| (Calmar 式风险收益比) 最高, 且必须优于买入持有.
+  // 若 4 个策略的 Calmar 均不如 BH, 则不标记最佳策略(矮子里拔将军会误导).
   const STRATEGY_KEYS: (keyof MarketSummary)[] = [
     'strat_total',
     'timing_total',
@@ -1059,19 +1060,23 @@ function SummaryTable({
     extreme_total: 'extreme_mdd',
     ronly_total: 'ronly_mdd',
   }
-  // 最佳策略(最高性价比): 4 个策略变体中 总收益÷|最大回撤| 最高 → 金色 ★
+  // 最佳策略(最高性价比): 4 个策略变体中 Calmar 最高, 且该 Calmar 须 > BH 的 Calmar → 金色 ★
   const bestRiskKeysFor = (m: TableView): Set<keyof TableView> => {
-    const vals = STRATEGY_KEYS.map((k) => {
-      const tot = Number(m[k]) || 0
-      const mdd = Math.abs(Number(m[STRATEGY_TO_MDD[k as string]]) || 0)
+    const calmar = (totKey: keyof MarketSummary, mddKey: keyof MarketSummary) => {
+      const tot = Number(m[totKey]) || 0
+      const mdd = Math.abs(Number(m[mddKey]) || 0)
       return mdd > 1e-9 ? tot / mdd : Number.NEGATIVE_INFINITY
-    })
+    }
+    const vals = STRATEGY_KEYS.map((k) => calmar(k, STRATEGY_TO_MDD[k as string]))
     const max = Math.max(...vals)
+    const benchCalmar = calmar('bench_total', 'bench_mdd')
     const set = new Set<keyof MarketSummary>()
-    STRATEGY_KEYS.forEach((k, i) => {
-      if (max > Number.NEGATIVE_INFINITY && Math.abs(vals[i] - max) < 1e-6)
-        set.add(k)
-    })
+    // 只有当最佳策略的 Calmar 严格优于 BH 时才标记
+    if (max > Number.NEGATIVE_INFINITY && max > benchCalmar) {
+      STRATEGY_KEYS.forEach((k, i) => {
+        if (Math.abs(vals[i] - max) < 1e-6) set.add(k)
+      })
+    }
     return set
   }
   // —— 排序状态: sortKey=null 时按 group 升序再按 label 升序 (默认) ——
@@ -1148,9 +1153,9 @@ function SummaryTable({
             }}
           >
             ★ 最佳策略
-          </span>
-          （金色 ★：4 策略变体中 总收益÷|最大回撤| 最高，即最佳策略=最高性价比策略）·{' '}
-          基准(buy&amp;hold) 仅参与「最佳收益」排名，不参与「最佳策略」（买入持有不算策略）·{' '}
+        </span>
+        （金色 ★：4 策略变体中 Calmar 最高且优于买入持有；若均不如 BH 则不标）·{' '}
+        基准(buy&amp;hold) 仅参与「最佳收益」排名，不参与「最佳策略」（买入持有不算策略）·{' '}
           <strong>所有「超额」列均为相对基准(buy&amp;hold) 的超额收益</strong>
           （主策略/股现择时/极值仓位/risk-on满仓 各自 − 基准）·{' '}
           <span
