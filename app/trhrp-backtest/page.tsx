@@ -237,7 +237,7 @@ function Sidebar({
                   is7x24 ? '交易时段: 7×24 连续 (信号即时生效, 无 T+1 延迟)' : '',
                   m.outlook_note ? `预警: ${m.outlook_note}` : '',
                   m.last_date ? `数据截至 ${m.last_date}` : '',
-                  m.quality ? '优质标的 ★' : '',
+                  m.quality ? '优质标的' : '',
                 ]
                   .filter(Boolean)
                   .join('\n')
@@ -275,18 +275,22 @@ function Sidebar({
                         gap: 4,
                       }}
                     >
-                      {/* 优质标的: label 前加金色 ★ */}
+                      {/* 优质标的: label 后跟小 tag */}
                       {m.quality && (
                         <span
                           title="优质标的"
                           style={{
                             flexShrink: 0,
-                            color: 'var(--best-star, #f5c518)',
-                            fontSize: 12,
+                            fontSize: 10,
                             lineHeight: 1,
+                            padding: '2px 4px',
+                            borderRadius: 3,
+                            background: 'color-mix(in srgb, var(--accent-trhrp) 16%, transparent)',
+                            color: 'var(--accent-strong)',
+                            fontWeight: 600,
                           }}
                         >
-                          ★
+                          优质
                         </span>
                       )}
                       <span
@@ -1237,17 +1241,23 @@ function SummaryTable({
                       className={cellCls}
                       style={cellStyle}
                     >
-                      {/* 标的列(idx 0): 优质标的名称前加金色 ★ (不加新列, 更简洁) */}
+                      {/* 标的列(idx 0): 优质标的名称后跟小 tag */}
                       {idx === 0 && v.quality && (
                         <span
                           title="优质标的"
                           style={{
-                            color: 'var(--best-star, #f5c518)',
-                            fontWeight: 700,
-                            marginRight: 3,
+                            fontSize: 10,
+                            lineHeight: 1,
+                            padding: '1px 4px',
+                            marginLeft: 4,
+                            borderRadius: 3,
+                            background: 'color-mix(in srgb, var(--accent-trhrp) 16%, transparent)',
+                            color: 'var(--accent-strong)',
+                            fontWeight: 600,
+                            whiteSpace: 'nowrap',
                           }}
                         >
-                          ★
+                          优质
                         </span>
                       )}
                       {fmtVal(v, c)}

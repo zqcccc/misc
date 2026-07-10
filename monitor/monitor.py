@@ -575,7 +575,7 @@ def _trhrp_status_section(args=None):
     # 名词速查 (一次出现, 供各市场行参照):
     #   REGIME: 风险档 — RISK_ON 偏多仓 / MODERATE 中性 / RISK_OFF 避险
     #   cur→nxt: 当前生效档 → 次日交易档 (T 日信号, T+1 生效); ⚠️=次日档已变化, 待执行
-    #   ★=quality 优质标的; vol: 21d realized vol 年化; p60 = 252 日窗口 60 分位;
+    #   [优]=quality 优质标的; vol: 21d realized vol 年化; p60 = 252 日窗口 60 分位;
     #   中位 = 126 日窗口中位; mom = 21d 动量; 崩盘线: 强制 RISK_OFF 的 vol 阈值
     #   z: 252 日 log 价 z-score (均值回归极端偏差)
     #   基础配比: regime → 股票/GLD/SGOV; 叠加后: 经 z-score overlay 调整后配比 (抄底加 / 高位减)
@@ -604,9 +604,9 @@ def _trhrp_status_section(args=None):
         z = m.get("priceZScore252")
         z_str = f"{z:+.2f}σ" if isinstance(z, (int, float)) else "-"
         marker = " ⚠️" if m.get("changed") else ""
-        # quality 优质标的在 label 前加 ★ 标记
-        qmark = "★" if m.get("ticker") in quality_tickers else ""
-        label_disp = f"{qmark}{m.get('label','-')}"
+        # quality 优质标的在 label 后加 [优] 标记
+        qmark = " [优]" if m.get("ticker") in quality_tickers else ""
+        label_disp = f"{m.get('label','-')}{qmark}"
         lines.append(f"  {label_disp:<10} {m.get('marketGroup','-'):<6} {regime_cell:<20} "
                      f"{m.get('allocationText','-'):<24} "
                      f"{m.get('overlayAdjustedAllocationText','-'):<26} {z_str:<10} "
