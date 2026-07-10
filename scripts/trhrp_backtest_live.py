@@ -443,6 +443,8 @@ def run_backtest_live(spec, usd_equity, usd_gld, usd_sgov, scenario, overlay,
     summary["latest_vol_p60"] = vol_p60_T
     summary["latest_vol_med"] = vol_med_T
     summary["latest_mom"] = mom_T
+    # 交易时段: crypto 7×24 连续交易无 T+1 延迟; 其余为日内收盘 T+1 生效
+    summary["trading_hours"] = "7x24" if spec.market == "crypto" else "daily"
 
     return {
         "meta": {"market": spec.market, "label": spec.label, "ticker": spec.ticker,
@@ -538,6 +540,8 @@ def main() -> None:
             "regime_outlook": s["regime_outlook"], "next_regime": s["next_regime"],
             "next_operation": s["next_operation"], "outlook_note": s["outlook_note"],
             "outlook_dist": s["outlook_dist"],
+            "trading_hours": s.get("trading_hours", "daily"),
+            "quality": bool(m.get("quality", False)),
         })
         all_results.append({"meta": res["meta"], "params": res["params"], "summary": res["summary"],
                             "timeseries": compact_ts(res["timeseries"])})

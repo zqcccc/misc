@@ -566,6 +566,867 @@
       "proxy": "春秋航空上交所主板(relative_zscore重校准)",
       "crashMode": "relative_zscore",
       "crashZscore": 2.5
+    },
+    {
+      "label": "平安银行",
+      "marketGroup": "A股",
+      "ticker": "000001.SZ",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "美的集团",
+      "marketGroup": "A股",
+      "ticker": "000333.SZ",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "粤高速A",
+      "marketGroup": "A股",
+      "ticker": "000429.SZ",
+      "crashMode": "relative_zscore",
+      "quality": true,
+      "crashZscore": 2.5
+    },
+    {
+      "label": "格力电器",
+      "marketGroup": "A股",
+      "ticker": "000651.SZ",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "中信特钢",
+      "marketGroup": "A股",
+      "ticker": "000708.SZ",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "塔牌集团",
+      "marketGroup": "A股",
+      "ticker": "002233.SZ",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "三维化学",
+      "marketGroup": "A股",
+      "ticker": "002469.SZ",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "江阴银行",
+      "marketGroup": "A股",
+      "ticker": "002807.SZ",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "张家港行",
+      "marketGroup": "A股",
+      "ticker": "002839.SZ",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "苏州银行",
+      "marketGroup": "A股",
+      "ticker": "002966.SZ",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "中国国贸",
+      "marketGroup": "A股",
+      "ticker": "600007.SS",
+      "crashMode": "relative_zscore",
+      "quality": true,
+      "crashZscore": 2.5
+    },
+    {
+      "label": "华夏银行",
+      "marketGroup": "A股",
+      "ticker": "600015.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "民生银行",
+      "marketGroup": "A股",
+      "ticker": "600016.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "招商银行",
+      "marketGroup": "A股",
+      "ticker": "600036.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "山东高速",
+      "marketGroup": "A股",
+      "ticker": "600350.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "洪城环境",
+      "marketGroup": "A股",
+      "ticker": "600461.SS",
+      "crashMode": "relative_zscore",
+      "quality": true,
+      "crashZscore": 2.5
+    },
+    {
+      "label": "安徽建工",
+      "marketGroup": "A股",
+      "ticker": "600502.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "济川药业",
+      "marketGroup": "A股",
+      "ticker": "600566.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "中粮糖业",
+      "marketGroup": "A股",
+      "ticker": "600737.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "华润江中",
+      "marketGroup": "A股",
+      "ticker": "600750.SS",
+      "crashMode": "relative_zscore",
+      "quality": true,
+      "crashZscore": 2.5
+    },
+    {
+      "label": "长江传媒",
+      "marketGroup": "A股",
+      "ticker": "600757.SS",
+      "crashMode": "relative_zscore",
+      "quality": true,
+      "crashZscore": 2.5
+    },
+    {
+      "label": "新奥股份",
+      "marketGroup": "A股",
+      "ticker": "600803.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "隧道股份",
+      "marketGroup": "A股",
+      "ticker": "600820.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "华能蒙电",
+      "marketGroup": "A股",
+      "ticker": "600863.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "梅花生物",
+      "marketGroup": "A股",
+      "ticker": "600873.SS",
+      "crashMode": "relative_zscore",
+      "quality": true,
+      "crashZscore": 2.5
+    },
+    {
+      "label": "江苏银行",
+      "marketGroup": "A股",
+      "ticker": "600919.SS",
+      "crashMode": "relative_zscore",
+      "quality": true,
+      "crashZscore": 2.5
+    },
+    {
+      "label": "中国海油",
+      "marketGroup": "A股",
+      "ticker": "600938.SS",
+      "crashMode": "relative_zscore",
+      "quality": true,
+      "crashZscore": 2.5
+    },
+    {
+      "label": "中国移动",
+      "marketGroup": "A股",
+      "ticker": "600941.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "南京银行",
+      "marketGroup": "A股",
+      "ticker": "601009.SS",
+      "crashMode": "relative_zscore",
+      "quality": true,
+      "crashZscore": 2.5
+    },
+    {
+      "label": "渝农商行",
+      "marketGroup": "A股",
+      "ticker": "601077.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "北京银行",
+      "marketGroup": "A股",
+      "ticker": "601169.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "厦门银行",
+      "marketGroup": "A股",
+      "ticker": "601187.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "上海银行",
+      "marketGroup": "A股",
+      "ticker": "601229.SS",
+      "crashMode": "relative_zscore",
+      "quality": true,
+      "crashZscore": 2.5
+    },
+    {
+      "label": "农业银行",
+      "marketGroup": "A股",
+      "ticker": "601288.SS",
+      "crashMode": "relative_zscore",
+      "quality": true,
+      "crashZscore": 2.5
+    },
+    {
+      "label": "中国平安",
+      "marketGroup": "A股",
+      "ticker": "601318.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "交通银行",
+      "marketGroup": "A股",
+      "ticker": "601328.SS",
+      "crashMode": "relative_zscore",
+      "quality": true,
+      "crashZscore": 2.5
+    },
+    {
+      "label": "陕鼓动力",
+      "marketGroup": "A股",
+      "ticker": "601369.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "工商银行",
+      "marketGroup": "A股",
+      "ticker": "601398.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "长沙银行",
+      "marketGroup": "A股",
+      "ticker": "601577.SS",
+      "crashMode": "relative_zscore",
+      "quality": true,
+      "crashZscore": 2.5
+    },
+    {
+      "label": "邮储银行",
+      "marketGroup": "A股",
+      "ticker": "601658.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "齐鲁银行",
+      "marketGroup": "A股",
+      "ticker": "601665.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "中国建筑",
+      "marketGroup": "A股",
+      "ticker": "601668.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "沪农商行",
+      "marketGroup": "A股",
+      "ticker": "601825.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "成都银行",
+      "marketGroup": "A股",
+      "ticker": "601838.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "中国石油",
+      "marketGroup": "A股",
+      "ticker": "601857.SS",
+      "crashMode": "relative_zscore",
+      "quality": true,
+      "crashZscore": 2.5
+    },
+    {
+      "label": "凤凰传媒",
+      "marketGroup": "A股",
+      "ticker": "601928.SS",
+      "crashMode": "relative_zscore",
+      "quality": true,
+      "crashZscore": 2.5
+    },
+    {
+      "label": "建设银行",
+      "marketGroup": "A股",
+      "ticker": "601939.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "重庆银行",
+      "marketGroup": "A股",
+      "ticker": "601963.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "中国银行",
+      "marketGroup": "A股",
+      "ticker": "601988.SS",
+      "crashMode": "relative_zscore",
+      "quality": true,
+      "crashZscore": 2.5
+    },
+    {
+      "label": "中信银行",
+      "marketGroup": "A股",
+      "ticker": "601998.SS",
+      "crashMode": "relative_zscore",
+      "quality": true,
+      "crashZscore": 2.5
+    },
+    {
+      "label": "东阿阿胶",
+      "marketGroup": "A股",
+      "ticker": "000423.SZ",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "长虹美菱",
+      "marketGroup": "A股",
+      "ticker": "000521.SZ",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "云南白药",
+      "marketGroup": "A股",
+      "ticker": "000538.SZ",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "贵州轮胎",
+      "marketGroup": "A股",
+      "ticker": "000589.SZ",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "长安汽车",
+      "marketGroup": "A股",
+      "ticker": "000625.SZ",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "五粮液",
+      "marketGroup": "A股",
+      "ticker": "000858.SZ",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "双汇发展",
+      "marketGroup": "A股",
+      "ticker": "000895.SZ",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "冀中能源",
+      "marketGroup": "A股",
+      "ticker": "000937.SZ",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "华润三九",
+      "marketGroup": "A股",
+      "ticker": "000999.SZ",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "兰州银行",
+      "marketGroup": "A股",
+      "ticker": "001227.SZ",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "陕西能源",
+      "marketGroup": "A股",
+      "ticker": "001286.SZ",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "招商公路",
+      "marketGroup": "A股",
+      "ticker": "001965.SZ",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "苏泊尔",
+      "marketGroup": "A股",
+      "ticker": "002032.SZ",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "浙江交科",
+      "marketGroup": "A股",
+      "ticker": "002061.SZ",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "仙琚制药",
+      "marketGroup": "A股",
+      "ticker": "002332.SZ",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "涪陵榨菜",
+      "marketGroup": "A股",
+      "ticker": "002507.SZ",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "老板电器",
+      "marketGroup": "A股",
+      "ticker": "002508.SZ",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "洽洽食品",
+      "marketGroup": "A股",
+      "ticker": "002557.SZ",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "汤臣倍健",
+      "marketGroup": "A股",
+      "ticker": "300146.SZ",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "首创环保",
+      "marketGroup": "A股",
+      "ticker": "600008.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "皖通高速",
+      "marketGroup": "A股",
+      "ticker": "600012.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "上港集团",
+      "marketGroup": "A股",
+      "ticker": "600018.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "宝钢股份",
+      "marketGroup": "A股",
+      "ticker": "600019.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "华电国际",
+      "marketGroup": "A股",
+      "ticker": "600027.SS",
+      "crashMode": "relative_zscore",
+      "quality": true,
+      "crashZscore": 2.5
+    },
+    {
+      "label": "中国联通",
+      "marketGroup": "A股",
+      "ticker": "600050.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "南京高科",
+      "marketGroup": "A股",
+      "ticker": "600064.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "重庆啤酒",
+      "marketGroup": "A股",
+      "ticker": "600132.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "雅戈尔",
+      "marketGroup": "A股",
+      "ticker": "600177.SS",
+      "crashMode": "relative_zscore",
+      "quality": true,
+      "crashZscore": 2.5
+    },
+    {
+      "label": "羚锐制药",
+      "marketGroup": "A股",
+      "ticker": "600285.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "白云山",
+      "marketGroup": "A股",
+      "ticker": "600332.SS",
+      "crashMode": "relative_zscore",
+      "quality": true,
+      "crashZscore": 2.5
+    },
+    {
+      "label": "宁沪高速",
+      "marketGroup": "A股",
+      "ticker": "600377.SS",
+      "crashMode": "relative_zscore",
+      "quality": true,
+      "crashZscore": 2.5
+    },
+    {
+      "label": "福能股份",
+      "marketGroup": "A股",
+      "ticker": "600483.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "贵州茅台",
+      "marketGroup": "A股",
+      "ticker": "600519.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "天士力",
+      "marketGroup": "A股",
+      "ticker": "600535.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "老白干酒",
+      "marketGroup": "A股",
+      "ticker": "600559.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "康恩贝",
+      "marketGroup": "A股",
+      "ticker": "600572.SS",
+      "crashMode": "relative_zscore",
+      "quality": true,
+      "crashZscore": 2.5
+    },
+    {
+      "label": "天地科技",
+      "marketGroup": "A股",
+      "ticker": "600582.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "青岛啤酒",
+      "marketGroup": "A股",
+      "ticker": "600600.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "申能股份",
+      "marketGroup": "A股",
+      "ticker": "600642.SS",
+      "crashMode": "relative_zscore",
+      "quality": true,
+      "crashZscore": 2.5
+    },
+    {
+      "label": "海尔智家",
+      "marketGroup": "A股",
+      "ticker": "600690.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "国电电力",
+      "marketGroup": "A股",
+      "ticker": "600795.SS",
+      "crashMode": "relative_zscore",
+      "quality": true,
+      "crashZscore": 2.5
+    },
+    {
+      "label": "伊利股份",
+      "marketGroup": "A股",
+      "ticker": "600887.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "长江电力",
+      "marketGroup": "A股",
+      "ticker": "600900.SS",
+      "crashMode": "relative_zscore",
+      "quality": true,
+      "crashZscore": 2.5
+    },
+    {
+      "label": "江苏金租",
+      "marketGroup": "A股",
+      "ticker": "600901.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "无锡银行",
+      "marketGroup": "A股",
+      "ticker": "600908.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "杭州银行",
+      "marketGroup": "A股",
+      "ticker": "600926.SS",
+      "crashMode": "relative_zscore",
+      "quality": true,
+      "crashZscore": 2.5
+    },
+    {
+      "label": "九州通",
+      "marketGroup": "A股",
+      "ticker": "600998.SS",
+      "crashMode": "relative_zscore",
+      "quality": true,
+      "crashZscore": 2.5
+    },
+    {
+      "label": "唐山港",
+      "marketGroup": "A股",
+      "ticker": "601000.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "大秦铁路",
+      "marketGroup": "A股",
+      "ticker": "601006.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "中南传媒",
+      "marketGroup": "A股",
+      "ticker": "601098.SS",
+      "crashMode": "relative_zscore",
+      "quality": true,
+      "crashZscore": 2.5
+    },
+    {
+      "label": "常熟银行",
+      "marketGroup": "A股",
+      "ticker": "601128.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "兴业银行",
+      "marketGroup": "A股",
+      "ticker": "601166.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "中国铁建",
+      "marketGroup": "A股",
+      "ticker": "601186.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "青岛港",
+      "marketGroup": "A股",
+      "ticker": "601298.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "中国电信",
+      "marketGroup": "A股",
+      "ticker": "601728.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "中国中车",
+      "marketGroup": "A股",
+      "ticker": "601766.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "中国交建",
+      "marketGroup": "A股",
+      "ticker": "601800.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "光大银行",
+      "marketGroup": "A股",
+      "ticker": "601818.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "紫金银行",
+      "marketGroup": "A股",
+      "ticker": "601860.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "浙商银行",
+      "marketGroup": "A股",
+      "ticker": "601916.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "浙版传媒",
+      "marketGroup": "A股",
+      "ticker": "601921.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "苏垦农发",
+      "marketGroup": "A股",
+      "ticker": "601952.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "贵阳银行",
+      "marketGroup": "A股",
+      "ticker": "601997.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "公牛集团",
+      "marketGroup": "A股",
+      "ticker": "603195.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "苏农银行",
+      "marketGroup": "A股",
+      "ticker": "603323.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "柳药集团",
+      "marketGroup": "A股",
+      "ticker": "603368.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "口子窖",
+      "marketGroup": "A股",
+      "ticker": "603589.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "安图生物",
+      "marketGroup": "A股",
+      "ticker": "603658.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
+    },
+    {
+      "label": "中国通号",
+      "marketGroup": "A股",
+      "ticker": "688009.SS",
+      "crashMode": "relative_zscore",
+      "crashZscore": 2.5
     }
   ],
   "regime_weights": {

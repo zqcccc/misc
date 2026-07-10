@@ -83,7 +83,20 @@ export function useOverview(autoRefreshMs = 60_000): {
 }
 
 // 单标的结果按 (label@generatedAt) 缓存, 切回已看过的标的无需重新请求
+// 简单 LRU: 超过上限时删最早插入的条目 (利用 Map 的插入顺序)
+const RESULT_CACHE_MAX = 50
 const resultCache = new Map<string, MarketResult>()
+function cacheResult(key: string, val: MarketResult) {
+  if (resultCache.has(key)) {
+    // 命中后先删再插, 让它变成"最近使用"排到末尾
+    resultCache.delete(key)
+  } else if (resultCache.size >= RESULT_CACHE_MAX) {
+    // 超上限: 删最早 (Map 迭代顺序 = 插入顺序, 第一个即最久未用)
+    const oldest = resultCache.keys().next().value
+    if (oldest !== undefined) resultCache.delete(oldest)
+  }
+  resultCache.set(key, val)
+}
 
 /** 按需加载单标的完整结果(含 timeseries), key 随 generatedAt 失效 */
 export function useMarketResult(label: string | null, generatedAt: string | null) {
@@ -95,6 +108,9 @@ export function useMarketResult(label: string | null, generatedAt: string | null
     const key = `${label}@${generatedAt}`
     const cached = resultCache.get(key)
     if (cached) {
+      // 命中: 删后重插, 把它挪到末尾表示最近使用 (LRU)
+      resultCache.delete(key)
+      resultCache.set(key, cached)
       setResult(cached)
       return
     }
@@ -107,7 +123,7 @@ export function useMarketResult(label: string | null, generatedAt: string | null
       .then((d) => {
         if (cancelled) return
         if (d && d.meta) {
-          resultCache.set(key, d as MarketResult)
+          cacheResult(key, d as MarketResult)
           setResult(d as MarketResult)
         }
       })
