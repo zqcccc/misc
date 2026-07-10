@@ -66,6 +66,9 @@ def compact_ts(ts_rows: list) -> list:
             "e": r["extreme_nav"],
             "ro": r["ronly_nav"],
             "v": r["vol_21"],
+            "vp60": r["vol_p60"],
+            "vmed": r["vol_med"],
+            "mom": r["mom"],
             "r": r["regime"],
             "o": r["operation"],
             "we": r["weight_equity"],
@@ -180,8 +183,22 @@ def run_backtest_live(spec, usd_equity, usd_gld, usd_sgov, scenario, overlay,
     raw_regime = sig_frame["regime"]
     # vol_21 (年化波动率) 同样在原始权益序列上算, 再对齐回 frame; 不 ffill, 早期 NaN 留空
     raw_vol = sig_frame["vol"]
+    # vol_p60 / vol_med / mom 同源对齐, 供前端 tooltip 在每个时间点展示原始信号分量
+    raw_vol_p60 = sig_frame["vol_p60"]
+    raw_vol_med = sig_frame["vol_med"]
+    raw_mom = sig_frame["mom"]
     target_regime = raw_regime.reindex(frame.index).ffill().fillna("moderate")
+    # 展示用: 当日 regime (与 monitor currentRegime 一致, 供看板着色/tooltip)
+    display_regime = target_regime.copy()
+    # —— 修复前瞻偏差: T 日仓位用 T-1 日的 regime 决定 ——
+    # 原实现用当日 regime (含当日收盘价信息) 决定当日仓位, 等于"看到未来再调仓",
+    # 在暴跌日当天触发 risk_off 并空仓规避当日跌幅, 系统性高估 ronly/extreme 避灾能力.
+    # 修复: regime shift(1), T 日用 T-1 regime; 首日无前值用 moderate.
+    target_regime = target_regime.shift(1).fillna("moderate")
     vol_series = raw_vol.reindex(frame.index)
+    vol_p60_series = raw_vol_p60.reindex(frame.index)
+    vol_med_series = raw_vol_med.reindex(frame.index)
+    mom_series = raw_mom.reindex(frame.index)
 
     if overlay:
         weights_df = eng.apply_overlay(target_regime, frame["equity_Close"],
@@ -196,11 +213,15 @@ def run_backtest_live(spec, usd_equity, usd_gld, usd_sgov, scenario, overlay,
     valid = equity_ret["close"].notna() & gld_ret["close"].notna() & sgov_ret["close"].notna()
     frame = frame.loc[valid].copy()
     target_regime = target_regime.loc[valid]
+    display_regime = display_regime.loc[valid]
     weights_df = weights_df.loc[valid]
     equity_ret = equity_ret.loc[valid]
     gld_ret = gld_ret.loc[valid]
     sgov_ret = sgov_ret.loc[valid]
     vol_series = vol_series.loc[valid]
+    vol_p60_series = vol_p60_series.loc[valid]
+    vol_med_series = vol_med_series.loc[valid]
+    mom_series = mom_series.loc[valid]
 
     strat_close = [initial_capital]
     strat_high, strat_low = [], []
@@ -332,6 +353,9 @@ def run_backtest_live(spec, usd_equity, usd_gld, usd_sgov, scenario, overlay,
                 op_delta = d
         prev_equity_weight = eq_w
         vol_val = vol_series.loc[date]
+        vol_p60_val = vol_p60_series.loc[date]
+        vol_med_val = vol_med_series.loc[date]
+        mom_val = mom_series.loc[date]
         daily_records.append({
             "date": str(date.date()),
             "strategy_nav": round(strat_close[-1] / initial_capital, 6),
@@ -340,8 +364,11 @@ def run_backtest_live(spec, usd_equity, usd_gld, usd_sgov, scenario, overlay,
             "extreme_nav": round(extreme_close[-1] / initial_capital, 6),
             "ronly_nav": round(ronly_close[-1] / initial_capital, 6),
             "vol_21": None if pd.isna(vol_val) else round(float(vol_val), 6),
-            "regime": state,
-            "regime_changed": prev_regime is not None and state != prev_regime,
+            "vol_p60": None if pd.isna(vol_p60_val) else round(float(vol_p60_val), 6),
+            "vol_med": None if pd.isna(vol_med_val) else round(float(vol_med_val), 6),
+            "mom": None if pd.isna(mom_val) else round(float(mom_val), 6),
+            "regime": str(display_regime.loc[date]),
+            "regime_changed": prev_regime is not None and str(display_regime.loc[date]) != prev_regime,
             "rebalanced": trade_cost > eng.EPS,
             "operation": op,
             "equity_weight_delta": round(op_delta, 6),
@@ -350,7 +377,7 @@ def run_backtest_live(spec, usd_equity, usd_gld, usd_sgov, scenario, overlay,
             "weight_sgov": round(float(current_weights["SGOV"]), 6),
             "equity_close": round(float(prices["equity"]), 6),
         })
-        prev_regime = state
+        prev_regime = str(display_regime.loc[date])
 
     sc = pd.Series(strat_close[1:], index=frame.index)
     sh = pd.Series(strat_high, index=frame.index)
