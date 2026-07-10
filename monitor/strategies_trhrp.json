@@ -429,7 +429,8 @@
       "ticker": "512890.SS",
       "proxy": "红利低波100ETF(relative_zscore重校准)",
       "crashMode": "relative_zscore",
-      "crashZscore": 2.5
+      "crashZscore": 2.5,
+      "quality": true
     },
     {
       "label": "创业板ETF",
@@ -586,7 +587,6 @@
       "marketGroup": "A股",
       "ticker": "000429.SZ",
       "crashMode": "relative_zscore",
-      "quality": true,
       "crashZscore": 2.5
     },
     {
@@ -643,7 +643,6 @@
       "marketGroup": "A股",
       "ticker": "600007.SS",
       "crashMode": "relative_zscore",
-      "quality": true,
       "crashZscore": 2.5
     },
     {
@@ -679,7 +678,6 @@
       "marketGroup": "A股",
       "ticker": "600461.SS",
       "crashMode": "relative_zscore",
-      "quality": true,
       "crashZscore": 2.5
     },
     {
@@ -708,7 +706,6 @@
       "marketGroup": "A股",
       "ticker": "600750.SS",
       "crashMode": "relative_zscore",
-      "quality": true,
       "crashZscore": 2.5
     },
     {
@@ -716,7 +713,6 @@
       "marketGroup": "A股",
       "ticker": "600757.SS",
       "crashMode": "relative_zscore",
-      "quality": true,
       "crashZscore": 2.5
     },
     {
@@ -745,7 +741,6 @@
       "marketGroup": "A股",
       "ticker": "600873.SS",
       "crashMode": "relative_zscore",
-      "quality": true,
       "crashZscore": 2.5
     },
     {
@@ -753,7 +748,6 @@
       "marketGroup": "A股",
       "ticker": "600919.SS",
       "crashMode": "relative_zscore",
-      "quality": true,
       "crashZscore": 2.5
     },
     {
@@ -761,7 +755,6 @@
       "marketGroup": "A股",
       "ticker": "600938.SS",
       "crashMode": "relative_zscore",
-      "quality": true,
       "crashZscore": 2.5
     },
     {
@@ -776,7 +769,6 @@
       "marketGroup": "A股",
       "ticker": "601009.SS",
       "crashMode": "relative_zscore",
-      "quality": true,
       "crashZscore": 2.5
     },
     {
@@ -805,7 +797,6 @@
       "marketGroup": "A股",
       "ticker": "601229.SS",
       "crashMode": "relative_zscore",
-      "quality": true,
       "crashZscore": 2.5
     },
     {
@@ -813,7 +804,6 @@
       "marketGroup": "A股",
       "ticker": "601288.SS",
       "crashMode": "relative_zscore",
-      "quality": true,
       "crashZscore": 2.5
     },
     {
@@ -828,7 +818,6 @@
       "marketGroup": "A股",
       "ticker": "601328.SS",
       "crashMode": "relative_zscore",
-      "quality": true,
       "crashZscore": 2.5
     },
     {
@@ -850,7 +839,6 @@
       "marketGroup": "A股",
       "ticker": "601577.SS",
       "crashMode": "relative_zscore",
-      "quality": true,
       "crashZscore": 2.5
     },
     {
@@ -901,7 +889,6 @@
       "marketGroup": "A股",
       "ticker": "601928.SS",
       "crashMode": "relative_zscore",
-      "quality": true,
       "crashZscore": 2.5
     },
     {
@@ -923,7 +910,6 @@
       "marketGroup": "A股",
       "ticker": "601988.SS",
       "crashMode": "relative_zscore",
-      "quality": true,
       "crashZscore": 2.5
     },
     {
@@ -931,7 +917,6 @@
       "marketGroup": "A股",
       "ticker": "601998.SS",
       "crashMode": "relative_zscore",
-      "quality": true,
       "crashZscore": 2.5
     },
     {
@@ -995,7 +980,8 @@
       "marketGroup": "A股",
       "ticker": "000999.SZ",
       "crashMode": "relative_zscore",
-      "crashZscore": 2.5
+      "crashZscore": 2.5,
+      "quality": true
     },
     {
       "label": "兰州银行",
@@ -1100,7 +1086,6 @@
       "marketGroup": "A股",
       "ticker": "600027.SS",
       "crashMode": "relative_zscore",
-      "quality": true,
       "crashZscore": 2.5
     },
     {
@@ -1129,7 +1114,6 @@
       "marketGroup": "A股",
       "ticker": "600177.SS",
       "crashMode": "relative_zscore",
-      "quality": true,
       "crashZscore": 2.5
     },
     {
@@ -1144,7 +1128,6 @@
       "marketGroup": "A股",
       "ticker": "600332.SS",
       "crashMode": "relative_zscore",
-      "quality": true,
       "crashZscore": 2.5
     },
     {
@@ -1188,7 +1171,6 @@
       "marketGroup": "A股",
       "ticker": "600572.SS",
       "crashMode": "relative_zscore",
-      "quality": true,
       "crashZscore": 2.5
     },
     {
@@ -1210,7 +1192,6 @@
       "marketGroup": "A股",
       "ticker": "600642.SS",
       "crashMode": "relative_zscore",
-      "quality": true,
       "crashZscore": 2.5
     },
     {
@@ -1218,14 +1199,14 @@
       "marketGroup": "A股",
       "ticker": "600690.SS",
       "crashMode": "relative_zscore",
-      "crashZscore": 2.5
+      "crashZscore": 2.5,
+      "quality": true
     },
     {
       "label": "国电电力",
       "marketGroup": "A股",
       "ticker": "600795.SS",
       "crashMode": "relative_zscore",
-      "quality": true,
       "crashZscore": 2.5
     },
     {
@@ -1240,7 +1221,6 @@
       "marketGroup": "A股",
       "ticker": "600900.SS",
       "crashMode": "relative_zscore",
-      "quality": true,
       "crashZscore": 2.5
     },
     {
@@ -1262,7 +1242,6 @@
       "marketGroup": "A股",
       "ticker": "600926.SS",
       "crashMode": "relative_zscore",
-      "quality": true,
       "crashZscore": 2.5
     },
     {
@@ -1270,7 +1249,6 @@
       "marketGroup": "A股",
       "ticker": "600998.SS",
       "crashMode": "relative_zscore",
-      "quality": true,
       "crashZscore": 2.5
     },
     {
@@ -1292,7 +1270,6 @@
       "marketGroup": "A股",
       "ticker": "601098.SS",
       "crashMode": "relative_zscore",
-      "quality": true,
       "crashZscore": 2.5
     },
     {
@@ -1321,7 +1298,8 @@
       "marketGroup": "A股",
       "ticker": "601298.SS",
       "crashMode": "relative_zscore",
-      "crashZscore": 2.5
+      "crashZscore": 2.5,
+      "quality": true
     },
     {
       "label": "中国电信",
@@ -1405,7 +1383,8 @@
       "marketGroup": "A股",
       "ticker": "603368.SS",
       "crashMode": "relative_zscore",
-      "crashZscore": 2.5
+      "crashZscore": 2.5,
+      "quality": true
     },
     {
       "label": "口子窖",
