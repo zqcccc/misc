@@ -105,108 +105,252 @@ function Sidebar({
   onSelect: (label: string) => void
   regimeCn: Record<string, string>
 }) {
+  // —— 搜索: 按 label / ticker 模糊匹配, 不区分大小写 ——
+  const [query, setQuery] = useState('')
+  // —— Regime 筛选 tab: 全部 / 偏好(risk_on) / 中性(moderate) / 规避(risk_off) / 优质(quality) ——
+  const [regimeFilter, setRegimeFilter] = useState<
+    'all' | 'risk_on' | 'moderate' | 'risk_off' | 'quality'
+  >('all')
+  // —— 折叠的分组集合 (默认空集 = 全部展开) ——
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set())
+
+  // 先按搜索词 + regime 筛选, 再按 marketGroup 分组
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return markets.filter((m) => {
+      if (
+        q &&
+        !m.label.toLowerCase().includes(q) &&
+        !m.ticker.toLowerCase().includes(q)
+      )
+        return false
+      if (regimeFilter === 'quality') {
+        if (!m.quality) return false
+      } else if (regimeFilter !== 'all') {
+        if (m.current_regime !== regimeFilter) return false
+      }
+      return true
+    })
+  }, [markets, query, regimeFilter])
+
   const groups = useMemo(() => {
     const g: Record<string, MarketSummary[]> = {}
-    markets.forEach((m) => {
+    filtered.forEach((m) => {
       ;(g[m.group] = g[m.group] || []).push(m)
     })
     return g
-  }, [markets])
+  }, [filtered])
+
+  const toggleGroup = (grp: string) => {
+    setCollapsed((prev) => {
+      const next = new Set(prev)
+      if (next.has(grp)) next.delete(grp)
+      else next.add(grp)
+      return next
+    })
+  }
+
+  const REGIME_TABS: { key: typeof regimeFilter; label: string }[] = [
+    { key: 'all', label: '全部' },
+    { key: 'risk_on', label: '偏好' },
+    { key: 'moderate', label: '中性' },
+    { key: 'risk_off', label: '规避' },
+    { key: 'quality', label: '优质' },
+  ]
 
   return (
     <>
-      {Object.entries(groups).map(([grp, items]) => (
-        <div key={grp}>
-          <div className="px-4 pt-3.5 pb-1.5 text-[10.5px] font-semibold text-[var(--sub-2)] uppercase tracking-[0.08em] max-md:hidden">
-            {grp}
-          </div>
-          {items.map((m) => {
-            const isActive = m.label === active
-            // 右侧数字: risk-on满仓 相对 基准(buy&hold) 的超额 = ronly_total − bench_total
-            const ronlyVsBase = (m.ronly_total ?? 0) - (m.bench_total ?? 0)
-            const excessCls = clsColor(ronlyVsBase)
-            const rc = m.current_regime
-            const rcBg = rc ? REGIME_BG[rc] : '#9e9e9e'
-            const no = m.next_operation
-            const nextOpArrow = no && no !== 'hold' ? OP_ARROW[no] : null
-            const nextOpColor = no && no !== 'hold' ? OP_COLOR[no] : undefined
-            const title = [
-              `risk-on满仓超额(满仓−基准): ${fmtPct(ronlyVsBase)}`,
-              `当前风险偏好: ${regimeCnLabel(rc, regimeCn)}`,
-              `最新操作: ${OP_LABEL[m.current_operation || 'hold'] || '—'}`,
-              m.next_regime
-                ? `预计明日: ${regimeCnLabel(m.next_regime, regimeCn)} / ${OP_LABEL[no || 'hold']}`
-                : '',
-              m.outlook_note ? `预警: ${m.outlook_note}` : '',
-              m.last_date ? `数据截至 ${m.last_date}` : '',
-            ]
-              .filter(Boolean)
-              .join('\n')
+      {/* 搜索框 + regime 筛选 tab: 仅桌面端显示 (移动端是横向 tab 条, 不放搜索) */}
+      <div className="sticky top-0 z-[2] bg-[var(--surface)] px-3 pt-2 pb-2 border-b border-[color:var(--border-trhrp)] max-md:hidden">
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="搜索标的..."
+          className="w-full rounded-md border border-[color:var(--border-trhrp)] bg-[var(--surface-2)] px-2.5 py-1.5 text-[12.5px] text-[var(--ink-2)] placeholder:text-[var(--sub-2)] focus:outline-none focus:border-[color:var(--accent-trhrp)] transition"
+        />
+        <div className="flex items-center gap-1 mt-2 flex-wrap">
+          {REGIME_TABS.map((t) => {
+            const on = regimeFilter === t.key
             return (
               <button
-                key={m.label}
-                onClick={() => onSelect(m.label)}
-                className={`flex items-center justify-between gap-2 w-full pl-3 pr-4 py-[7px] border-l-2 border-l-transparent bg-transparent text-[var(--ink-2)] text-[13px] text-left cursor-pointer hover:bg-[var(--surface-hover)] transition max-md:w-auto max-md:shrink-0 max-md:border-l-0 max-md:border-b-2 max-md:border-b-transparent max-md:px-2.5 max-md:py-1.5 ${
-                  isActive
-                    ? 'bg-[var(--accent-bg)] border-l-[color:var(--accent-trhrp)] text-[var(--accent-strong)] font-semibold max-md:border-l-0 max-md:border-b-[color:var(--accent-trhrp)]'
-                    : ''
+                key={t.key}
+                onClick={() => setRegimeFilter(t.key)}
+                className={`px-2 py-[2px] rounded text-[11px] font-medium border transition cursor-pointer ${
+                  on
+                    ? 'bg-[var(--accent-trhrp)] text-white border-transparent'
+                    : 'bg-transparent text-[var(--sub)] border-[color:var(--border-trhrp)] hover:bg-[var(--surface-hover)]'
                 }`}
-                title={title}
-                style={{ gap: 6 }}
               >
-                <span
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: '50%',
-                    background: rcBg,
-                    flexShrink: 0,
-                    boxShadow: '0 0 0 1px rgba(0,0,0,0.12) inset',
-                  }}
-                />
-                <span
-                  style={{
-                    flex: 1,
-                    minWidth: 0,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {m.label}
-                </span>
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 4,
-                    flexShrink: 0,
-                  }}
-                >
-                  {nextOpArrow && (
-                    <span
-                      style={{
-                        color: nextOpColor,
-                        fontSize: 10,
-                        fontWeight: 700,
-                      }}
-                    >
-                      {nextOpArrow}
-                    </span>
-                  )}
-                  <span
-                    className={`text-[11.5px] tabular-nums text-[var(--sub-2)] shrink-0 ${
-                      isActive ? 'text-[var(--accent-strong)]' : excessCls
-                    }`}
-                  >
-                    {fmtPct(ronlyVsBase, 0)}
-                  </span>
-                </span>
+                {t.label}
               </button>
             )
           })}
         </div>
-      ))}
+      </div>
+      {Object.entries(groups).map(([grp, items]) => {
+        const isCollapsed = collapsed.has(grp)
+        return (
+          <div key={grp}>
+            {/* 分组标题: 可点击折叠/展开, 右侧显示该组数量 */}
+            <button
+              onClick={() => toggleGroup(grp)}
+              className="w-full flex items-center justify-between gap-2 px-4 pt-3.5 pb-1.5 text-[10.5px] font-semibold text-[var(--sub-2)] uppercase tracking-[0.08em] max-md:hidden hover:text-[var(--ink-2)] transition cursor-pointer"
+              title={isCollapsed ? '点击展开' : '点击折叠'}
+            >
+              <span className="inline-flex items-center gap-1.5">
+                <span
+                  className="inline-block text-[9px] transition-transform"
+                  style={{
+                    transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
+                  }}
+                >
+                  ▼
+                </span>
+                {grp}
+              </span>
+              <span className="text-[var(--sub-2)] normal-case font-normal tracking-normal">
+                {items.length}
+              </span>
+            </button>
+            {!isCollapsed &&
+              items.map((m) => {
+                const isActive = m.label === active
+                // 右侧数字: risk-on满仓 相对 基准(buy&hold) 的超额 = ronly_total − bench_total
+                const ronlyVsBase = (m.ronly_total ?? 0) - (m.bench_total ?? 0)
+                const excessCls = clsColor(ronlyVsBase)
+                const rc = m.current_regime
+                const rcBg = rc ? REGIME_BG[rc] : '#9e9e9e'
+                const no = m.next_operation
+                const nextOpArrow = no && no !== 'hold' ? OP_ARROW[no] : null
+                const nextOpColor = no && no !== 'hold' ? OP_COLOR[no] : undefined
+                const is7x24 = m.trading_hours === '7x24'
+                // 7×24 连续交易: 信号即时生效, 无 T+1; 传统市场: T 日收盘信号 T+1 生效
+                const nextLabel = is7x24 ? '最新信号(即时生效)' : '预计明日'
+                const title = [
+                  `risk-on满仓超额(满仓−基准): ${fmtPct(ronlyVsBase)}`,
+                  `当前风险偏好: ${regimeCnLabel(rc, regimeCn)}`,
+                  `最新操作: ${OP_LABEL[m.current_operation || 'hold'] || '—'}`,
+                  m.next_regime
+                    ? `${nextLabel}: ${regimeCnLabel(m.next_regime, regimeCn)} / ${OP_LABEL[no || 'hold']}`
+                    : '',
+                  is7x24 ? '交易时段: 7×24 连续 (信号即时生效, 无 T+1 延迟)' : '',
+                  m.outlook_note ? `预警: ${m.outlook_note}` : '',
+                  m.last_date ? `数据截至 ${m.last_date}` : '',
+                  m.quality ? '优质标的 ★' : '',
+                ]
+                  .filter(Boolean)
+                  .join('\n')
+                return (
+                  <button
+                    key={m.label}
+                    onClick={() => onSelect(m.label)}
+                    className={`flex items-center justify-between gap-2 w-full pl-3 pr-4 py-[7px] border-l-[3px] border-l-transparent bg-transparent text-[var(--ink-2)] text-[13px] text-left cursor-pointer hover:bg-[var(--surface-hover)] transition max-md:w-auto max-md:shrink-0 max-md:border-l-0 max-md:border-b-2 max-md:border-b-transparent max-md:px-2.5 max-md:py-1.5 ${
+                      isActive
+                        ? 'bg-[var(--accent-trhrp)]/10 border-l-[color:var(--accent-trhrp)] text-[var(--accent-strong)] font-semibold max-md:border-l-0 max-md:border-b-2 max-md:border-b-[color:var(--accent-trhrp)]'
+                        : ''
+                    }`}
+                    title={title}
+                    style={isActive ? {
+                      background: 'color-mix(in srgb, var(--accent-trhrp) 14%, transparent)',
+                      borderLeftColor: 'var(--accent-trhrp)',
+                    } : { gap: 6 }}
+                  >
+                    <span
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: '50%',
+                        background: rcBg,
+                        flexShrink: 0,
+                        boxShadow: '0 0 0 1px rgba(0,0,0,0.12) inset',
+                      }}
+                    />
+                    <span
+                      style={{
+                        flex: 1,
+                        minWidth: 0,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                      }}
+                    >
+                      {/* 优质标的: label 前加金色 ★ */}
+                      {m.quality && (
+                        <span
+                          title="优质标的"
+                          style={{
+                            flexShrink: 0,
+                            color: 'var(--best-star, #f5c518)',
+                            fontSize: 12,
+                            lineHeight: 1,
+                          }}
+                        >
+                          ★
+                        </span>
+                      )}
+                      <span
+                        style={{
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          minWidth: 0,
+                        }}
+                      >
+                        {m.label}
+                      </span>
+                      {is7x24 && (
+                        <span
+                          title="7×24 连续交易, 信号即时生效无 T+1 延迟"
+                          style={{
+                            flexShrink: 0,
+                            fontSize: 9,
+                            fontWeight: 700,
+                            color: '#fff',
+                            background: '#00838f',
+                            padding: '0 3px',
+                            borderRadius: 3,
+                            lineHeight: '14px',
+                            letterSpacing: '0.02em',
+                          }}
+                        >
+                          7×24
+                        </span>
+                      )}
+                    </span>
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {nextOpArrow && (
+                        <span
+                          style={{
+                            color: nextOpColor,
+                            fontSize: 10,
+                            fontWeight: 700,
+                          }}
+                        >
+                          {nextOpArrow}
+                        </span>
+                      )}
+                      <span
+                        className={`text-[11.5px] tabular-nums text-[var(--sub-2)] shrink-0 ${
+                          isActive ? 'text-[var(--accent-strong)]' : excessCls
+                        }`}
+                      >
+                        {fmtPct(ronlyVsBase, 0)}
+                      </span>
+                    </span>
+                  </button>
+                )
+              })}
+          </div>
+        )
+      })}
     </>
   )
 }
@@ -290,6 +434,9 @@ function RiskStatusPanel({
   const nextOp = summary.next_operation || 'hold'
   const outlook = summary.regime_outlook
   const isUnknown = outlook === 'unknown'
+  // 7×24 连续交易 (crypto): 信号于日 K 收盘即时生效, 无 T+1 延迟;
+  // 传统市场: T 日收盘信号, T+1 开盘生效.
+  const is7x24 = summary.trading_hours === '7x24'
   const badge = (r: string | null | undefined) =>
     r ? (
       <span
@@ -396,14 +543,46 @@ function RiskStatusPanel({
   return (
     <div className="bg-[var(--surface)] border border-[color:var(--border-trhrp)] rounded-xl px-4 py-4 shadow-[var(--shadow-md)] min-w-0 max-w-full">
       <div className="flex items-baseline justify-between gap-3 mb-2">
-        <h3 className="text-sm font-semibold text-[var(--ink)] tracking-tight m-0">
+        <h3 className="text-sm font-semibold text-[var(--ink)] tracking-tight m-0 inline-flex items-center gap-2 flex-wrap">
           风险偏好状态（回测快照推演）
+          {is7x24 ? (
+            <span
+              title="该标的为 7×24 连续交易, 信号于日 K 收盘即时生效, 无 T+1 延迟"
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                color: '#fff',
+                background: '#00838f',
+                padding: '1px 6px',
+                borderRadius: 4,
+                letterSpacing: '0.02em',
+              }}
+            >
+              7×24 即时生效
+            </span>
+          ) : (
+            <span
+              title="该标的为日内收盘市场, T 日收盘信号 T+1 开盘生效"
+              style={{
+                fontSize: 10,
+                fontWeight: 600,
+                color: 'var(--sub-2)',
+                background: 'var(--surface-2)',
+                border: '1px solid var(--border-trhrp)',
+                padding: '1px 6px',
+                borderRadius: 4,
+                letterSpacing: '0.02em',
+              }}
+            >
+              T+1 次日生效
+            </span>
+          )}
         </h3>
       </div>
       <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-x-5 gap-y-3 mt-0.5">
         <div className="flex flex-col gap-1">
           <div className="text-[10.5px] text-[var(--sub-2)] uppercase tracking-[0.05em] inline-flex items-center">
-            当前风险偏好
+            {is7x24 ? '当前生效' : '今日生效'}
           </div>
           <div className="text-sm font-semibold text-[var(--ink)] inline-flex items-center gap-1.5 flex-wrap">
             {badge(cur)}
@@ -422,9 +601,9 @@ function RiskStatusPanel({
         </div>
         <div className="flex flex-col gap-1">
           <div className="text-[10.5px] text-[var(--sub-2)] uppercase tracking-[0.05em] inline-flex items-center">
-            预计下一风险偏好
+            {is7x24 ? '最新信号' : '预计下一风险偏好'}
             <span className="text-[10px] text-[var(--sub-2)] border border-[color:var(--border-trhrp)] rounded px-[5px] ml-1 font-normal normal-case tracking-normal">
-              预计
+              {is7x24 ? '即时生效' : '预计'}
             </span>
           </div>
           <div className="text-sm font-semibold text-[var(--ink)] inline-flex items-center gap-1.5 flex-wrap">
@@ -433,9 +612,9 @@ function RiskStatusPanel({
         </div>
         <div className="flex flex-col gap-1">
           <div className="text-[10.5px] text-[var(--sub-2)] uppercase tracking-[0.05em] inline-flex items-center">
-            预计明日操作
+            {is7x24 ? '最新信号操作' : '预计明日操作'}
             <span className="text-[10px] text-[var(--sub-2)] border border-[color:var(--border-trhrp)] rounded px-[5px] ml-1 font-normal normal-case tracking-normal">
-              预计
+              {is7x24 ? '即时生效' : '预计'}
             </span>
           </div>
           <div
@@ -663,8 +842,11 @@ function RiskStatusPanel({
         </div>
       )}
       <div className="mt-2 text-[11px] leading-relaxed text-[var(--sub-2)]">
-        说明：回测为历史快照，无明日行情，故“预计”项为按最新收盘信号黏性外推、非实时交易指令；仅当最新信号临近切换阈值（10%
-        缓冲）才向前推一档。风险偏好色：绿=偏好·黄=中性·红=规避（语义色，非涨跌）；操作色：红=加仓·绿=减仓（A股惯例）。
+        说明：回测为历史快照，无明日行情，故“{is7x24 ? '最新信号' : '预计'}”项为按最新收盘信号黏性外推、非实时交易指令；仅当最新信号临近切换阈值（10%
+        缓冲）才向前推一档。{is7x24
+          ? '该标的为 7×24 连续交易，信号于日 K 收盘即时生效，无 T+1 延迟。'
+          : '该标的为日内收盘市场，T 日收盘信号 T+1 开盘生效。'}
+        风险偏好色：绿=偏好·黄=中性·红=规避（语义色，非涨跌）；操作色：红=加仓·绿=减仓（A股惯例）。
       </div>
     </div>
   )
@@ -888,6 +1070,58 @@ function SummaryTable({
     })
     return set
   }
+  // —— 排序状态: sortKey=null 时按 group 升序再按 label 升序 (默认) ——
+  const [sortKey, setSortKey] = useState<keyof TableView | null>(null)
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+  // 数值类 fmt 按数值排, text 按字符串排
+  const NUMERIC_FMT = new Set<string>(['pct', 'signed', 'int'])
+
+  // 预计算每行的 viewOf + best/bestRisk 集合, 仅在 data.markets 变化时重算
+  // (避免每次 render 对 187 行 × 9 字段重复计算)
+  const rows = useMemo(() => {
+    return markets.map((m) => {
+      const v = viewOf(m)
+      return { v, best: bestKeysFor(v), risk: bestRiskKeysFor(v) }
+    })
+    // viewOf/bestKeysFor/bestRiskKeysFor 为纯函数, 仅依赖 markets 数据, 故只盯 markets
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [markets])
+
+  // 排序后的行 (默认: group 升序 → label 升序)
+  const sortedRows = useMemo(() => {
+    const arr = [...rows]
+    const colByKey = new Map(cols.map((c) => [c.key, c]))
+    arr.sort((a, b) => {
+      if (sortKey === null) {
+        if (a.v.group !== b.v.group) return a.v.group < b.v.group ? -1 : 1
+        return a.v.label < b.v.label ? -1 : 1
+      }
+      const col = colByKey.get(sortKey)
+      const va = a.v[sortKey]
+      const vb = b.v[sortKey]
+      let r: number
+      if (col && NUMERIC_FMT.has(col.fmt)) {
+        r = (Number(va) || 0) - (Number(vb) || 0)
+      } else {
+        const sa = String(va)
+        const sb = String(vb)
+        r = sa < sb ? -1 : sa > sb ? 1 : 0
+      }
+      return sortDir === 'asc' ? r : -r
+    })
+    return arr
+  }, [rows, sortKey, sortDir, NUMERIC_FMT])
+
+  const onSort = (key: keyof TableView) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    } else {
+      const col = cols.find((c) => c.key === key)
+      // 数值列首次点击默认降序 (看最优), 文本列默认升序
+      setSortKey(key)
+      setSortDir(col && NUMERIC_FMT.has(col.fmt) ? 'desc' : 'asc')
+    }
+  }
   return (
     <div className="bg-[var(--surface)] border border-[color:var(--border-trhrp)] rounded-xl shadow-[var(--shadow-md)] overflow-hidden min-w-0 max-w-full">
       <div className="px-4 pt-3 pb-2 flex items-baseline justify-between">
@@ -930,75 +1164,103 @@ function SummaryTable({
         <table className="w-full border-separate border-spacing-0 text-[12.5px]">
           <thead>
             <tr>
-              {cols.map((c, idx) => (
-                <th
-                  key={c.key as string}
-                  className={`sticky top-0 z-[3] bg-[var(--surface-2)] text-[var(--sub)] font-medium uppercase text-[10.5px] tracking-[0.05em] px-3 py-2 border-b border-[color:var(--border-strong)] whitespace-nowrap shadow-[0_2px_4px_-2px_rgba(15,23,42,0.12)] ${
-                    idx < 2 ? 'text-left' : 'text-right'
-                  }`}
-                >
-                  {c.label}
-                </th>
-              ))}
+              {cols.map((c, idx) => {
+                const on = sortKey === c.key
+                return (
+                  <th
+                    key={c.key as string}
+                    onClick={() => onSort(c.key)}
+                    className={`sticky top-0 z-[3] bg-[var(--surface-2)] text-[var(--sub)] font-medium uppercase text-[10.5px] tracking-[0.05em] px-3 py-2 border-b border-[color:var(--border-strong)] whitespace-nowrap shadow-[0_2px_4px_-2px_rgba(15,23,42,0.12)] cursor-pointer select-none hover:text-[var(--ink-2)] transition ${
+                      idx < 2 ? 'text-left' : 'text-right'
+                    }`}
+                    title="点击排序"
+                  >
+                    <span className="inline-flex items-center gap-1">
+                      {c.label}
+                      {on && (
+                        <span
+                          className="text-[9px]"
+                          style={{ color: 'var(--accent-trhrp)' }}
+                        >
+                          {sortDir === 'asc' ? '▲' : '▼'}
+                        </span>
+                      )}
+                    </span>
+                  </th>
+                )
+              })}
             </tr>
           </thead>
           <tbody>
-            {markets.map((m) => {
-              const v = viewOf(m)
-              const best = bestKeysFor(v)
-              const risk = bestRiskKeysFor(v)
-              return (
-                <tr
-                  key={m.label}
-                  onClick={() => onSelect(m.label)}
-                  className={`cursor-pointer transition-colors hover:bg-[var(--surface-hover)] ${
-                    m.label === active
-                      ? '!bg-[var(--accent-bg)] shadow-[inset_2px_0_0_var(--accent-trhrp)]'
-                      : ''
-                  }`}
-                >
-                  {cols.map((c, idx) => {
-                    const isBest = best.has(c.key)
-                    const isRisk = risk.has(c.key)
-                    const alignCls = idx < 2 ? 'text-left' : 'text-right'
-                    const inkCls =
-                      idx === 0
-                        ? 'font-semibold text-[var(--ink)]'
-                        : 'text-[var(--ink-2)]'
-                    const tabularCls = idx < 2 ? '' : 'tabular-nums'
-                    const tdBase = `px-3 py-[7px] border-b border-[color:var(--border-trhrp)] whitespace-nowrap ${alignCls} ${inkCls} ${tabularCls}`.replace(
-                      /\s+/g,
-                      ' ',
-                    ).trim()
-                    const cellCls = [
-                      tdBase,
-                      clsFor(v, c),
-                      isBest ? '!text-[var(--best-ink)] !font-bold' : '',
-                    ]
-                      .filter(Boolean)
-                      .join(' ')
-                    const cellStyle =
-                      c.fmt === 'pct'
-                        ? mddSeverityStyle(Math.abs(Number(v[c.key]) || 0))
-                        : undefined
-                    return (
-                      <td
-                        key={c.key as string}
-                        className={cellCls}
-                        style={cellStyle}
-                      >
-                        {fmtVal(v, c)}
-                        {isRisk && (
-                          <span className="text-[var(--best-star)] font-bold">
-                            {' ★'}
-                          </span>
-                        )}
-                      </td>
-                    )
-                  })}
-                </tr>
-              )
-            })}
+            {sortedRows.map(({ v, best, risk }) => (
+              <tr
+                key={v.label}
+                onClick={() => onSelect(v.label)}
+                className={`cursor-pointer transition-colors hover:bg-[var(--surface-hover)] ${
+                  v.label === active
+                    ? '!bg-[var(--accent-bg)] shadow-[inset_2px_0_0_var(--accent-trhrp)]'
+                    : ''
+                }`}
+                // 虚拟滚动: 让浏览器跳过不可见行的渲染 (行数多时显著降低绘制成本)
+                style={{
+                  contentVisibility: 'auto',
+                  containIntrinsicSize: '34px',
+                }}
+              >
+                {cols.map((c, idx) => {
+                  const isBest = best.has(c.key)
+                  const isRisk = risk.has(c.key)
+                  const alignCls = idx < 2 ? 'text-left' : 'text-right'
+                  const inkCls =
+                    idx === 0
+                      ? 'font-semibold text-[var(--ink)]'
+                      : 'text-[var(--ink-2)]'
+                  const tabularCls = idx < 2 ? '' : 'tabular-nums'
+                  const tdBase = `px-3 py-[7px] border-b border-[color:var(--border-trhrp)] whitespace-nowrap ${alignCls} ${inkCls} ${tabularCls}`.replace(
+                    /\s+/g,
+                    ' ',
+                  ).trim()
+                  const cellCls = [
+                    tdBase,
+                    isBest ? '' : clsFor(v, c),
+                    isBest ? '!text-[var(--best-ink)] !font-bold' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')
+                  const cellStyle =
+                    c.fmt === 'pct'
+                      ? mddSeverityStyle(Math.abs(Number(v[c.key]) || 0))
+                      : undefined
+                  return (
+                    <td
+                      key={c.key as string}
+                      className={cellCls}
+                      style={cellStyle}
+                    >
+                      {/* 标的列(idx 0): 优质标的名称前加金色 ★ (不加新列, 更简洁) */}
+                      {idx === 0 && v.quality && (
+                        <span
+                          title="优质标的"
+                          style={{
+                            color: 'var(--best-star, #f5c518)',
+                            fontWeight: 700,
+                            marginRight: 3,
+                          }}
+                        >
+                          ★
+                        </span>
+                      )}
+                      {fmtVal(v, c)}
+                      {isRisk && (
+                        <span className="text-[var(--best-star)] font-bold">
+                          {' ★'}
+                        </span>
+                      )}
+                    </td>
+                  )
+                })}
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
@@ -1091,6 +1353,15 @@ export default function TrhrpBacktestPage() {
     hour12: false,
   })
 
+  // 当前选中标的的概要信息 (result.meta 未就绪时回退到 overview markets)
+  const meta = result?.meta
+  const ovMarket = data.markets.find((m) => m.label === activeLabel)
+  const curLabel = meta?.label || activeLabel || ''
+  const curTicker = meta?.ticker || ovMarket?.ticker || ''
+  const curGroup = meta?.market || ovMarket?.group || ''
+  const curProxy = meta?.proxy || ''
+  const is7x24 = (sm?.trading_hours || ovMarket?.trading_hours) === '7x24'
+
   return (
     <div
       className="min-h-[100dvh] bg-[var(--page-bg)] text-[var(--ink)]"
@@ -1147,6 +1418,47 @@ export default function TrhrpBacktestPage() {
         </aside>
 
         <main className="flex-1 min-w-0 max-w-full overflow-hidden flex flex-col gap-3 px-3 pb-8 pt-3 sm:gap-4 sm:px-6 sm:pb-10 sm:pt-5">
+          {/* 当前标的标识栏: 让用户一眼看清详情区看的是哪个标的 */}
+          <div className="flex items-baseline gap-3 flex-wrap px-1">
+            <h2 className="text-[22px] font-bold tracking-tight text-[var(--ink)] m-0 leading-tight">
+              {curLabel}
+            </h2>
+            <span className="text-[13px] font-medium text-[var(--sub)] tabular-nums">
+              {curTicker}
+            </span>
+            {curGroup && (
+              <span
+                className="text-[10.5px] font-semibold uppercase tracking-[0.06em] text-[var(--sub-2)] border border-[color:var(--border-trhrp)] rounded px-[7px] py-[2px]"
+              >
+                {curGroup}
+              </span>
+            )}
+            {is7x24 && (
+              <span
+                title="7×24 连续交易, 信号即时生效无 T+1 延迟"
+                style={{
+                  fontSize: 10.5,
+                  fontWeight: 700,
+                  color: '#fff',
+                  background: '#00838f',
+                  padding: '1px 7px',
+                  borderRadius: 4,
+                  letterSpacing: '0.02em',
+                }}
+              >
+                7×24
+              </span>
+            )}
+            {curProxy && (
+              <span className="text-[11px] text-[var(--sub-2)]">
+                · {curProxy}
+              </span>
+            )}
+            <span className="text-[11.5px] text-[var(--sub-2)] tabular-nums ml-auto">
+              {meta ? `${meta.start} ~ ${meta.end?.slice(0, 4)} · ${meta.days} 天` : ''}
+            </span>
+          </div>
+
           {sm && (
             <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-2">
               <StatCard

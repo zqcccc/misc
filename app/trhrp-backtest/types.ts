@@ -77,6 +77,10 @@ export interface MarketSummary {
   next_operation?: string | null
   outlook_note?: string | null
   outlook_dist?: number | null
+  // 交易时段: crypto=7x24 连续交易(信号即时生效无 T+1); 其余=daily(日内收盘 T+1 生效)
+  trading_hours?: '7x24' | 'daily'
+  // 优质标的标记 (来自 strategies_trhrp.json 的 quality 字段), Sidebar/汇总表用 ★ 标出
+  quality?: boolean
 }
 
 export interface MarketResult {
@@ -140,6 +144,7 @@ export interface MarketResult {
     latest_vol_p60?: number | null // 波动率 60 分位 (risk_off 触发线)
     latest_vol_med?: number | null // 波动率中位数 (risk_on 触发线)
     latest_mom?: number | null // 21 日动量 (0~1)
+    trading_hours?: '7x24' | 'daily' // 交易时段 (crypto=7x24 即时生效; 其余=daily T+1)
   }
   timeseries: TsPoint[]
 }

@@ -321,11 +321,19 @@ def _fmt_action(st):
 
 def cmd_status(args):
     data = load_strategies()
+    # EMA 反手段: 只支持 --name 模糊过滤 (group/regime/quality 是 TRHRP 概念, 不适用)
+    name_kw = (args.name or "").lower() or None
     print(f"{'NAME':<9} {'RUN':<4} {'PID':<6} {'POS':<4} {'SIZE':>4} {'PRICE':<13} {'UNREAL':<8} {'LAST_ACTION':<28} {'LAST_BAR':<17}")
     print("-" * 110)
     running = 0
+    shown = 0
     for s in sorted(data["strategies"], key=lambda x: (x.get("priority", 99), x["name"])):
         name = s["name"]
+        # --name 同时匹配 name 与 display_name
+        if name_kw and name_kw not in name.lower() \
+                and name_kw not in str(s.get("display_name", "") or "").lower():
+            continue
+        shown += 1
         rn = is_running(name)
         if rn:
             running += 1
@@ -348,11 +356,15 @@ def cmd_status(args):
             pos = size = price = unreal = lastbar = la_short = "-"
         run_flag = "✓" if rn else "-"
         print(f"{name:<9} {run_flag:<4} {pid:<6} {pos:<4} {size:>4} {price:<13} {unreal:<8} {la_short:<28} {lastbar:<17}")
-    print(f"\n运行中 {running}/{len(data['strategies'])}  (PID 文件在 monitor/caches/<name>/daemon.pid; "
-          f"LAST_ACTION 真实来自 actions.log JSONL)")
+    if name_kw:
+        print(f"\n运行中 {running}/{shown} (筛选自 {len(data['strategies'])} 只, 关键词={args.name})  "
+              f"(PID 文件在 monitor/caches/<name>/daemon.pid; LAST_ACTION 真实来自 actions.log JSONL)")
+    else:
+        print(f"\n运行中 {running}/{len(data['strategies'])}  (PID 文件在 monitor/caches/<name>/daemon.pid; "
+              f"LAST_ACTION 真实来自 actions.log JSONL)")
 
     # === TRHRP 子系统 (独立配置文件 monitor/strategies_trhrp.json) ===
-    trhrp_state = _trhrp_status_section()
+    trhrp_state = _trhrp_status_section(args)
     if trhrp_state is not None:
         print(trhrp_state)
 
@@ -450,8 +462,71 @@ def _trhrp_compact_trigger(text):
     return t
 
 
-def _trhrp_status_section():
-    """构建 TRHRP 子系统 status 段落. 没配置或没数据时返回 None (不打印)."""
+def _trhrp_quality_lookup():
+    """从 strategies_trhrp.json 构建优质标的集合. 返回 (quality_tickers, quality_labels)."""
+    cfg = _load_trhrp_config()
+    tickers = set()
+    labels = set()
+    if cfg:
+        for m in cfg.get("markets") or []:
+            if m.get("quality"):
+                if m.get("ticker"):
+                    tickers.add(m["ticker"])
+                if m.get("label"):
+                    labels.add(m["label"])
+    return tickers, labels
+
+
+def _trhrp_market_matches(m, args, quality_tickers):
+    """判断 state.json 中的 market 条目是否匹配 status 过滤参数 (group/regime/name/quality)."""
+    if args is None:
+        return True
+    groups = getattr(args, "group", None)
+    if groups:
+        if m.get("marketGroup") not in groups:
+            return False
+    regime = getattr(args, "regime", None)
+    if regime:
+        # 同时匹配当前档与次日档, 任一命中即保留
+        cur = (m.get("currentRegime") or "").lower()
+        nxt = (m.get("nextRegime") or "").lower()
+        if regime not in (cur, nxt):
+            return False
+    name_kw = getattr(args, "name", None)
+    if name_kw:
+        kw = name_kw.lower()
+        label = str(m.get("label") or "").lower()
+        ticker = str(m.get("ticker") or "").lower()
+        if kw not in label and kw not in ticker:
+            return False
+    if getattr(args, "quality", False):
+        if m.get("ticker") not in quality_tickers:
+            return False
+    return True
+
+
+def _trhrp_show_in_summary(m):
+    """精简模式下判断 market 是否值得显示:
+    有变化 (⚠️) / 临近切换 (outlookDist<0.1) / 次日 regime 非 risk_off (risk_on|moderate 值得关注)."""
+    if m.get("changed"):
+        return True
+    od = m.get("outlookDist")
+    if isinstance(od, (int, float)) and od < 0.1:
+        return True
+    nxt = (m.get("nextRegime") or "").upper()
+    if nxt in ("RISK_ON", "MODERATE"):
+        return True
+    return False
+
+
+def _trhrp_status_section(args=None):
+    """构建 TRHRP 子系统 status 段落. 没配置或没数据时返回 None (不打印).
+
+    模式:
+    - 精简模式 (默认, 无过滤参数且未 --full): 段一只显示有变化/临近切换/非 risk_off 的标的,
+      段三只显示 quality=true 的标的, 末尾附 `共 N 只 (显示 M 只, --full 查看全部)`.
+    - 完整模式 (--full 或传了任意过滤参数): 显示全部匹配过滤条件的标的.
+    """
     cfg = _load_trhrp_config()
     if not cfg:
         return None
@@ -460,13 +535,26 @@ def _trhrp_status_section():
     state_file = os.path.join(cache_dir, "state.json")
     rn = is_running(name)
     pid = str(read_pid(name) or "-")
+
+    # 过滤上下文: 是否传了过滤参数, 是否完整模式
+    has_filter = False
+    if args is not None:
+        has_filter = bool(getattr(args, "group", None) or getattr(args, "regime", None)
+                          or getattr(args, "name", None) or getattr(args, "quality", False))
+    full_mode = bool(getattr(args, "full", False)) if args is not None else True
+    if has_filter:
+        full_mode = True  # 传了过滤参数则自动全量显示匹配结果
+
+    quality_tickers, quality_labels = _trhrp_quality_lookup()
+    quality_count = len(quality_tickers)
+
     lines = []
     lines.append("")
     lines.append("[TRHRP 多市场 regime 策略子系统]")
-    lines.append(f"{'NAME':<8} {'RUN':<4} {'PID':<6} {'REGIME':<18} {'CHG':<4} {'ASOF':<11} {'LAST_ACTION':<40} {'FETCHED':<17}")
-    lines.append("-" * 110)
+    lines.append(f"{'NAME':<8} {'RUN':<4} {'PID':<6} {'REGIME':<30} {'CHG':<4} {'ASOF':<11} {'LAST_ACTION':<40} {'FETCHED':<17}")
+    lines.append("-" * 122)
     if not os.path.exists(state_file):
-        lines.append(f"{name:<8} {'✓' if rn else '-':<4} {pid:<6} {'-':<18} {'-':<4} {'-':<11} {'-':<40} {'-':<17}")
+        lines.append(f"{name:<8} {'✓' if rn else '-':<4} {pid:<6} {'-':<30} {'-':<4} {'-':<11} {'-':<40} {'-':<17}")
         return "\n".join(lines)
     try:
         with open(state_file) as f:
@@ -475,36 +563,67 @@ def _trhrp_status_section():
         lines.append(f"(TRHRP state.json 读取失败: {e})")
         return "\n".join(lines)
 
-    regime_summary = f"🟢{st.get('riskOnCount',0)} 🟡{st.get('moderateCount',0)} 🔴{st.get('riskOffCount',0)}"
+    # 汇总行: regime 分布 + 优质标的数
+    regime_summary = (f"🟢{st.get('riskOnCount',0)} 🟡{st.get('moderateCount',0)} "
+                      f"🔴{st.get('riskOffCount',0)} 优质{quality_count}只")
     as_of = (st.get("asOfDate") or "-")[:10]
     changed = st.get("changedMarkets", 0)
     fetched = (st.get("fetchedAt") or "")[:16].replace("T", " ")
     la_short, _ = _fmt_action_from_log(name, st)
     run_flag = "✓" if rn else "-"
-    lines.append(f"{name:<8} {run_flag:<4} {pid:<6} {regime_summary:<18} {changed:<4} {as_of:<11} {la_short:<40} {fetched:<17}")
+    lines.append(f"{name:<8} {run_flag:<4} {pid:<6} {regime_summary:<30} {changed:<4} {as_of:<11} {la_short:<40} {fetched:<17}")
     # 名词速查 (一次出现, 供各市场行参照):
     #   REGIME: 风险档 — RISK_ON 偏多仓 / MODERATE 中性 / RISK_OFF 避险
     #   cur→nxt: 当前生效档 → 次日交易档 (T 日信号, T+1 生效); ⚠️=次日档已变化, 待执行
-    #   vol: 21d realized vol 年化; p60 = 252 日窗口 60 分位; 中位 = 126 日窗口中位; mom = 21d 动量
-    #   崩盘线: 强制 RISK_OFF 的 vol 阈值; z: 252 日 log 价 z-score (均值回归极端偏差)
+    #   ★=quality 优质标的; vol: 21d realized vol 年化; p60 = 252 日窗口 60 分位;
+    #   中位 = 126 日窗口中位; mom = 21d 动量; 崩盘线: 强制 RISK_OFF 的 vol 阈值
+    #   z: 252 日 log 价 z-score (均值回归极端偏差)
     #   基础配比: regime → 股票/GLD/SGOV; 叠加后: 经 z-score overlay 调整后配比 (抄底加 / 高位减)
     lines.append("")
-    lines.append(f"  ── 段一·当前 {len(st.get('markets') or [])} 个市场仓位水平 ──")
+
+    # === 段一·当前仓位水平 ===
+    all_markets = st.get("markets") or []
+    # 规范化 None → "-"
+    norm_markets = [{k: (v if v is not None else "-") for k, v in (raw_m or {}).items()}
+                    for raw_m in all_markets]
+    # 应用过滤参数 (group/regime/name/quality)
+    filtered = [m for m in norm_markets if _trhrp_market_matches(m, args, quality_tickers)]
+    total_count = len(norm_markets)
+    if full_mode:
+        shown = filtered
+    else:
+        # 精简模式: 只显示有变化/临近切换/非 risk_off 的标的
+        shown = [m for m in filtered if _trhrp_show_in_summary(m)]
+
+    lines.append(f"  ── 段一·当前 {total_count} 个市场仓位水平 (显示 {len(shown)} 只) ──")
     lines.append(f"  {'市场':<10} {'分组':<6} {'REGIME':<20} {'基础配比':<24} {'叠加后配比':<26} {'z-score':<10} {'叠加提示'}")
-    for raw_m in (st.get("markets") or []):
-        m = {k: (v if v is not None else "-") for k, v in (raw_m or {}).items()}
+    for m in shown:
         cur_r = (m.get("currentRegime") or "?")[:8].upper()
         nxt_r = (m.get("nextRegime") or "?")[:8].upper()
         regime_cell = f"{cur_r} → {nxt_r}"
         z = m.get("priceZScore252")
         z_str = f"{z:+.2f}σ" if isinstance(z, (int, float)) else "-"
         marker = " ⚠️" if m.get("changed") else ""
-        lines.append(f"  {m.get('label','-'):<10} {m.get('marketGroup','-'):<6} {regime_cell:<20} "
+        # quality 优质标的在 label 前加 ★ 标记
+        qmark = "★" if m.get("ticker") in quality_tickers else ""
+        label_disp = f"{qmark}{m.get('label','-')}"
+        lines.append(f"  {label_disp:<10} {m.get('marketGroup','-'):<6} {regime_cell:<20} "
                      f"{m.get('allocationText','-'):<24} "
                      f"{m.get('overlayAdjustedAllocationText','-'):<26} {z_str:<10} "
                      f"{m.get('overlayRecommendationText','-')}{marker}")
-    _append_trhrp_section_two(lines, st)
-    _append_trhrp_section_three(lines)
+    # 段二: 同步应用过滤 (用 filtered, 不再用全量 markets)
+    _append_trhrp_section_two(lines, st, filtered, full_mode)
+    # 段三: 精简模式只显示 quality 标的; 完整模式按过滤参数显示
+    _append_trhrp_section_three(lines, args, quality_labels, full_mode)
+
+    # 末尾汇总行
+    if not full_mode:
+        lines.append("")
+        lines.append(f"  共 {total_count} 只 (显示 {len(shown)} 只, --full 查看全部)")
+    elif len(shown) < total_count:
+        lines.append("")
+        lines.append(f"  共 {total_count} 只 (匹配 {len(shown)} 只)")
+
     if st.get("error"):
         lines.append("")
         lines.append(f"  ⚠️ error: {st.get('error')}")
@@ -515,14 +634,24 @@ def _trhrp_status_section():
     return "\n".join(lines)
 
 
-def _append_trhrp_section_two(lines, st):
-    """段二: 次日档变化与触发条件. 拆成变化组 (展开) + 维持组 (按档分组, 每市场一行)."""
+def _append_trhrp_section_two(lines, st, filtered_markets=None, full_mode=True):
+    """段二: 次日档变化与触发条件. 拆成变化组 (展开) + 维持组 (按档分组, 每市场一行).
+
+    filtered_markets: 已经过滤 (group/regime/name/quality) 并规范化的 market 列表;
+                      为 None 时回退到 state.json 全量 markets (向后兼容).
+    full_mode: 完整模式标志 (目前段二展示逻辑不变, 仅用于将来扩展).
+    """
     lines.append("")
-    markets = st.get("markets") or []
+    # 段二同步应用过滤: 优先用上层传入的 filtered_markets, 否则回退全量
+    if filtered_markets is not None:
+        markets = filtered_markets
+    else:
+        markets = [{k: (v if v is not None else "-") for k, v in (raw_m or {}).items()}
+                   for raw_m in (st.get("markets") or [])]
+    total = len(st.get("markets") or [])
     changed_markets = []
     stable_markets = []
-    for raw_m in markets:
-        m = {k: (v if v is not None else "-") for k, v in (raw_m or {}).items()}
+    for m in markets:
         cur_r = (m.get("currentRegime") or "?").upper()
         nxt_r = (m.get("nextRegime") or "?").upper()
         is_changed = bool(m.get("changed")) or cur_r != nxt_r
@@ -554,7 +683,7 @@ def _append_trhrp_section_two(lines, st):
             return out + " " * (width - cur_w)
         return s
 
-    lines.append(f"  ── 段二·次日档变化与触发条件 (共 {len(markets)} 个市场 · 变化 {len(changed_markets)} · 维持 {len(stable_markets)}) ──")
+    lines.append(f"  ── 段二·次日档变化与触发条件 (共 {total} 个市场 · 变化 {len(changed_markets)} · 维持 {len(stable_markets)}) ──")
 
     if changed_markets:
         lines.append("")
@@ -665,17 +794,41 @@ def _load_trhrp_backtest():
     return out
 
 
-def _append_trhrp_section_three(lines):
-    """段三: 各标的历史回测最佳策略 (按 Calmar=CAGR/|MDD| 评选, 突出最佳≠主策略的标的)."""
+def _append_trhrp_section_three(lines, args=None, quality_labels=None, full_mode=True):
+    """段三: 各标的历史回测最佳策略 (按 Calmar=CAGR/|MDD| 评选, 突出最佳≠主策略的标的).
+
+    精简模式 (full_mode=False): 只显示 quality=true 的标的.
+    完整模式 (full_mode=True): 显示全部, 但应用 --name / --quality 过滤.
+    """
     bt = _load_trhrp_backtest()
     if not bt:
         return
-    total = len(bt)
-    non_strat = [(label, info) for label, info in bt.items() if info["variant"] != "strategy"]
+    quality_labels = quality_labels or set()
+    name_kw = (getattr(args, "name", None) or "").lower() or None
+    quality_filter = bool(getattr(args, "quality", False))
+
+    def _label_ok(label):
+        if not full_mode:
+            # 精简模式: 只显示 quality=true 标的
+            if label not in quality_labels:
+                return False
+        else:
+            if quality_filter and label not in quality_labels:
+                return False
+            if name_kw and name_kw not in str(label).lower():
+                return False
+        return True
+
+    filtered_bt = {label: info for label, info in bt.items() if _label_ok(label)}
+    if not filtered_bt:
+        return
+    total = len(filtered_bt)
+    non_strat = [(label, info) for label, info in filtered_bt.items() if info["variant"] != "strategy"]
     is_strat_count = total - len(non_strat)
 
     lines.append("")
-    lines.append(f"  ── 段三·历史回测最佳策略 (Calmar = CAGR/|MDD| · 共 {total} 个标的 · 最佳非主策略 {len(non_strat)} 个) ──")
+    scope = "优质标的" if not full_mode and quality_labels else "标的"
+    lines.append(f"  ── 段三·历史回测最佳策略 (Calmar = CAGR/|MDD| · 共 {total} 个{scope} · 最佳非主策略 {len(non_strat)} 个) ──")
 
     def _disp_label(label, width=14):
         s = str(label)
@@ -1007,6 +1160,15 @@ def main():
     sp.set_defaults(func=cmd_restart)
 
     sp = sub.add_parser("status", help="查看所有品种 daemon 状态 + 关键 state 字段")
+    sp.add_argument("--group", action="append", default=None, metavar="名称",
+                    help="按 marketGroup 过滤 (如 --group A股), 可多次指定")
+    sp.add_argument("--regime", choices=["risk_on", "moderate", "risk_off"], default=None,
+                    help="只显示当前/次日 regime 匹配的标的")
+    sp.add_argument("--name", default=None, metavar="关键词",
+                    help="按 label/ticker 模糊搜索 (不区分大小写)")
+    sp.add_argument("--quality", action="store_true", help="只显示 quality=true 的优质标的")
+    sp.add_argument("--summary", action="store_true", help="精简模式 (默认): 汇总行 + 有变化的标的")
+    sp.add_argument("--full", action="store_true", help="完整模式: 显示全部标的 (等价于旧行为)")
     sp.set_defaults(func=cmd_status)
 
     sp = sub.add_parser("logs", help="查看品种日志; 默认实时跟随所有品种, Ctrl+C 退出")

@@ -21,6 +21,7 @@ import os
 import sys
 import time
 import json
+import subprocess
 import traceback
 from pathlib import Path
 
@@ -220,6 +221,37 @@ def _notify_changes(cfg, chgs, cur_state):
     notifiers.notify_all(f"[{name}] 档位切换", "\n".join(lines), important=True)
 
 
+def _refresh_backtest_data(cfg, log_func):
+    """监控检测到 regime 变化后, 自动重跑回测刷新 _all.json, 让看板与通知同步.
+
+    回测脚本默认读 monitor/caches/TRHRP/yf_cache (即 daemon 刚刷新过的行情),
+    输出到 deliverables/trhrp_backtest_all/_all.json, 无需额外 env 覆盖.
+    跑失败不影响 daemon 主循环, 下次有变化时再试.
+    """
+    script = os.path.join(_PARENT, "scripts", "trhrp_backtest_live.py")
+    if not os.path.exists(script):
+        log_func(f"看板同步: 回测脚本不存在, 跳过 ({script})", also_print=False)
+        return
+    log_func(f"看板同步: 重跑回测刷新 _all.json (regime 变化已通知, 同步看板) ...")
+    try:
+        r = subprocess.run(
+            ["python3", script],
+            cwd=_PARENT,
+            capture_output=True, text=True, timeout=300,
+        )
+        if r.returncode == 0:
+            tail = (r.stdout or "").strip().splitlines()
+            last = tail[-1] if tail else "done"
+            log_func(f"看板同步完成: {last}")
+        else:
+            err = (r.stderr or r.stdout or "")[-600:]
+            log_func(f"看板同步失败 (rc={r.returncode}): {err}", also_print=False)
+    except subprocess.TimeoutExpired:
+        log_func("看板同步超时 (300s), 跳过本次", also_print=False)
+    except Exception as e:
+        log_func(f"看板同步异常: {e}", also_print=False)
+
+
 def _bootstrap_log(prev_state, cur_state, log_func):
     """daemon 启动时把 "上次 state.json -> 当前" 之间 regime 变化一次性记录到 actions.log, 不发通知."""
     chgs = _compare_regime_changes(prev_state, cur_state)
@@ -339,6 +371,12 @@ def run(name):
                     _notify_changes(cfg, chgs, new_state)
             except Exception as e_notify:
                 log(f"通知发送失败 (忽略): {e_notify}", also_print=False)
+            # 看板同步: 有 regime 变化时重跑回测刷新 _all.json, 让页面与通知同步
+            if chgs:
+                try:
+                    _refresh_backtest_data(cfg, log)
+                except Exception as e_bt:
+                    log(f"看板同步异常 (忽略): {e_bt}", also_print=False)
             cur_state = new_state
     except KeyboardInterrupt:
         log("监控已停止。")
