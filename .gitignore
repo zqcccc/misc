@@ -53,9 +53,9 @@ next-env.d.ts
 /deliverables
 
 # 与 Next.js 无关的本地研究/回测产物
-/scripts/*.py
+/scripts/**/*.py
 /scripts/_*
-# TRHRP 部署必需（随 trhrp-data 镜像构建，必须入库）: 对上面的 /scripts/*.py 开例外
+# TRHRP 部署必需（随 trhrp-data 镜像构建，必须入库）: 对上面的 /scripts/**/*.py 开例外
 !/scripts/trhrp_backtest_live.py
 !/scripts/refresh_trhrp_cache.py
 
@@ -88,3 +88,12 @@ next-env.d.ts
 /monitor/feishu_webhook.json
 # TRHRP 实验性研究产物: 回测脚本 + 生成结果 (与 next 项目无关, 不入库)
 /monitor/research/
+
+# === 礼物页本地草稿（已迁入 app/gift，无需入库） ===
+/electronic_gift.html
+
+# 日内回测行情缓存（CSV），非源码
+/scripts/intraday_cache/
+
+# 临时生成的研究 / 报告 HTML
+/outputs/
