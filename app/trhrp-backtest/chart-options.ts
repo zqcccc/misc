@@ -132,6 +132,7 @@ function axisTooltip(regimeCn: RegimeCn) {
       h += `<br/><b>股票权重:</b> ${(d.we * 100).toFixed(0)}% &nbsp; <b>标的现价:</b> ${fmtPrice(d.pp)} &nbsp; <b>归一价:</b> ${d.p.toFixed(
         3,
       )} &nbsp; <b>vol21:</b> ${d.v != null ? (d.v * 100).toFixed(1) + '%' : '—'}`
+      h += `<br/><b>mom(21d):</b> ${d.mom != null ? (d.mom * 100).toFixed(1) + '%' : '—'} &nbsp; <b>vol_p60:</b> ${d.vp60 != null ? (d.vp60 * 100).toFixed(1) + '%' : '—'} &nbsp; <b>vol中位(126d):</b> ${d.vmed != null ? (d.vmed * 100).toFixed(1) + '%' : '—'}`
       return h
     },
   }
@@ -157,6 +158,9 @@ export function buildMainOption(
     e: pt.e,
     ro: pt.ro,
     v: pt.v,
+    vp60: pt.vp60,
+    vmed: pt.vmed,
+    mom: pt.mom,
     p: pt.p / p0,
     pp: pt.p,
   }))
@@ -172,6 +176,9 @@ export function buildMainOption(
     e: pt.e,
     ro: pt.ro,
     v: pt.v,
+    vp60: pt.vp60,
+    vmed: pt.vmed,
+    mom: pt.mom,
     p: pt.p / p0,
     pp: pt.p,
   }))
@@ -187,6 +194,9 @@ export function buildMainOption(
     e: pt.e,
     ro: pt.ro,
     v: pt.v,
+    vp60: pt.vp60,
+    vmed: pt.vmed,
+    mom: pt.mom,
     p: pt.p / p0,
     pp: pt.p,
   }))
@@ -202,6 +212,9 @@ export function buildMainOption(
     e: pt.e,
     ro: pt.ro,
     v: pt.v,
+    vp60: pt.vp60,
+    vmed: pt.vmed,
+    mom: pt.mom,
     p: pt.p / p0,
     pp: pt.p,
   }))
@@ -217,6 +230,9 @@ export function buildMainOption(
     e: pt.e,
     ro: pt.ro,
     v: pt.v,
+    vp60: pt.vp60,
+    vmed: pt.vmed,
+    mom: pt.mom,
     p: pt.p / p0,
     pp: pt.p,
   }))
@@ -358,6 +374,9 @@ export function buildWeightOption(
     dw: pt.dw,
     we: pt.we,
     v: pt.v,
+    vp60: pt.vp60,
+    vmed: pt.vmed,
+    mom: pt.mom,
     s: pt.s,
     b: pt.b,
     p: pt.p / p0,
@@ -372,6 +391,9 @@ export function buildWeightOption(
       dw: pt.dw,
       we: pt.we,
       v: pt.v,
+      vp60: pt.vp60,
+      vmed: pt.vmed,
+      mom: pt.mom,
     }))
     .filter((pt) => pt.value[1] != null)
   const mWadd: any[] = []
@@ -403,6 +425,9 @@ export function buildWeightOption(
         h += `<br/><b>股票仓位:</b> ${d.value[1].toFixed(0)}%`
         if (d.pp != null) h += ` &nbsp; <b>标的现价:</b> ${fmtPrice(d.pp)}`
         if (d.v != null) h += ` &nbsp; <b>vol21:</b> ${(d.v * 100).toFixed(1)}%`
+        if (d.mom != null) h += ` &nbsp; <b>mom:</b> ${(d.mom * 100).toFixed(1)}%`
+        if (d.vp60 != null) h += ` &nbsp; <b>vol_p60:</b> ${(d.vp60 * 100).toFixed(1)}%`
+        if (d.vmed != null) h += ` &nbsp; <b>vol中位:</b> ${(d.vmed * 100).toFixed(1)}%`
         return h
       },
     },

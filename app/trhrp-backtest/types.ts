@@ -12,6 +12,9 @@ export interface TsPoint {
   e: number // 极值仓位净值 (risk_on=满仓, risk_off=空仓, moderate=半仓, 其余 SGOV)
   ro: number // risk-on满仓净值 (risk_on=满仓, moderate/risk_off 全部 SGOV 空仓)
   v: number | null // vol_21 年化波动率 (0~1, 早期可能为 null)
+  vp60: number | null // 波动率 60 分位 (risk_off 触发线, 0~1, 早期可能为 null)
+  vmed: number | null // 波动率中位数 (risk_on 触发线, 0~1, 早期可能为 null)
+  mom: number | null // 21 日动量 (0~1, 早期可能为 null)
   r: string // regime: risk_on / moderate / risk_off
   o: string // 操作: add / reduce / hold
   we: number // 股票权重 (0~1)

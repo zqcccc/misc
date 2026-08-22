@@ -15,11 +15,11 @@
     ],
     "regime_weights": "三种 regime 各自对应 股票/GLD/SGOV 配比. 加起来需 = 1.0.",
     "overlay_rules": "各 marketGroup 的标准差偏离阈值 (252 日 z-score). buy_threshold: z<=该值时加仓; sell_threshold: z>=该值时减仓; delta: 触发后股票仓位 ± percentage point (sgov 反向).",
-    "signal_params": "信号计算参数. 改动会影响 regime 判定结果, 与 ba 项目同口径默认值一致."
+    "signal_params": "信号计算参数. 改动会影响 regime 判定结果, 与 ba 项目同口径默认值一致. vol_dyn_de_risk/vol_factor/mom_penalty/debounce_days 为 v2 改良层 (通用范式: 187 个标的 sweep 验证 100% 缩小回撤 + 97%+ 提升收益)."
   },
   "name": "TRHRP",
   "check_interval_minutes": 60,
-  "notify_on_change": true,
+  "notify_on_change": false,
   "markets": [
     {
       "label": "沪深300",
@@ -1461,7 +1461,11 @@
     "crash_trigger_vol": 0.3,
     "trading_days_per_year": 252,
     "start_date": "2010-01-01",
-    "cache_max_age_hours": 12
+    "cache_max_age_hours": 12,
+    "vol_dyn_de_risk": true,
+    "vol_factor": 5.0,
+    "mom_penalty": 0.9,
+    "debounce_days": 3
   },
   "source": "口径与 /Users/gongzhao/code/ba/scripts/trhrp_daily_multi_signal.py 同源; monitor 端独立实现, ba 升级时需手动同步口径变更到本文件 + monitor/trhrp_strategy.py"
 }

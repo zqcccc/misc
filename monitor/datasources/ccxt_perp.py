@@ -1,7 +1,10 @@
 """
-Binance USDT-M 永续合约 K 线适配器.
+Crypto 永续合约 K 线适配器.
 单次最多 1500 根, 用 since 分页拉取足够 EMA warmup 的大窗口.
+
+默认走 OKX (国内本地可直连). 可通过环境变量 CCXT_EXCHANGE=binance 切换.
 """
+import os
 import time
 import pandas as pd
 
@@ -12,10 +15,17 @@ def _get_exchange():
     global _EXCHANGE
     if _EXCHANGE is None:
         import ccxt
-        _EXCHANGE = ccxt.binance({
-            "enableRateLimit": True,
-            "options": {"defaultType": "future"},
-        })
+        ex_name = os.getenv("CCXT_EXCHANGE", "okx").lower()
+        if ex_name == "binance":
+            _EXCHANGE = ccxt.binance({
+                "enableRateLimit": True,
+                "options": {"defaultType": "future"},
+            })
+        else:
+            _EXCHANGE = ccxt.okx({
+                "enableRateLimit": True,
+                "options": {"defaultType": "swap"},
+            })
     return _EXCHANGE
 
 
@@ -29,6 +39,7 @@ _TF_MS = {
 def fetch_recent(symbol, timeframe="15m", limit=1500, warmup_target=None, timeout=30, **_kw):
     """
     分页拉取, 至少返回 limit 根. warmup_target 给定时强制拉满 (≥ EMA_SPAN*3).
+    OKX 每次实际返回可能少于 limit (默认 300), 需多次翻页.
     """
     ex = _get_exchange()
     tf_ms = _TF_MS.get(timeframe, 15 * 60 * 1000)
@@ -40,7 +51,8 @@ def fetch_recent(symbol, timeframe="15m", limit=1500, warmup_target=None, timeou
     since_ms = now_ms - n_target * tf_ms
     rows = []
     cur = since_ms
-    max_iter = 30
+    # OKX 每次返回 300 根, 拉 5 年 1h 需 ~150 次; 给 300 次裕度
+    max_iter = 300
     while cur < now_ms and len(rows) < n_target + 200 and max_iter > 0:
         try:
             ohlcv = ex.fetch_ohlcv(symbol, timeframe, since=cur, limit=per_page)

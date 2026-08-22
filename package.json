@@ -35,6 +35,7 @@
     "eslint-config-next": "16.2.4",
     "gray-matter": "^4.0.3",
     "js-base64": "^3.7.5",
+    "jszip": "^3.10.1",
     "next": "16.2.4",
     "next-mdx-remote": "^5.0.0",
     "next-mdx-remote-client": "^2",

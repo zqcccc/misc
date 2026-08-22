@@ -1,4 +1,8 @@
-"""Telegram Bot 通知 — 读取 monitor/telegram_config.json 统一配置."""
+"""Telegram Bot 通知 — 读取 monitor/telegram_config.json 统一配置.
+国内直连 api.telegram.org 被墙, 必须走代理. 代理来源优先级:
+  telegram_config.json 的 "proxy" 字段 > 环境变量 HTTPS_PROXY/HTTP_PROXY
+EMA/TRHRP daemon 进程通常不继承 shell 代理变量, 所以推荐在 json 里显式配 proxy.
+"""
 import os
 import json
 import urllib.parse
@@ -37,6 +41,17 @@ def is_configured():
     return _load() is not None
 
 
+def _proxy_url():
+    """代理优先级: json 的 proxy 字段 > 环境变量 HTTPS_PROXY/HTTP_PROXY."""
+    cfg = _load()
+    proxy = None
+    if cfg:
+        proxy = cfg.get("proxy")
+    if not proxy:
+        proxy = os.environ.get("HTTPS_PROXY") or os.environ.get("HTTP_PROXY")
+    return proxy
+
+
 def notify(title, message, important=True, **_kw):
     cfg = _load()
     if not cfg:
@@ -46,7 +61,15 @@ def notify(title, message, important=True, **_kw):
         url = f"https://api.telegram.org/bot{cfg['bot_token']}/sendMessage"
         data = urllib.parse.urlencode({"chat_id": cfg["chat_id"], "text": text}).encode()
         req = urllib.request.Request(url, data=data)
-        resp = urllib.request.urlopen(req, timeout=10)
+        # telegram 国内被墙, 走代理; 无代理则直连(境外/已配系统代理时可用).
+        proxy = _proxy_url()
+        if proxy:
+            opener = urllib.request.build_opener(
+                urllib.request.ProxyHandler({"http": proxy, "https": proxy})
+            )
+            resp = opener.open(req, timeout=10)
+        else:
+            resp = urllib.request.urlopen(req, timeout=10)
         return resp.status == 200
     except Exception as e:
         print(f"[notifier:telegram] err: {e}", flush=True)
