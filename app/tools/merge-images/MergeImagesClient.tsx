@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   DndContext,
   closestCenter,
@@ -104,36 +104,87 @@ export default function MergeImagesClient() {
 
   const sensors = useSensors(useSensor(PointerSensor));
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const arr = Array.from(e.target.files);
-      Promise.all(arr.map(f => new Promise<{ id: string; file: File; preview: string }>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve({ id: getFileId(f), file: f, preview: reader.result as string });
-        reader.onerror = reject;
-        reader.readAsDataURL(f);
-      }))).then(async (objs) => {
-        setFileObjs(objs);
-        setResultUrl(null);
-        setResultSize(null);
-        const imgs = await Promise.all(
-          objs.map(obj => new Promise<HTMLImageElement>((resolve, reject) => {
-            const img = new window.Image();
-            img.onload = () => resolve(img);
-            img.onerror = reject;
-            img.src = obj.preview;
-          }))
-        );
-        const widths = imgs.map(img => img.width);
-        const heights = imgs.map(img => img.height);
-        setImgStats({
-          minWidth: Math.min(...widths),
-          maxWidth: Math.max(...widths),
-          minHeight: Math.min(...heights),
-          maxHeight: Math.max(...heights),
-        });
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const dragCounter = useRef(0);
+
+  const loadFiles = useCallback((files: File[]) => {
+    if (files.length === 0) return;
+    Promise.all(files.map(f => new Promise<{ id: string; file: File; preview: string }>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve({ id: getFileId(f), file: f, preview: reader.result as string });
+      reader.onerror = reject;
+      reader.readAsDataURL(f);
+    }))).then(async (objs) => {
+      setFileObjs(objs);
+      setResultUrl(null);
+      setResultSize(null);
+      const imgs = await Promise.all(
+        objs.map(obj => new Promise<HTMLImageElement>((resolve, reject) => {
+          const img = new window.Image();
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = obj.preview;
+        }))
+      );
+      const widths = imgs.map(img => img.width);
+      const heights = imgs.map(img => img.height);
+      setImgStats({
+        minWidth: Math.min(...widths),
+        maxWidth: Math.max(...widths),
+        minHeight: Math.min(...heights),
+        maxHeight: Math.max(...heights),
       });
+    });
+  }, []);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) loadFiles(Array.from(e.target.files));
+    e.target.value = '';
+  };
+
+  // 粘贴上传
+  useEffect(() => {
+    const onPaste = (ev: ClipboardEvent) => {
+      if (!ev.clipboardData) return;
+      const files: File[] = [];
+      for (const it of Array.from(ev.clipboardData.items)) {
+        if (it.kind === 'file') {
+          const f = it.getAsFile();
+          if (f) files.push(f);
+        }
+      }
+      if (files.length > 0) loadFiles(files);
+    };
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  }, [loadFiles]);
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current++;
+    if (e.dataTransfer.types?.includes('Files')) setDragOver(true);
+  };
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current--;
+    if (dragCounter.current <= 0) {
+      dragCounter.current = 0;
+      setDragOver(false);
     }
+  };
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current = 0;
+    setDragOver(false);
+    if (e.dataTransfer.files) loadFiles(Array.from(e.dataTransfer.files));
   };
 
   const moveUp = (idx: number) => {
@@ -260,25 +311,49 @@ export default function MergeImagesClient() {
 
   return (
     <div className="max-w-2xl mx-auto my-10 p-8 bg-white dark:bg-[#282c35] rounded-xl shadow-lg transition-colors">
-      <div className="mb-6 flex items-center gap-4">
-        <label
-          htmlFor="file-upload"
-          className="inline-flex items-center px-4 py-2 bg-blue-600 dark:bg-blue-800 text-white rounded-md shadow cursor-pointer hover:bg-blue-700 dark:hover:bg-blue-900 transition-colors font-medium"
-        >
-          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5-5m0 0l5 5m-5-5v12" />
-          </svg>
-          选择图片
-          <input
-            id="file-upload"
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={handleFileChange}
-            className="hidden"
-          />
-        </label>
-        <span className="text-gray-400 dark:text-gray-500 text-sm">支持多图，拖拽/按钮调整顺序</span>
+      <div
+        onDragEnter={handleDragEnter}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        onClick={() => fileInputRef.current?.click()}
+        className={`relative mb-6 cursor-pointer rounded-2xl border-2 border-dashed transition-all duration-200 ${
+          dragOver
+            ? 'border-blue-500 bg-blue-50/80 dark:bg-blue-900/20 scale-[1.01]'
+            : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-gray-50 dark:hover:bg-[#363c48]'
+        } ${fileObjs.length === 0 ? 'p-12' : 'p-6'}`}
+      >
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={handleFileChange}
+          className="hidden"
+        />
+        <div className="flex items-center gap-4 pointer-events-none">
+          <div className={`flex-shrink-0 flex items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 text-white shadow-lg ${fileObjs.length === 0 ? 'w-14 h-14' : 'w-12 h-12'} transition-all`}>
+            <svg className={fileObjs.length === 0 ? 'w-7 h-7' : 'w-6 h-6'} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.9A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+            </svg>
+          </div>
+          <div>
+            {fileObjs.length === 0 ? (
+              <>
+                <p className="text-base font-semibold text-gray-800 dark:text-gray-100">
+                  点击、拖拽或粘贴上传图片
+                </p>
+                <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
+                  支持多图，上传后可拖拽排序或用按钮调整顺序
+                </p>
+              </>
+            ) : (
+              <p className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                已选 {fileObjs.length} 张 · 点击/拖拽/粘贴可重新选择
+              </p>
+            )}
+          </div>
+        </div>
       </div>
       {fileObjs.length > 0 && (
         <div className="mb-8 bg-gray-50 dark:bg-[#363c48] rounded-lg p-5 shadow">

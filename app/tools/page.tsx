@@ -23,6 +23,12 @@ const tools = [
     href: '/tools/merge-images',
     icon: '🖼️',
   },
+  {
+    name: '图片压缩工具',
+    desc: 'JPG/PNG/WEBP 压缩与尺寸缩放，拖拽/粘贴上传，多图打包下载 ZIP。',
+    href: '/tools/compress-images',
+    icon: '🗜️',
+  },
   // 以后可继续添加更多工具
 ];
 

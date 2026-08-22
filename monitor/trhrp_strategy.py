@@ -361,6 +361,32 @@ def _allocation_text_with_delta(regime: str, equity_delta: float, cfg: Dict[str,
     return f"股票{equity*100:.0f}% / GLD{gld*100:.0f}% / SGOV{sgov*100:.0f}%"
 
 
+def _vol_dyn_scale_and_text(vol: Optional[float], vol_med: Optional[float], mom: Optional[float],
+                            vol_factor: float, mom_penalty: float) -> tuple:
+    """Compute VolDyn equity scale factor (0-1) and a human-readable explanation.
+
+    Returns (scale, text). scale=1 means no change (calm/positive mom); scale < 1 means
+    equity should be reduced by that factor. text describes the trigger reason.
+    """
+    if vol is None or vol_med is None or mom is None or vol_med <= 0.0:
+        return 1.0, "VolDyn: 信号分量不足, 不调仓"
+    factor = vol / vol_med
+    # vol scale: 1 when factor=1, 0 when factor=1+vol_factor
+    vol_scale = 1.0 - (factor - 1.0) / float(vol_factor)
+    vol_scale = max(0.0, min(1.0, vol_scale))
+    mom_cut = 1.0 - float(mom_penalty)
+    triggers = []
+    if vol_scale < 1.0:
+        triggers.append(f"vol {vol*100:.1f}% > median {vol_med*100:.1f}% → 缩放 {vol_scale*100:.0f}%")
+    if mom < 0.0:
+        vol_scale = vol_scale * mom_cut
+        triggers.append(f"动量 {mom*100:+.1f}% < 0 → 再缩 ×{mom_cut*100:.0f}% (mom_penalty={mom_penalty*100:.0f}%)")
+    if not triggers:
+        return 1.0, "VolDyn: vol close to median 且 mom ≥ 0, 不调仓"
+    text = "VolDyn: " + "; ".join(triggers) + f", 最终 equity ×{vol_scale*100:.0f}%"
+    return float(vol_scale), text
+
+
 def explain_regime(regime: str, vol: Optional[float], mom: Optional[float],
                    vol_p60: Optional[float], vol_med: Optional[float],
                    crash_trigger: float,
@@ -523,6 +549,31 @@ def summarize_market(spec: MarketSpec, cfg: Dict[str, Any], cache_dir: Path,
     adj_text = _allocation_text_with_delta(nxt_regime, eq_delta, cfg)
     base_text = ALLOCATION_BASE_TEXT.get(nxt_regime, "-")
     crash_trigger = float(sp.get("crash_trigger_vol", 0.30))
+    # — VolDyn 风险自适应层: 在 regime + overlay 上再叠加一个等比缩放 —
+    vol_dyn_active = bool(sp.get("vol_dyn_de_risk", False))
+    vol_factor = float(sp.get("vol_factor", 5.0))
+    mom_penalty = float(sp.get("mom_penalty", 0.9))
+    vol_dyn_scale, _vd_text = _vol_dyn_scale_and_text(
+        _safe_num(cur_row["vol"]), _safe_num(cur_row["vol_med"]),
+        _safe_num(cur_row["mom"]), vol_factor, mom_penalty)
+    vol_dyn_scale_t, vd_text_t = _vol_dyn_scale_and_text(
+        _safe_num(nxt_row["vol"]), _safe_num(nxt_row["vol_med"]),
+        _safe_num(nxt_row["mom"]), vol_factor, mom_penalty)
+    # Build a "post-VolDyn" allocation text reflecting the recommended weights
+    if vol_dyn_active:
+        weights = dict((cfg.get("regime_weights") or {}).get(nxt_regime, {}))
+        base_eq_v = float(weights.get("equity", 0.5))
+        gld_v = float(weights.get("GLD", 0.25))
+        # apply overlay delta (if any)
+        base_eq_v = max(0.0, min(1.0, base_eq_v + eq_delta))
+        # apply vol_dyn scale (continuous de-risk)
+        base_eq_v_scaled = max(0.0, base_eq_v * vol_dyn_scale_t)
+        sgov_v = max(0.0, 1.0 - base_eq_v_scaled - gld_v)
+        adj_text_vd = f"股票{base_eq_v_scaled*100:.0f}% / GLD{gld_v*100:.0f}% / SGOV{sgov_v*100:.0f}% (含 VolDyn 缩放 {vol_dyn_scale_t*100:.0f}%)"
+    else:
+        adj_text_vd = adj_text
+        vol_dyn_scale_t = 1.0
+        vd_text_t = "VolDyn: 未启用"
     # 解释 curRegime 和 nextRegime "为什么是这一档"
     cur_explain = explain_regime(
         cur_regime,
@@ -565,6 +616,10 @@ def summarize_market(spec: MarketSpec, cfg: Dict[str, Any], cache_dir: Path,
         "overlayRecommendationText": overlay.get("text"),
         "overlayAdjustedAllocationText": adj_text,
         "allocationText": base_text,
+        "volDynActive": vol_dyn_active,
+        "volDynScale": vol_dyn_scale_t,
+        "volDynText": vd_text_t,
+        "volDynAdjustedAllocationText": adj_text_vd,
         "changed": cur_regime != nxt_regime,
     }
 

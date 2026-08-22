@@ -136,8 +136,8 @@ def fetch_recent(symbol, timeframe="1d", limit=1000, warmup_target=None, **_kw):
     try:
         all_rows = []
         page_key = None
-        # 一直翻页直到没有 page_key; 安全上限 20 页 (20000 根) 避免异常无限循环
-        for _ in range(20):
+        # 一直翻页直到没有 page_key; 安全上限 80 页 (80000 根) 覆盖 15m 10 年
+        for _ in range(80):
             kwargs = dict(
                 code=code, start=start.strftime("%Y-%m-%d"), end=end.strftime("%Y-%m-%d"),
                 ktype=ktype, autype=AuType.QFQ, max_count=1000,
