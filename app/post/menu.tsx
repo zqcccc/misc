@@ -19,7 +19,10 @@ const Menu = () => {
         <Link href='/ema-backtest'>EMA Backtest</Link>
       </li>
       <li>
-        <Link href='/trhrp-backtest'>TRHRP Backtest</Link>
+        <Link href='/privacy/element-scroll-capture'>Scroll Capture Privacy</Link>
+      </li>
+      <li>
+        <Link href='/trhrp-backtest'>TRHRP Backtest(deprecated)</Link>
       </li>
       <li>
         <Link href='/vmess'>Vmess(deprecated)</Link>
