@@ -129,8 +129,11 @@ def cmd_list(args):
         print(f"{s['name']:<10} {s['symbol']:<22} {s.get('timeframe','15m'):<5} {int(s['ema_span']):>5} {cb:>6} "
               f"{float(s['breakout_pct'])*100:>6.2f}% {tp:<24} {s['data_source']:<10} {run:<5}")
     print(f"\n共 {len(data['strategies'])} 个 EMA 策略. 配置文件: {STRATEGIES_FILE}")
-    # TRHRP 子系统也一并展示
-    cmd_trhrp_list()
+    cfg = _load_trhrp_config()
+    if cfg and cfg.get("enabled", True):
+        cmd_trhrp_list()
+    elif cfg:
+        print("\nTRHRP 子系统已下线（历史配置仍保留）")
 
 
 def _is_trhrp_name(name):
@@ -145,6 +148,9 @@ def cmd_start(args):
     skipped = []
     for name in names:
         if _is_trhrp_name(name):
+            cfg = _load_trhrp_config() or {}
+            if not cfg.get("enabled", True):
+                raise SystemExit(f"[{name}] 已下线，如需重启请先在 strategies_trhrp.json 显式设置 enabled=true")
             daemon_file = "daemon_trhrp.py"
         else:
             find_cfg(name)  # 校验 EMA 反手策略存在
@@ -528,7 +534,7 @@ def _trhrp_status_section(args=None):
     - 完整模式 (--full 或传了任意过滤参数): 显示全部匹配过滤条件的标的.
     """
     cfg = _load_trhrp_config()
-    if not cfg:
+    if not cfg or not cfg.get("enabled", True):
         return None
     name = cfg.get("name", "TRHRP")
     cache_dir = cache_dir_for(name)
@@ -1104,6 +1110,9 @@ def _tail_multi(targets, init_n):
 def cmd_run(args):
     """前台跑指定品种, 可任意覆盖参数, 不写 strategies.json. 直接 exec daemon.py."""
     if _is_trhrp_name(args.name):
+        cfg = _load_trhrp_config() or {}
+        if not cfg.get("enabled", True):
+            raise SystemExit(f"[{args.name}] 已下线，如需重启请先在 strategies_trhrp.json 显式设置 enabled=true")
         cmd = [DEFAULT_PY, "-u", os.path.join(HERE, "daemon_trhrp.py"), args.name]
         os.execvpe(cmd[0], cmd, os.environ)
     cmd = [DEFAULT_PY, "-u", os.path.join(HERE, "daemon.py"), args.name]
@@ -1121,7 +1130,7 @@ def _expand_names(names_csv, all_flag, default_all=False):
     if all_flag or (default_all and not names_csv):
         names = [s["name"] for s in load_strategies()["strategies"]]
         trhrp_cfg = _load_trhrp_config()
-        if trhrp_cfg and trhrp_cfg.get("name"):
+        if trhrp_cfg and trhrp_cfg.get("enabled", True) and trhrp_cfg.get("name"):
             tn = trhrp_cfg["name"]
             if tn not in names:
                 names.append(tn)
