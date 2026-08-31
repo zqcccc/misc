@@ -5,3 +5,12 @@ node_modules
 *.db
 !node_modules/shiki
 .github
+docker/trhrp-data
+deliverables/trhrp_backtest_all
+monitor/caches/TRHRP
+monitor/daemon_trhrp.py
+monitor/strategies_trhrp.json
+monitor/trhrp_strategy.py
+scripts/refresh_trhrp_cache.py
+scripts/trhrp_backtest_live.py
+scripts/trhrp_lib

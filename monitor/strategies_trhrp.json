@@ -1,6 +1,7 @@
 {
-  "_comment": "TRHRP 多市场 regime 子系统 - 唯一配置源. 与 EMA 反手 strategies.json 完全独立. 加品种=改本文件 markets 数组, 不动 daemon 代码.",
+  "_comment": "TRHRP 多市场 regime 子系统已下线，配置仅作历史研究保留。",
   "_schema": {
+    "enabled": "是否允许 monitor 启动 TRHRP daemon；false 表示已下线",
     "name": "唯一短名 (用作 caches/<name>/ 目录名和 CLI 标识)",
     "check_interval_minutes": "daemon 每 N 分钟拉一次快照 (默认 60). 收盘前数据可能 stale; 设太小会冲击 yfinance 限频.",
     "notify_on_change": "任一市场 regime 变化是否发通知 (true/false)",
@@ -17,6 +18,7 @@
     "overlay_rules": "各 marketGroup 的标准差偏离阈值 (252 日 z-score). buy_threshold: z<=该值时加仓; sell_threshold: z>=该值时减仓; delta: 触发后股票仓位 ± percentage point (sgov 反向).",
     "signal_params": "信号计算参数. 改动会影响 regime 判定结果, 与 ba 项目同口径默认值一致. vol_dyn_de_risk/vol_factor/mom_penalty/debounce_days 为 v2 改良层 (通用范式: 187 个标的 sweep 验证 100% 缩小回撤 + 97%+ 提升收益)."
   },
+  "enabled": false,
   "name": "TRHRP",
   "check_interval_minutes": 60,
   "notify_on_change": false,

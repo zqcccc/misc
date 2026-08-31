@@ -22,9 +22,6 @@ const Menu = () => {
         <Link href='/privacy/element-scroll-capture'>Scroll Capture Privacy</Link>
       </li>
       <li>
-        <Link href='/trhrp-backtest'>TRHRP Backtest(deprecated)</Link>
-      </li>
-      <li>
         <Link href='/vmess'>Vmess(deprecated)</Link>
       </li>
       <li>

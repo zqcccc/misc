@@ -278,6 +278,8 @@ def run(name):
     cfg = _load_trhrp_cfg()
     if cfg.get("name") != name:
         raise ValueError(f"strategies_trhrp.json name={cfg.get('name')!r} 与命令行参数 {name!r} 不匹配")
+    if not cfg.get("enabled", True):
+        raise SystemExit(f"[{name}] 已在 strategies_trhrp.json 中下线，拒绝启动")
 
     cache_dir = _cache_dir(name)
     state_file = _state_file_path(cache_dir)
