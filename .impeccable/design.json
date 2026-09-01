@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-01T09:03:12+08:00",
+  "title": "Design System: c9cu",
+  "extensions": {
+    "colorMeta": {
+      "archive-blue": {
+        "role": "primary",
+        "displayName": "档案蓝",
+        "canonical": "#075a9c",
+        "tonalRamp": ["#05253c", "#063a60", "#075083", "#075a9c", "#2e78ad", "#6ca4ca", "#b5d3e7", "#eef7fc"]
+      },
+      "status-amber": {
+        "role": "secondary",
+        "displayName": "状态琥珀",
+        "canonical": "#b98200",
+        "tonalRamp": ["#332500", "#5b4100", "#855e00", "#b98200", "#d9a62f", "#e8c46f", "#f4dfad", "#fff8e7"]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "冷纸面",
+        "canonical": "#f5f7fa",
+        "tonalRamp": ["#20242a", "#424850", "#69727e", "#919ba7", "#bbc3cc", "#d8dde3", "#edf0f4", "#f5f7fa"]
+      },
+      "graphite": {
+        "role": "neutral",
+        "displayName": "石墨",
+        "canonical": "#151b26",
+        "tonalRamp": ["#151b26", "#303845", "#4d5664", "#6d7683", "#929aa5", "#bac0c8", "#dfe2e6", "#f5f6f8"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "编辑式展示", "purpose": "首页、文章、工具与信任页的大标题。" },
+      "body": { "displayName": "清楚正文", "purpose": "正文、说明、导航与交互。" },
+      "label": { "displayName": "状态标签", "purpose": "日期、状态、分类和辅助动作。" }
+    },
+    "shadows": [
+      { "name": "floating-panel", "value": "0 18px 56px rgba(16, 26, 41, 0.18)", "purpose": "同意面板和必须浮在正文上方的界面。" },
+      { "name": "evidence-card", "value": "0 24px 70px rgba(4, 48, 82, 0.22)", "purpose": "首页唯一的代表作品面板。" }
+    ],
+    "motion": [
+      { "name": "link-nudge", "value": "180ms ease-out", "purpose": "文字入口箭头的短距离反馈；减少动态偏好时关闭。" }
+    ],
+    "breakpoints": [
+      { "name": "mobile", "value": "640px" },
+      { "name": "navigation", "value": "720px" },
+      { "name": "home-stack", "value": "900px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Consent Button",
+      "kind": "button",
+      "refersTo": "consent-primary",
+      "description": "同意统计等明确主动作。",
+      "html": "<button class=\"ds-consent-primary\">允许匿名统计</button>",
+      "css": ".ds-consent-primary{min-height:38px;border:1px solid var(--site-link,#075a9c);border-radius:9px;padding:0 13px;background:var(--site-link,#075a9c);color:#fff;font:750 13px ui-sans-serif,system-ui,sans-serif}.ds-consent-primary:hover{background:var(--site-link-strong,#034270)}.ds-consent-primary:focus-visible{outline:3px solid #7db9df;outline-offset:3px}"
+    },
+    {
+      "name": "Text Link",
+      "kind": "button",
+      "description": "导航、阅读入口和信任页面的默认动作。",
+      "html": "<a class=\"ds-text-link\" href=\"#\">查看完整方法 →</a>",
+      "css": ".ds-text-link{color:var(--site-link,#075a9c);font:750 14px ui-sans-serif,system-ui,sans-serif;text-decoration:underline;text-underline-offset:5px}.ds-text-link:hover{color:var(--site-link-strong,#034270)}.ds-text-link:focus-visible{outline:3px solid #7db9df;outline-offset:3px}"
+    },
+    {
+      "name": "Archive Status",
+      "kind": "custom",
+      "description": "明确标示停止刷新或退出运行的历史研究。",
+      "html": "<aside class=\"ds-archive-status\"><strong>历史研究档案</strong><p>数据已停止自动刷新，请核对截至日。</p></aside>",
+      "css": ".ds-archive-status{border:1px solid #d4b66d;border-top:3px solid var(--site-signal,#b98200);background:#fffaf0;padding:20px 22px;color:var(--site-ink,#151b26);font-family:ui-sans-serif,system-ui,sans-serif}.ds-archive-status strong{display:block;margin-bottom:7px}.ds-archive-status p{margin:0;color:var(--site-muted,#5f6b7a);line-height:1.7}"
+    },
+    {
+      "name": "Evidence Card",
+      "kind": "card",
+      "refersTo": "archive-card",
+      "description": "首页唯一的代表作品证据面板。",
+      "html": "<article class=\"ds-evidence\"><small>研究 · 历史状态</small><h2>代表作品标题</h2><p>方法、证据与局限的简短说明。</p><a href=\"#\">阅读完整方法 →</a></article>",
+      "css": ".ds-evidence{border-radius:16px;background:var(--site-link,#075a9c);color:#fff;padding:42px;font-family:ui-sans-serif,system-ui,sans-serif}.ds-evidence h2{max-width:12ch;margin:70px 0 20px;font:700 44px/1 ui-serif,Georgia,serif;letter-spacing:-.035em}.ds-evidence p{color:rgba(255,255,255,.82);line-height:1.7}.ds-evidence a{color:#fff;font-weight:750;text-decoration:underline;text-underline-offset:5px}.ds-evidence a:focus-visible{outline:3px solid #fff;outline-offset:3px}"
+    },
+    {
+      "name": "Site Navigation",
+      "kind": "nav",
+      "description": "公开主线的稳定入口。",
+      "html": "<nav class=\"ds-nav\"><a href=\"#\">首页</a><a href=\"#\">作品</a><a href=\"#\">文章</a><a href=\"#\">工具</a><a href=\"#\">关于</a></nav>",
+      "css": ".ds-nav{display:flex;gap:26px;font:650 14px ui-sans-serif,system-ui,sans-serif}.ds-nav a{color:var(--site-muted,#5f6b7a);text-decoration:none;text-underline-offset:6px}.ds-nav a:hover,.ds-nav a:focus-visible{color:var(--site-link-strong,#034270);text-decoration:underline}.ds-nav a:focus-visible{outline:3px solid #7db9df;outline-offset:3px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "个人档案索引",
+    "overview": "c9cu 的界面像一份由本人持续整理的档案索引：先给身份和状态，再给证据与正文。视觉不模拟机构媒体，也不以促销组件制造权威感；冷色纸面、细规则线和开放列表承担主要秩序。展示层使用编辑式衬线字形成个人出版物的气质，正文与导航保持清楚克制。",
+    "keyCharacteristics": ["编辑式大标题与高可读正文并置。", "依靠网格、留白和细规则线组织内容。", "明暗主题共享同一语义色彩关系。", "状态、来源和限制是视觉层级的一部分。"],
+    "rules": [
+      { "name": "The Rare Accent Rule", "body": "档案蓝负责行动和证据，状态琥珀负责状态；两者不互相代替，也不把整页染成强调色。", "section": "colors" },
+      { "name": "The Two-Voice Rule", "body": "衬线只负责展示级标题；正文、导航、状态和交互全部使用无衬线。", "section": "typography" },
+      { "name": "The Open Index Rule", "body": "同类内容优先使用规则线分隔的开放列表；只有确实需要独立承载或浮层语义时才使用封闭面板。", "section": "layout" },
+      { "name": "The Flat-by-Default Rule", "body": "正文、列表、信任说明和状态提示保持平面；结构先靠规则线和留白完成。", "section": "elevation" }
+    ],
+    "dos": ["Do 先展示作者、日期、状态、来源或处理位置，再要求访客相信结果。", "Do 用规则线、留白和文字层级组织跨主题内容。", "Do 让移动端从多栏自然重排为单列，并保持页面无横向溢出。", "Do 在明暗主题中保持档案蓝、状态琥珀和中性色的语义一致。"],
+    "donts": ["Don't 使用装饰性眉题、全大写口号或无信息量徽章填充标题上方。", "Don't 把每项内容包装成同尺寸圆角卡片。", "Don't 用单侧粗色条、发光阴影、渐变文字或表情符号代替层级。", "Don't 编造头像、资历、统计数字或机构背书来制造可信度。"]
+  }
+}

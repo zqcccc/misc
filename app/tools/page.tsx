@@ -1,57 +1,92 @@
-export const metadata = {
-  title: '在线工具集合 | 图片合并、格式转换等免费工具',
-  description: '收录多种实用的在线工具，如图片合并、格式转换等，全部免费、无需下载，浏览器本地处理，安全高效。',
-  keywords: '在线工具,图片合并,格式转换,web工具,免费工具,merge images,tools',
-};
+import type { Metadata } from 'next'
+import Link from 'next/link'
+
+export const metadata: Metadata = {
+  title: '自用工具',
+  description:
+    'c9cu 的研究工具、浏览器工具与历史研究档案：说明维护状态、数据来源、处理位置和已知局限。',
+  alternates: { canonical: '/tools' },
+}
 
 const tools = [
   {
-    name: '利润线 vs 股价',
-    desc: '输入美股代码，自动绘制股价、TTM EPS 利润线与参考线。',
+    name: '利润线与估值',
+    desc: '把股价、TTM EPS、利润线、估值区间与分红记录放进同一时间轴。',
     href: '/pe',
-    icon: '📈',
+    kind: '研究工具',
+    detail: '使用公开市场数据；页面标注更新时间与研究边界。',
   },
   {
-    name: 'EMA 反手策略回测',
-    desc: 'EMA 反手策略多品种回测净值曲线 + 实时监控当前持仓位置 + 真实操作日志.',
-    href: '/ema-backtest',
-    icon: '📊',
+    name: 'TRHRP 多市场回测',
+    desc: '保留多市场状态识别、仓位切换、回撤和长期收益的历史结果。',
+    href: '/trhrp-backtest',
+    kind: '历史研究',
+    detail: '已停止自动刷新；页面仅作研究档案，不构成投资建议。',
   },
   {
-    name: '图片合并工具',
-    desc: '支持多图上传、顺序调整、横/纵向拼接、格式与质量选择。',
+    name: '图片合并',
+    desc: '调整顺序后横向或纵向拼接多张图片，并选择导出格式。',
     href: '/tools/merge-images',
-    icon: '🖼️',
+    kind: '本地工具',
+    detail: '图片只在当前浏览器处理，不会上传到本站服务器。',
   },
   {
-    name: '图片压缩工具',
-    desc: 'JPG/PNG/WEBP 压缩与尺寸缩放，拖拽/粘贴上传，多图打包下载 ZIP。',
+    name: '图片压缩',
+    desc: '批量缩放 JPG、PNG、WEBP，并按质量导出或打包下载。',
     href: '/tools/compress-images',
-    icon: '🗜️',
+    kind: '本地工具',
+    detail: '图片只在当前浏览器处理，不会上传到本站服务器。',
   },
-  // 以后可继续添加更多工具
-];
+]
 
 export default function ToolsHome() {
   return (
-    <div className="max-w-2xl mx-auto my-10 p-8 rounded-xl shadow-lg bg-white dark:bg-[#282c35] transition-colors">
-      <h1 className="text-3xl font-bold mb-6 text-gray-900 dark:text-gray-100">在线工具集合</h1>
-      <p className="text-gray-600 dark:text-gray-300 mb-8">收录多种实用的在线工具，全部免费、无需下载，浏览器本地处理，安全高效。</p>
-      <div className="grid gap-6">
-        {tools.map(tool => (
-          <a
-            key={tool.href}
-            href={tool.href}
-            className="flex items-center gap-4 p-5 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 hover:bg-blue-50 dark:bg-[#363c48] dark:hover:bg-[#444b5a] hover:shadow transition"
-          >
-            <span className="text-3xl">{tool.icon}</span>
-            <div>
-              <div className="font-semibold text-lg text-gray-900 dark:text-gray-100">{tool.name}</div>
-              <div className="text-gray-600 dark:text-gray-400 text-sm">{tool.desc}</div>
-            </div>
-          </a>
-        ))}
-      </div>
-    </div>
-  );
-} 
+    <main className='tools-index'>
+      <header>
+        <h1>解决我自己反复遇到的问题。</h1>
+        <p>
+          这里不是随手堆出来的工具导航。每个页面都说明它在处理什么、数据从哪里来，以及哪些结论不能从结果中推出。
+        </p>
+      </header>
+
+      <section aria-labelledby='tools-list-title'>
+        <div className='tools-index-heading'>
+          <h2 id='tools-list-title'>工具与研究档案</h2>
+          <p>{tools.length} 个公开页面</p>
+        </div>
+        <ol className='tools-index-list'>
+          {tools.map((tool, index) => (
+            <li key={tool.href}>
+              <span className='tools-index-number' aria-hidden='true'>
+                {String(index + 1).padStart(2, '0')}
+              </span>
+              <div>
+                <p className='tools-index-kind'>{tool.kind}</p>
+                <h3><Link href={tool.href}>{tool.name}</Link></h3>
+              </div>
+              <div className='tools-index-copy'>
+                <p>{tool.desc}</p>
+                <small>{tool.detail}</small>
+              </div>
+              <Link className='tools-index-open' href={tool.href} aria-label={`打开${tool.name}`}>
+                打开 <span aria-hidden='true'>→</span>
+              </Link>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <aside className='tools-index-note'>
+        <h2>隐私与责任</h2>
+        <p>
+          图片工具使用浏览器能力在本地完成计算；研究工具的数据和算法有明确边界。本站不会把“免费”包装成无条件保证，也不会隐藏金融工具的风险提示。
+        </p>
+        <div>
+          <Link href='/privacy'>隐私说明</Link>
+          <Link href='/standards'>内容与披露原则</Link>
+          <Link href='/contact'>反馈问题</Link>
+        </div>
+      </aside>
+    </main>
+  )
+}

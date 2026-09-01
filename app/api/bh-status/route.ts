@@ -17,7 +17,9 @@ const DATA_DIR =
   process.env.DELIVERABLES_DIR || path.join(process.cwd(), 'deliverables')
 const DATA_FILE = path.join(DATA_DIR, 'bh_enhancement', 'bh_status.json')
 const SCRIPT = path.join(process.cwd(), 'scripts', 'bh_status.py')
-const PY = path.join(process.cwd(), '.venv', 'bin', 'python')
+// Avoid making the build graph depend on a machine-specific virtualenv symlink.
+// Deployments can still select an interpreter explicitly with PYTHON_BIN.
+const PY = process.env.PYTHON_BIN || 'python3'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
