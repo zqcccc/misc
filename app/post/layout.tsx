@@ -4,11 +4,11 @@ export default BlogLayout
 
 export const metadata = {
   title: {
-    template: "%s | ZQC's Blog",
-    default: "ZQC's Blog", // a default is required when creating a template
+    template: '%s · c9cu',
+    default: '文章 · c9cu',
   },
-  description: "welcome to ZQC's personal blog, nice to meet you",
-  keywords: ['Next.js', 'React', 'JavaScript', 'blog', 'zqc', 'onlylike.work'],
+  description: 'c9cu 的第一手研究、工程实践与个人记录。',
+  keywords: ['c9cu', '个人网站', '工程实践', '投资研究'],
 }
 
 export const viewport = {

@@ -2,6 +2,8 @@
 title: TRHRP 策略详解（Tail Risk Hedged Rotation Portfolio）
 date: '2026-07-07T14:00:00.000Z'
 description: '一套跨多市场、按波动率+动量识别市场状态(Regime)来切换股/金/债仓位的尾部风险对冲型轮动组合，全文拆解每个英文专业名词。'
+updated: '2026-09-01'
+archived: true
 ---
 
 # TRHRP 策略详解（Tail Risk Hedged Rotation Portfolio）

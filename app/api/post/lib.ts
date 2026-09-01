@@ -12,6 +12,7 @@ import remarkGfm from 'remark-gfm'
 // import rehypePrism from '@mapbox/rehype-prism'
 import rehypePrettyCode from 'rehype-pretty-code'
 import { serialize } from 'next-mdx-remote-client/serialize'
+import { isPublicPost } from '@/lib/site'
 
 const postsDirectory = path.join(process.cwd(), 'posts')
 
@@ -21,6 +22,17 @@ const postDirectories = [postsDirectory, plusDirectory]
 
 type Nested<T> = (T | null | Nested<T>)[] | T | null
 type NestedString = Nested<string>
+
+export type PostFrontmatter = {
+  title: string
+  date: string
+  description?: string
+  updated?: string
+  category?: string
+  published?: boolean
+  draft?: boolean
+  archived?: boolean
+}
 
 function readFile(
   filePath: string,
@@ -66,31 +78,8 @@ export async function getAllPostsPath(dirPath = postsDirectory) {
 }
 
 export async function getAllPostIds() {
-  const allPaths = await getAllPostsPath()
-  const linkPaths = allPaths.map((filePath) => {
-    return {
-      id: path.relative(postsDirectory, filePath).split('.')[0].split('/'),
-    }
-  })
-  if (fs.existsSync(plusDirectory)) {
-    const plusPaths = await getAllPostsPath(plusDirectory)
-    linkPaths.push(
-      ...plusPaths.map((filePath) => {
-        return {
-          id: path.relative(plusDirectory, filePath).split('.')[0].split('/'),
-        }
-      })
-    )
-    // allPaths.push(...(plusPaths))
-  }
-  return linkPaths
-  // return allPaths.map((filePath) => {
-  //   return {
-  //     params: {
-  //       id: path.relative(postsDirectory, filePath).split('.')[0].split('/'),
-  //     },
-  //   }
-  // })
+  const posts = await getAllPost()
+  return posts.map((post) => ({ id: post.path.split('/') }))
 }
 
 export async function getAllPost(dirPath = postsDirectory) {
@@ -115,6 +104,7 @@ export async function getAllPost(dirPath = postsDirectory) {
 
         return {
           ...matterResult,
+          source: sourceDirectory === plusDirectory ? ('plus' as const) : ('builtin' as const),
           path: path
             .relative(sourceDirectory || dirPath, filePath)
             .replace(/\.md$/, ''),
@@ -129,16 +119,22 @@ export async function getAllPost(dirPath = postsDirectory) {
       return -1
     }
   })
-  return allPosts
+  return allPosts.filter((post) => isPublicPost(post))
 }
 
 export const getCachedAllPost = unstable_cache(
   () => getAllPost(),
-  ['all-posts'],
+  ['all-posts-v3'],
   { revalidate: 3600, tags: ['posts'] }
 )
 
-export function getPostMeta(id: string[]) {
+export function getPostMeta(id: string[]): {
+  id: string[]
+  changeTime: Date
+  content: string
+  data: PostFrontmatter
+  source: 'builtin' | 'plus'
+} {
   const fileId = [...id]
   fileId[fileId.length - 1] =
     decodeURIComponent(fileId[fileId.length - 1]) + '.md'
@@ -158,19 +154,18 @@ export function getPostMeta(id: string[]) {
         title: '',
         date: '',
       },
+      source: 'builtin',
     }
   }
   const fileContents = fs.readFileSync(fullPath, 'utf8')
   const stat = fs.statSync(fullPath)
   const matterResult = matter(fileContents) as GrayMatterFile<string> & {
-    data: {
-      title: string
-      date: string
-    }
+    data: PostFrontmatter
   }
   return {
     id,
     changeTime: stat.mtime,
+    source: fullPath === path2 ? 'plus' : 'builtin',
     ...matterResult,
   }
 }

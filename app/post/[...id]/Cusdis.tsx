@@ -60,20 +60,37 @@ export function ReactCusdis(props: CusdisProps) {
 
 function WrapperCusdis(props: Partial<CusdisProps>) {
   const inBrowser = useIsUseBrowser()
+  const [enabled, setEnabled] = React.useState(false)
 
-  return inBrowser ? (
-    <ReactCusdis
-      attrs={{
-        host: 'https://cusdis.com',
-        appId: '05e78cdc-13fc-404f-bab7-a4cc8e62a388',
-        pageId: `${window.location.hostname}_${window.location.pathname}`,
-        pageTitle: document.title,
-        pageUrl: location.href,
-        theme: document.documentElement.className as 'light' | 'dark' | 'auto',
-      }}
-      lang='zh-cn'
-      className={props.className}
-    />
-  ) : null
+  if (!inBrowser) return null
+
+  return (
+    <section className={props.className} aria-labelledby='comments-title'>
+      <div className='article-comments-heading'>
+        <div>
+          <h2 id='comments-title'>评论</h2>
+          <p>评论由 Cusdis 提供。只有你主动加载后，浏览器才会连接该第三方服务。</p>
+        </div>
+        {!enabled && (
+          <button type='button' onClick={() => setEnabled(true)}>
+            加载评论
+          </button>
+        )}
+      </div>
+      {enabled && (
+        <ReactCusdis
+          attrs={{
+            host: 'https://cusdis.com',
+            appId: '05e78cdc-13fc-404f-bab7-a4cc8e62a388',
+            pageId: `${window.location.hostname}_${window.location.pathname}`,
+            pageTitle: document.title,
+            pageUrl: location.href,
+            theme: document.documentElement.className as 'light' | 'dark' | 'auto',
+          }}
+          lang='zh-cn'
+        />
+      )}
+    </section>
+  )
 }
 export default WrapperCusdis
