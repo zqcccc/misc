@@ -73,7 +73,9 @@ def effective_holdings(res) -> float:
     但会把 n_holdings 抬高一倍，直接用会误导。"""
     if not res.holdings:
         return float("nan")
-    return float(np.mean([(h > 1e-4).sum() for h in res.holdings.values()]))
+    n = [(h > 1e-4).sum() for h in res.holdings.values()]
+    n = [x for x in n if x > 0]        # 空仓日历期间的全现金目标不计入平均持仓
+    return float(np.mean(n)) if n else 0.0
 
 
 LADDER = ("2020-01-01", "2025-03-01")   # 聚宽策略天梯贴的统一回测区间
