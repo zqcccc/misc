@@ -101,10 +101,20 @@ next-env.d.ts
 # Impeccable 本地界面评审产物
 /.impeccable/critique/
 
-# A 股多因子量化研究（本地研究产物，与 Next 项目无关；仅保留 README 留档）
-/astock_quant/*
-!/astock_quant/README.md
+# A 股多因子量化研究大文件排除 (行情K线与中间面板不入库)
+/astock_quant/data/kline_*
+/astock_quant/data/panel/
+/astock_quant/data/*.log
+/astock_quant/verified/
+/astock_quant/reports/
+/astock_quant/strategies_ext/
 
-# A股量化策略与信号监控服务部署必需 (随 ashare-signal 镜像构建)
+# 临时预览目录
+.preview/
+
+# A股量化策略与信号监控服务部署必需 (随 ashare-signal 与 ashare-smallcap-quant 镜像构建)
 !/scripts/ashare_quant/**
 !/deliverables/ashare_strategy_backtest.json
+!/deliverables/smallcap_strategy.json
+!/astock_quant/data/meta.csv
+__pycache__

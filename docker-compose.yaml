@@ -27,5 +27,20 @@ services:
       - 'ashare-data:/app/deliverables'
       - './monitor/feishu_webhook.json:/app/monitor/feishu_webhook.json:ro'
 
+  ashare-smallcap-quant:
+    build:
+      context: .
+      dockerfile: docker/ashare-smallcap-quant/Dockerfile
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    volumes:
+      - 'ashare-data:/app/deliverables'
+      - './monitor/telegram_config.json:/app/monitor/telegram_config.json:ro'
+      - './monitor/feishu_webhook.json:/app/monitor/feishu_webhook.json:ro'
+      - './monitor/wechat_webhook.json:/app/monitor/wechat_webhook.json:ro'
+
 volumes:
   ashare-data:
