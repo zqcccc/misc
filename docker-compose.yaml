@@ -38,6 +38,7 @@ services:
           memory: 1G
     volumes:
       - 'ashare-data:/app/deliverables'
+      - './runtime/ashare-smallcap:/data'
       - './monitor/telegram_config.json:/app/monitor/telegram_config.json:ro'
       - './monitor/feishu_webhook.json:/app/monitor/feishu_webhook.json:ro'
       - './monitor/wechat_webhook.json:/app/monitor/wechat_webhook.json:ro'

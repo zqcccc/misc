@@ -14,7 +14,8 @@ COPY docker/ashare-smallcap-quant/requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
 COPY astock_quant /app/astock_quant
-COPY deliverables/smallcap_strategy.json /app/deliverables/smallcap_strategy.json
+COPY monitor/notifiers /app/monitor/notifiers
+COPY deliverables/smallcap_strategy.json /app/bundle_deliverables/smallcap_strategy.json
 COPY docker/ashare-smallcap-quant/run.sh /app/run.sh
 RUN chmod +x /app/run.sh
 

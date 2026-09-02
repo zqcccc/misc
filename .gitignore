@@ -28,6 +28,7 @@ __pycache__
 .DS_Store
 *.pem
 /tmp/
+/runtime/
 
 # debug
 npm-debug.log*
