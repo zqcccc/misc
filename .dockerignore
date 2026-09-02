@@ -14,3 +14,8 @@ monitor/trhrp_strategy.py
 scripts/refresh_trhrp_cache.py
 scripts/trhrp_backtest_live.py
 scripts/trhrp_lib
+astock_quant/data/*
+!astock_quant/data/meta.csv
+astock_quant/verified
+astock_quant/reports
+astock_quant/strategies_ext

@@ -389,7 +389,10 @@ def notify_rebalance_if_needed(deliverable: dict, force: bool = False) -> bool:
         print(f"[AShare-SmallCap-Quant] 当期 ({rb_date}) 经滞后带缓冲无标的变动，持仓保持稳定，无需发换仓通知", flush=True)
         return False
 
-    cache_dir = os.path.join(PROJECT_ROOT, "monitor", "caches", "ashare_smallcap")
+    cache_dir = os.getenv(
+        "SMALLCAP_STATE_DIR",
+        os.path.join(PROJECT_ROOT, "monitor", "caches", "ashare_smallcap"),
+    )
     os.makedirs(cache_dir, exist_ok=True)
     stamp_file = os.path.join(cache_dir, "last_notified_rebalance.txt")
 
