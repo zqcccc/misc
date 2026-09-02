@@ -838,7 +838,11 @@ body {
 }
 
 .home-note-group-heading h3 {
-  font-size: 21px;
+  color: var(--site-signal);
+  font-size: 14px;
+  font-weight: 750;
+  line-height: 1.5;
+  letter-spacing: 0.06em;
 }
 
 .home-note-group-heading p {
@@ -865,8 +869,9 @@ body {
   gap: 20px;
   align-items: baseline;
   color: var(--site-ink);
-  font-size: 18px;
+  font-size: 19px;
   font-weight: 750;
+  line-height: 1.45;
   text-decoration: none;
 }
 
