@@ -12,17 +12,7 @@ type PostLike = {
 }
 
 const HIDDEN_POST_PATHS = new Set([
-  'cloudflare/warp',
-  'cursor/ycursor',
-  'dns/解锁网飞',
-  'gatsby/index',
-  'k8s/practice',
-  'proxy/ipv6',
-  'proxy/naive',
-  'reg/index',
-  'v-machine/hyper-v-openwrt',
   'vps/recommend',
-  'webpack/index',
 ])
 
 const HIDDEN_POST_PREFIXES = ['proxy/', 'dns/']
