@@ -2,9 +2,6 @@ version: '3'
 services:
   misc:
     image: 172232502/misc
-    #build:
-    #  context: .
-    #    dockerfile: ./Dockerfile
     restart: always
     deploy:
       resources:
@@ -13,8 +10,22 @@ services:
     volumes:
       - './.env:/app/.env'
       - './plusPosts:/app/plusPosts'
-    #   - ./json:/usr/share/nginx/html/json
+      - 'ashare-data:/app/deliverables'
     ports:
       - 3010:3010
-        #- 3000:3000
-    # network_mode: 'host'
+
+  ashare-signal:
+    image: 172232502/ashare-signal
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    env_file:
+      - ./.env
+    volumes:
+      - 'ashare-data:/app/deliverables'
+      - './monitor/feishu_webhook.json:/app/monitor/feishu_webhook.json:ro'
+
+volumes:
+  ashare-data:
