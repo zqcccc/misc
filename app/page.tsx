@@ -4,7 +4,6 @@ import { getCachedAllPost } from './api/post/lib'
 import {
   formatPostDate,
   getPostCategory,
-  isArchivedPost,
   SITE_CATEGORIES,
   SITE_DESCRIPTION,
   SITE_TITLE,
@@ -25,31 +24,12 @@ export const metadata: Metadata = {
   },
 }
 
-const FEATURED_PATHS = [
-  'trhrp-strategy',
-  'etf/自由现金流ETF',
-  'ai/2025',
-  'cursor/code',
-]
-
 const tools = [
   {
     href: '/pe',
     title: '利润线与估值',
     description: '把股价、TTM EPS、利润线、估值区间和分红记录放在一张可检查的时间轴里。',
-    meta: '数据工具 · 持续维护',
-  },
-  {
-    href: '/ashare-strategy',
-    title: 'A 股策略信号与回测',
-    description: '查看最近交易日的风险状态、精选持仓与现金比例，以及全样本和样本外回测。',
-    meta: '策略看板 · 交易日盘后更新',
-  },
-  {
-    href: '/trhrp-backtest',
-    title: 'TRHRP 历史回测档案',
-    description: '保留当时的状态识别、仓位切换、回撤与长期收益；数据已停止自动刷新。',
-    meta: '历史研究 · 已停止刷新',
+    meta: '数据工具 · 线上可用',
   },
   {
     href: '/tools',
@@ -61,11 +41,7 @@ const tools = [
 
 export default async function Home() {
   const posts = await getCachedAllPost()
-  const featured = FEATURED_PATHS.map((postPath) =>
-    posts.find((post) => post.path === postPath),
-  ).filter(Boolean)
-  const lead = featured[0] || posts[0]
-  const recent = posts.filter((post) => post.path !== lead?.path).slice(0, 10)
+  const recent = posts.slice(0, 10)
   const grouped = recent.reduce<Record<SiteCategory, typeof posts>>(
     (groups, post) => {
       groups[getPostCategory(post)].push(post)
@@ -83,7 +59,7 @@ export default async function Home() {
             我在这里保存亲自做过的研究、工程实践和自用工具。不同主题由同一个标准连接：说明过程，给出证据，也写清局限。
           </p>
           <div className='home-actions'>
-            <a href='#work'>查看代表作品</a>
+            <Link href='/ashare-strategy'>查看当前策略信号</Link>
             <Link href='/about'>认识 c9cu</Link>
           </div>
           <dl className='home-principles' aria-label='内容原则'>
@@ -102,30 +78,26 @@ export default async function Home() {
           </dl>
         </div>
 
-        {lead && (
-          <article className='home-lead-work'>
-            <div className='home-lead-meta'>
-              <span>{isArchivedPost(lead) ? '历史研究' : SITE_CATEGORIES[getPostCategory(lead)].label}</span>
-              <time dateTime={String(lead.data.date)}>
-                {formatPostDate(lead.data.date)}
-              </time>
-            </div>
-            <h2>
-              <Link href={`/post/${lead.path}`}>{lead.data.title}</Link>
-            </h2>
-            <p>{lead.data.description}</p>
-            <Link className='home-text-link' href={`/post/${lead.path}`}>
-              阅读完整方法
-              <span aria-hidden='true'>→</span>
-            </Link>
-          </article>
-        )}
+        <article className='home-lead-work'>
+          <div className='home-lead-meta'>
+            <span>策略看板</span>
+            <span>交易日盘后更新</span>
+          </div>
+          <h2>
+            <Link href='/ashare-strategy'>A 股策略信号与回测</Link>
+          </h2>
+          <p>查看最近交易日的风险状态、精选持仓与现金比例，并核对全样本和样本外回测。</p>
+          <Link className='home-text-link' href='/ashare-strategy'>
+            查看当前信号与完整回测
+            <span aria-hidden='true'>→</span>
+          </Link>
+        </article>
       </section>
 
       <section id='work' className='home-section home-work' aria-labelledby='work-title'>
         <div className='home-section-heading'>
-          <h2 id='work-title'>我做过并保留的东西</h2>
-          <p>仍在维护和已经归档的页面都会写清状态，并解释数据从哪里来、适合回答什么问题，以及不能证明什么。</p>
+          <h2 id='work-title'>其他仍在维护的工具</h2>
+          <p>首页只列仍在运行、可以直接使用的页面，并说明数据来源、处理位置和研究边界。</p>
         </div>
         <div className='home-tool-list'>
           {tools.map((tool) => (

@@ -4,18 +4,11 @@ import Link from 'next/link'
 export const metadata: Metadata = {
   title: '自用工具',
   description:
-    'c9cu 的研究工具、浏览器工具与历史研究档案：说明维护状态、数据来源、处理位置和已知局限。',
+    'c9cu 的研究工具与浏览器工具：说明维护状态、数据来源、处理位置和已知局限。',
   alternates: { canonical: '/tools' },
 }
 
 const tools = [
-  {
-    name: '利润线与估值',
-    desc: '把股价、TTM EPS、利润线、估值区间与分红记录放进同一时间轴。',
-    href: '/pe',
-    kind: '研究工具',
-    detail: '使用公开市场数据；页面标注更新时间与研究边界。',
-  },
   {
     name: 'A 股策略信号与回测',
     desc: '查看最近交易日的风险状态、精选持仓与现金比例，并核对全样本和样本外回测。',
@@ -24,11 +17,11 @@ const tools = [
     detail: '交易日盘后更新；展示的是模型信号和历史回测，不构成投资建议。',
   },
   {
-    name: 'TRHRP 多市场回测',
-    desc: '保留多市场状态识别、仓位切换、回撤和长期收益的历史结果。',
-    href: '/trhrp-backtest',
-    kind: '历史研究',
-    detail: '已停止自动刷新；页面仅作研究档案，不构成投资建议。',
+    name: '利润线与估值',
+    desc: '把股价、TTM EPS、利润线、估值区间与分红记录放进同一时间轴。',
+    href: '/pe',
+    kind: '研究工具',
+    detail: '使用公开市场数据；页面标注更新时间与研究边界。',
   },
   {
     name: '图片合并',
@@ -58,7 +51,7 @@ export default function ToolsHome() {
 
       <section aria-labelledby='tools-list-title'>
         <div className='tools-index-heading'>
-          <h2 id='tools-list-title'>工具与研究档案</h2>
+          <h2 id='tools-list-title'>工具与研究看板</h2>
           <p>{tools.length} 个公开页面</p>
         </div>
         <ol className='tools-index-list'>
