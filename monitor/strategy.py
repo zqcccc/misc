@@ -15,6 +15,24 @@ TP_SIDE_BOTH = "both"
 TP_SIDE_VALUES = (TP_SIDE_LONG_ONLY, TP_SIDE_SHORT_ONLY, TP_SIDE_BOTH)
 
 
+def _is_turtle(cfg):
+    """是否海龟突破策略 (strategy_type == 'turtle')."""
+    return (cfg or {}).get("strategy_type") == "turtle"
+
+
+def describe_params(cfg):
+    """策略参数描述 (供 daemon 启动日志与 CLI 使用). 兼容 EMA 反手与海龟."""
+    if _is_turtle(cfg):
+        ne = int(cfg.get("n_entry", 20))
+        nx = int(cfg.get("n_exit", 10))
+        side = "多空" if cfg.get("turtle_side") == "longshort" else "做多+空仓"
+        return f"海龟突破 {ne}根入/{nx}根出 ({side})"
+    cb_float = float(cfg.get("cb_float", 0) or 0)
+    if cb_float > 0:
+        return f"EMA{cfg['ema_span']} + cb连续={cb_float:.2f} (阈值{cb_float*0.95:.2f}) + {float(cfg['breakout_pct'])*100}%"
+    return f"EMA{cfg['ema_span']} + cb={int(cfg['confirm_bars'])}根整数 + {float(cfg['breakout_pct'])*100}%"
+
+
 def tp_side_of(cfg):
     """从 cfg 取 tp_side 字段, 默认 'both'. 非法值回退 to both."""
     s = (cfg or {}).get("tp_side", TP_SIDE_BOTH)
@@ -35,7 +53,11 @@ def tp_side_matches(position, side):
 
 
 def compute_indicators(df, cfg):
-    """计算 EMA/ATR/RSI/偏离/确认计数 + K 线形态止盈信号列 (top_long_exit/top_short_exit)."""
+    """计算指标列 + 信号列. EMA 反手 (默认) 与海龟突破 (strategy_type='turtle') 分派.
+    海龟: 入场=前 n_entry 根最高/最低突破, 出场=前 n_exit 根反向穿越 (均 shift(1), 无未来函数).
+    """
+    if _is_turtle(cfg):
+        return _compute_turtle_indicators(df, cfg)
     df = df.copy()
     ema_span = int(cfg["ema_span"])
     df["ema"] = df["close"].ewm(span=ema_span, adjust=False).mean()
@@ -101,6 +123,24 @@ def compute_indicators(df, cfg):
 
     _compute_top_signals(df, cfg)
     return df, cb_threshold
+
+
+def _compute_turtle_indicators(df, cfg):
+    """海龟 (Donchian 突破) 指标: 前 n_entry 根通道 + 前 n_exit 根出场通道 + 突破信号.
+    全部用历史根 (rolling().shift(1)), 严格无未来函数."""
+    df = df.copy()
+    ne = int(cfg.get("n_entry", 20))
+    nx = int(cfg.get("n_exit", max(10, ne // 2)))
+    df["entry_hi"] = df["high"].rolling(ne).max().shift(1)   # 前 ne 根最高 (不含当前根)
+    df["entry_lo"] = df["low"].rolling(ne).min().shift(1)    # 前 ne 根最低
+    df["exit_lo"] = df["low"].rolling(nx).min().shift(1)     # 前 nx 根最低 (多头出场)
+    df["exit_hi"] = df["high"].rolling(nx).max().shift(1)    # 前 nx 根最高 (空头出场)
+    df["long_ready"] = df["close"] > df["entry_hi"]
+    df["short_ready"] = df["close"] < df["entry_lo"]
+    # 海龟不做 K 线形态止盈 (突破离场即止盈), 两列置 False 以兼容 snapshot/探针接口
+    df["top_long_exit"] = False
+    df["top_short_exit"] = False
+    return df, 1.0
 
 
 def _compute_top_signals(df, cfg):
@@ -256,6 +296,8 @@ def _compute_top_signals(df, cfg):
 
 def infer_position(df_closed, cfg):
     """基于已收盘 K 线回放策略, 推断当前应持仓方向."""
+    if _is_turtle(cfg):
+        return _infer_turtle_position(df_closed, cfg)
     n = len(df_closed)
     position = 0
     pos_size = 0.0
@@ -271,6 +313,7 @@ def infer_position(df_closed, cfg):
     tp_max_times = int(cfg.get("tp_max_times", -1))
     tp_enabled = bool(cfg.get("tp_enabled", True))
     tp_side = tp_side_of(cfg)
+    min_hold = int(cfg.get("min_hold_bars", 0) or 0)   # 翻仓冷却：开仓/反手后至少持有 N bar 才允许再翻
 
     has_top_signals = "top_long_exit" in df_closed.columns
     start = max(ema_span * 2, atr_span + 2)
@@ -293,6 +336,10 @@ def infer_position(df_closed, cfg):
             target = 1
         elif bool(r["short_ready"]) and not bool(r["long_ready"]):
             target = -1
+        # 翻仓冷却（无未来函数：只依赖已开仓时间）：
+        # 持仓不足 min_hold bar 时，即便出现反向就绪信号也维持原方向，避免在噪声里反复翻面。
+        if position != 0 and target != position and target != 0 and (i - entry_idx) < min_hold:
+            target = position
         if position == 0:
             if target != 0:
                 position = target
@@ -319,6 +366,52 @@ def infer_position(df_closed, cfg):
     }
 
 
+def _infer_turtle_position(df_closed, cfg):
+    """海龟状态机 (无未来函数): 空仓时收盘突破前 ne 根通道开仓; 持仓后收盘反向穿越前 nx 根通道平仓.
+    turtle_side='long' 仅做多+空仓 (crypto 回测验证跑赢 buyhold 的口径); 'longshort' 加做空.
+    """
+    n = len(df_closed)
+    allow_short = (cfg.get("turtle_side") or "long") == "longshort"
+    ne = int(cfg.get("n_entry", 20))
+    nx = int(cfg.get("n_exit", max(10, ne // 2)))
+    start = max(ne, nx) + 2
+    position = 0
+    pos_size = 1.0
+    entry_price = 0.0
+    entry_idx = 0
+    last_tp_idx = -10**9
+    tp_count_this = 0
+    for i in range(start, n):
+        r = df_closed.iloc[i]
+        if position == 0:
+            if bool(r["long_ready"]):
+                position = 1
+                pos_size = 1.0
+                entry_price = float(r["close"])
+                entry_idx = i
+            elif allow_short and bool(r["short_ready"]):
+                position = -1
+                pos_size = 1.0
+                entry_price = float(r["close"])
+                entry_idx = i
+        elif position == 1:
+            if float(r["close"]) < float(r["exit_lo"]):
+                position = 0
+        elif position == -1:
+            if float(r["close"]) > float(r["exit_hi"]):
+                position = 0
+
+    return {
+        "position": int(position),
+        "pos_size": float(pos_size),
+        "entry_price": float(entry_price),
+        "entry_idx": int(entry_idx),
+        "entry_time": df_closed.iloc[entry_idx]["timestamp"].isoformat() if entry_idx > 0 else None,
+        "last_tp_idx": int(last_tp_idx),
+        "tp_count_this_trade": int(tp_count_this),
+    }
+
+
 def replay_actions(df_closed, cfg, max_actions=None):
     """同 infer_position 一致的回放口径, 但额外返回每个"开仓/反手/止盈"动作的轨迹列表.
 
@@ -329,6 +422,8 @@ def replay_actions(df_closed, cfg, max_actions=None):
 
     max_actions: 只保留最后 N 个动作 (None=全保留). 用于 actions.log 不无限膨胀.
     """
+    if _is_turtle(cfg):
+        return _replay_turtle_actions(df_closed, cfg, max_actions)
     actions = []
     n = len(df_closed)
     if n == 0:
@@ -340,6 +435,7 @@ def replay_actions(df_closed, cfg, max_actions=None):
     tp_max_times = int(cfg.get("tp_max_times", -1))
     tp_enabled = bool(cfg.get("tp_enabled", True))
     tp_side = tp_side_of(cfg)
+    min_hold = int(cfg.get("min_hold_bars", 0) or 0)   # 翻仓冷却（与 infer_position 一致）
     has_top_signals = "top_long_exit" in df_closed.columns
     start = max(ema_span * 2, atr_span + 2)
     position = 0
@@ -384,6 +480,9 @@ def replay_actions(df_closed, cfg, max_actions=None):
             target = 1
         elif bool(r["short_ready"]) and not bool(r["long_ready"]):
             target = -1
+        # 翻仓冷却（无未来函数）：持仓不足 min_hold bar 时维持原方向
+        if position != 0 and target != position and target != 0 and (i - entry_idx) < min_hold:
+            target = position
         if position == 0:
             if target != 0:
                 position = target
@@ -409,8 +508,67 @@ def replay_actions(df_closed, cfg, max_actions=None):
     return actions
 
 
+def _replay_turtle_actions(df_closed, cfg, max_actions=None):
+    """海龟回放: 返回开仓/平仓动作轨迹, 与 _infer_turtle_position 口径一致."""
+    actions = []
+    n = len(df_closed)
+    if n == 0:
+        return actions
+    allow_short = (cfg.get("turtle_side") or "long") == "longshort"
+    ne = int(cfg.get("n_entry", 20))
+    nx = int(cfg.get("n_exit", max(10, ne // 2)))
+    start = max(ne, nx) + 2
+    position = 0
+    pos_size = 1.0
+    entry_price = 0.0
+    entry_idx = 0
+    dir_map = {1: "做多", -1: "做空", 0: "空仓"}
+
+    def _emit(kind, idx, after_pos, after_size, extra=""):
+        ts = df_closed.iloc[idx]["timestamp"].isoformat()
+        actions.append({
+            "kind": kind, "time": ts, "price": float(df_closed.iloc[idx]["close"]),
+            "pos": int(after_pos), "pos_size": float(after_size), "idx": int(idx),
+            "tp_count_this_trade": 0, "descr": extra or None,
+        })
+
+    for i in range(start, n):
+        r = df_closed.iloc[i]
+        if position == 0:
+            if bool(r["long_ready"]):
+                position = 1
+                pos_size = 1.0
+                entry_price = float(r["close"])
+                entry_idx = i
+                _emit("开仓", i, position, pos_size,
+                      extra=f"海龟开多 @ {entry_price:.4g} (突破前{ne}根高 {r['entry_hi']:.4g})")
+            elif allow_short and bool(r["short_ready"]):
+                position = -1
+                pos_size = 1.0
+                entry_price = float(r["close"])
+                entry_idx = i
+                _emit("开仓", i, position, pos_size,
+                      extra=f"海龟开空 @ {entry_price:.4g} (跌破前{ne}根低 {r['entry_lo']:.4g})")
+        elif position == 1:
+            if float(r["close"]) < float(r["exit_lo"]):
+                _emit("平仓", i, 0, 0.0,
+                      extra=f"海龟平多 @ {r['close']:.4g} (跌破前{nx}根低 {r['exit_lo']:.4g})")
+                position = 0
+        elif position == -1:
+            if float(r["close"]) > float(r["exit_hi"]):
+                _emit("平仓", i, 0, 0.0,
+                      extra=f"海龟平空 @ {r['close']:.4g} (升破前{nx}根高 {r['exit_hi']:.4g})")
+                position = 0
+
+    if max_actions is not None and max_actions > 0 and len(actions) > max_actions:
+        actions = actions[-max_actions:]
+    return actions
+
+
 def snapshot(df_closed, pos, live_price, cfg):
     """生成状态快照 dict (含止盈冷却信息)."""
+    if _is_turtle(cfg):
+        return _turtle_snapshot(df_closed, pos, live_price, cfg)
     last = df_closed.iloc[-1]
     dir_map = {1: "做多", -1: "做空", 0: "空仓"}
     unreal = 0.0
@@ -464,6 +622,49 @@ def snapshot(df_closed, pos, live_price, cfg):
         "cool_passed": cool_left == 0,
         "extreme_long": bool(last["top_long_exit"]) if "top_long_exit" in last else False,
         "extreme_short": bool(last["top_short_exit"]) if "top_short_exit" in last else False,
+    }
+
+
+def _turtle_snapshot(df_closed, pos, live_price, cfg):
+    """海龟状态快照: 通道价、距突破/离场距离、当前持仓."""
+    from datetime import datetime, timezone
+    last = df_closed.iloc[-1]
+    dir_map = {1: "做多", -1: "做空", 0: "空仓"}
+    ne = int(cfg.get("n_entry", 20))
+    nx = int(cfg.get("n_exit", max(10, ne // 2)))
+    unreal = 0.0
+    if pos["position"] != 0 and pos["entry_price"] > 0:
+        unreal = pos["position"] * (live_price - pos["entry_price"]) / pos["entry_price"]
+    # 距下一次触发的价格距离
+    def _dist_to(trigger_price, direction):
+        if trigger_price is None or not math.isfinite(float(trigger_price)) or float(trigger_price) <= 0:
+            return None
+        tp = float(trigger_price)
+        if direction == "above":
+            return max(0.0, (tp - live_price) / max(live_price, 1e-9))
+        return max(0.0, (live_price - tp) / max(live_price, 1e-9))
+    return {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "last_closed": last["timestamp"].isoformat(),
+        "close": float(last["close"]),
+        "live_price": float(live_price),
+        "entry_hi": float(last["entry_hi"]) if math.isfinite(float(last["entry_hi"])) else None,
+        "entry_lo": float(last["entry_lo"]) if math.isfinite(float(last["entry_lo"])) else None,
+        "exit_lo": float(last["exit_lo"]) if math.isfinite(float(last["exit_lo"])) else None,
+        "exit_hi": float(last["exit_hi"]) if math.isfinite(float(last["exit_hi"])) else None,
+        "n_entry": int(ne),
+        "n_exit": int(nx),
+        "long_ready": bool(last["long_ready"]),
+        "short_ready": bool(last["short_ready"]),
+        "position": int(pos["position"]),
+        "position_str": dir_map[pos["position"]],
+        "pos_size": float(pos["pos_size"]),
+        "entry_price": float(pos["entry_price"]),
+        "entry_time": df_closed.iloc[pos["entry_idx"]]["timestamp"].isoformat() if pos["entry_idx"] > 0 else None,
+        "tp_count_this_trade": int(pos["tp_count_this_trade"]),
+        "unreal_pct": float(unreal),
+        "extreme_long": False,
+        "extreme_short": False,
     }
 
 
@@ -536,6 +737,8 @@ def _tp_metric_label(s, cfg):
 
 def build_scenarios(s, cfg, cb_threshold):
     """生成"下一步可触发场景"说明. 返回 (短摘要, 详细列表)."""
+    if _is_turtle(cfg):
+        return _turtle_scenarios(s, cfg)
     short_parts = []
     details = []
     cb_label = _cb_label(cfg, cb_threshold)
@@ -606,7 +809,57 @@ def build_scenarios(s, cfg, cb_threshold):
     return " | ".join(short_parts), details
 
 
+def _turtle_scenarios(s, cfg):
+    """海龟"下一步可触发场景": 空仓→开仓突破价; 持仓→离场穿越价."""
+    short_parts = []
+    details = []
+    ne = int(cfg.get("n_entry", 20))
+    nx = int(cfg.get("n_exit", max(10, ne // 2)))
+    allow_short = (cfg.get("turtle_side") or "long") == "longshort"
+    live = s["live_price"]
+
+    def _pct(to_price):
+        if to_price is None or to_price <= 0:
+            return None
+        return (to_price - live) / max(live, 1e-9) * 100.0
+
+    if s["position"] == 0:
+        parts = []
+        if s.get("long_ready"):
+            parts.append("✅可开多")
+            details.append(f"🔵 开多: 收盘已突破前{ne}根高 {s['entry_hi']:.4g} → 开多")
+        else:
+            gap = _pct(s["entry_hi"])
+            d = f" (需涨{gap:.2f}%)" if gap is not None else ""
+            parts.append(f"开多需收盘>{s['entry_hi']:.4g}{d}")
+            details.append(f"🔵 开多: 需收盘>前{ne}根高 {s['entry_hi']:.4g} (当前{live:.4g}{d})")
+        if allow_short:
+            if s.get("short_ready"):
+                parts.append("✅可开空")
+                details.append(f"🔴 开空: 收盘已跌破前{ne}根低 {s['entry_lo']:.4g} → 开空")
+            else:
+                gap = _pct(s["entry_lo"])
+                d = f" (需跌{-gap:.2f}%)" if gap is not None else ""
+                parts.append(f"开空需收盘<{s['entry_lo']:.4g}{d}")
+                details.append(f"🔴 开空: 需收盘<前{ne}根低 {s['entry_lo']:.4g} (当前{live:.4g}{d})")
+        return " | ".join(parts), details
+
+    if s["position"] == 1:
+        gap = _pct(s["exit_lo"])
+        d = f" (需跌{-gap:.2f}%)" if gap is not None else ""
+        short_parts.append(f"平多需收盘<{s['exit_lo']:.4g}{d}")
+        details.append(f"🟢 平多: 收盘跌破前{nx}根低 {s['exit_lo']:.4g} (当前{live:.4g}{d}) → 平仓")
+    else:
+        gap = _pct(s["exit_hi"])
+        d = f" (需涨{gap:.2f}%)" if gap is not None else ""
+        short_parts.append(f"平空需收盘>{s['exit_hi']:.4g}{d}")
+        details.append(f"🟢 平空: 收盘升破前{nx}根高 {s['exit_hi']:.4g} (当前{live:.4g}{d}) → 平仓")
+    return " | ".join(short_parts), details
+
+
 def format_snapshot(s, cfg, cb_threshold, changes=None):
+    if _is_turtle(cfg):
+        return _turtle_format_snapshot(s, cfg, changes)
     lines = []
     sym = cfg.get("symbol", "?")
     name = cfg.get("name", sym)
@@ -640,7 +893,46 @@ def format_snapshot(s, cfg, cb_threshold, changes=None):
     return "\n".join(lines)
 
 
+def _turtle_format_snapshot(s, cfg, changes=None):
+    lines = []
+    sym = cfg.get("symbol", "?")
+    name = cfg.get("name", sym)
+    tf = cfg.get("timeframe", "15m")
+    lines.append("=" * 60)
+    lines.append(f"  [{name}] {sym} 海龟突破策略  {s['timestamp'][:19].replace('T',' ')} UTC  ({tf})")
+    lines.append("=" * 60)
+    lines.append(f"  最新收盘: {s['last_closed'][:16].replace('T',' ')}")
+    lines.append(f"  实时价格: {s['live_price']:.4g}  (收盘 {s['close']:.4g})")
+    ne = s.get("n_entry", 20)
+    nx = s.get("n_exit", 10)
+    if s.get("entry_hi") is not None:
+        lines.append(f"  前{ne}根通道: 高 {s['entry_hi']:.4g} / 低 {s['entry_lo']:.4g}   出场(前{nx}根): 低 {s['exit_lo']:.4g} / 高 {s['exit_hi']:.4g}")
+    lines.append("-" * 60)
+    pos_emoji = {1: "🟢", -1: "🔴", 0: "⚪"}
+    lines.append(f"  持仓: {pos_emoji[s['position']]} {s['position_str']}  仓位 {s['pos_size']*100:.0f}%")
+    if s["position"] != 0:
+        lines.append(f"  开仓: {s['entry_time'][:16].replace('T',' ') if s['entry_time'] else '-'} @ {s['entry_price']:.4g}")
+        lines.append(f"  浮盈: {s['unreal_pct']*100:+.2f}%")
+    lines.append("-" * 60)
+    lines.append("  📍 下一步可触发场景:")
+    _, details = build_scenarios(s, cfg, None)
+    for d in details:
+        lines.append(f"  {d}")
+    if changes:
+        lines.append("-" * 60)
+        for c in changes:
+            lines.append(f"  🚨 {c}")
+    lines.append("=" * 60)
+    return "\n".join(lines)
+
+
 def heartbeat_line(s, cfg, cb_threshold):
+    if _is_turtle(cfg):
+        scenario_short, _ = build_scenarios(s, cfg, None)
+        return (f"[{cfg.get('name','?')}] [{s['last_closed'][:16]}] "
+                f"{s['position_str']}{s['pos_size']*100:.0f}% "
+                f"价{s['live_price']:.4g} "
+                f"浮盈{s['unreal_pct']*100:+.2f}% | {scenario_short}")
     scenario_short, _ = build_scenarios(s, cfg, cb_threshold)
     return (f"[{cfg.get('name','?')}] [{s['last_closed'][:16]}] "
             f"{s['position_str']}{s['pos_size']*100:.0f}% "
@@ -649,6 +941,17 @@ def heartbeat_line(s, cfg, cb_threshold):
 
 
 def notify_message(s, cfg, cb_threshold, changes):
+    if _is_turtle(cfg):
+        scenario_short, _ = build_scenarios(s, cfg, None)
+        change_str = " | ".join(changes) if changes else "状态更新"
+        pos_emoji = {1: "🟢", -1: "🔴", 0: "⚪"}
+        pos_line = f"持仓: {pos_emoji[s['position']]} {s['position_str']} {s['pos_size']*100:.0f}%"
+        if s["position"] != 0 and s.get("entry_price"):
+            pos_line += f" @ 开仓{s['entry_price']:.4g}"
+        return (f"{cfg.get('name','?')}海龟: {change_str}\n"
+                f"{pos_line}\n"
+                f"现价{s['live_price']:.4g} 浮盈{s['unreal_pct']*100:+.2f}%\n"
+                f"下一步: {scenario_short}")
     scenario_short, _ = build_scenarios(s, cfg, cb_threshold)
     change_str = " | ".join(changes) if changes else "状态更新"
     # 显式标注当前持仓方向, 避免止盈通知只写"仓位 80%→65%"时用户不知道是多还是空
@@ -758,6 +1061,18 @@ def live_probe(df_closed, live_price, cfg, now_ts=None):
     # 覆盖 snapshot 的 last_closed 为虚拟根时间, 让上游能区分
     snap["is_virtual_probe"] = True
     snap["virtual_root_time"] = virtual_ts.isoformat()
+    if _is_turtle(cfg):
+        lastv = df_v.iloc[-1]
+        snap["close"] = float(lastv["close"])
+        snap["long_ready"] = bool(lastv["long_ready"])
+        snap["short_ready"] = bool(lastv["short_ready"])
+        snap["entry_hi"] = float(lastv["entry_hi"]) if math.isfinite(float(lastv["entry_hi"])) else None
+        snap["entry_lo"] = float(lastv["entry_lo"]) if math.isfinite(float(lastv["entry_lo"])) else None
+        snap["exit_lo"] = float(lastv["exit_lo"]) if math.isfinite(float(lastv["exit_lo"])) else None
+        snap["exit_hi"] = float(lastv["exit_hi"]) if math.isfinite(float(lastv["exit_hi"])) else None
+        snap["extreme_long"] = False
+        snap["extreme_short"] = False
+        return snap
     snap["bull_streak"] = float(df_v.iloc[-1]["bull_streak"])
     snap["bear_streak"] = float(df_v.iloc[-1]["bear_streak"])
     snap["ema"] = float(df_v.iloc[-1]["ema"])

@@ -116,19 +116,26 @@ def clear_pid(name):
 # ============================================================
 def cmd_list(args):
     data = load_strategies()
-    print(f"{'NAME':<10} {'SYMBOL':<22} {'TF':<5} {'EMA':>5} {'CB':>6} {'BP':>7} {'TP':<24} {'SRC':<10} {'RUN':<5}")
-    print("-" * 106)
+    print(f"{'NAME':<10} {'SYMBOL':<22} {'TF':<5} {'TYPE':<6} {'PARAM':>10} {'TP':<12} {'SRC':<10} {'RUN':<5}")
+    print("-" * 100)
     for s in sorted(data["strategies"], key=lambda x: (x.get("priority", 99), x["name"])):
-        cb = (f"f{s['cb_float']:.2f}" if s.get("cb_float") else f"{int(s['confirm_bars'])}i")
+        if s.get("strategy_type") == "turtle":
+            ne = int(s.get("n_entry", 20))
+            nx = int(s.get("n_exit", 10))
+            st = "turtle"
+            param = f"入{ne}/出{nx}"
+        else:
+            cb = (f"f{s['cb_float']:.2f}" if s.get("cb_float") else f"{int(s['confirm_bars'])}i")
+            st = "ema"
+            param = f"EMA{int(s['ema_span'])}/{cb}"
         run = "✓" if is_running(s["name"]) else "-"
         if s.get("tp_enabled", True) and s.get("tp_type") not in (None, "none"):
             side = s.get("tp_side", "both")
             tp = f"{s['tp_type']}[{side}]"
         else:
             tp = "none"
-        print(f"{s['name']:<10} {s['symbol']:<22} {s.get('timeframe','15m'):<5} {int(s['ema_span']):>5} {cb:>6} "
-              f"{float(s['breakout_pct'])*100:>6.2f}% {tp:<24} {s['data_source']:<10} {run:<5}")
-    print(f"\n共 {len(data['strategies'])} 个 EMA 策略. 配置文件: {STRATEGIES_FILE}")
+        print(f"{s['name']:<10} {s['symbol']:<22} {s.get('timeframe','15m'):<5} {st:<6} {param:>10} {tp:<12} {s['data_source']:<10} {run:<5}")
+    print(f"\n共 {len(data['strategies'])} 个策略. 配置文件: {STRATEGIES_FILE}")
     cfg = _load_trhrp_config()
     if cfg and cfg.get("enabled", True):
         cmd_trhrp_list()

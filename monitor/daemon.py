@@ -120,13 +120,14 @@ def run(name, overrides=None):
         _log(line, log_file, also_print=also_print)
 
     log("=" * 56)
-    log(f"[{cfg['name']}] {cfg['symbol']} EMA反手监控启动 (tf={cfg.get('timeframe','15m')})")
-    cb_float = float(cfg.get("cb_float", 0) or 0)
-    if cb_float > 0:
-        log(f"参数: EMA{cfg['ema_span']} + cb连续={cb_float:.2f} (阈值{cb_float*0.95:.2f}) + {float(cfg['breakout_pct'])*100}%")
-    else:
-        log(f"参数: EMA{cfg['ema_span']} + cb={int(cfg['confirm_bars'])}根整数 + {float(cfg['breakout_pct'])*100}%")
-    if cfg.get("tp_enabled", True) and cfg.get("tp_type") not in (None, "none"):
+    is_turtle = (cfg.get("strategy_type") == "turtle")
+    log(f"[{cfg['name']}] {cfg['symbol']} {'海龟突破' if is_turtle else 'EMA反手'}监控启动 (tf={cfg.get('timeframe','15m')})")
+    log(f"参数: {strategy.describe_params(cfg)}")
+    if is_turtle:
+        _ne = int(cfg["n_entry"])
+        _nx = int(cfg.get("n_exit", max(10, _ne // 2)))
+        log(f"      海龟出场=通道反向穿越 (跌破/升破前{_nx}根), 无 K 线形态止盈")
+    elif cfg.get("tp_enabled", True) and cfg.get("tp_type") not in (None, "none"):
         side = (cfg.get("tp_side") or "both")
         log(f"      止盈: {cfg['tp_type']} 比例{float(cfg['part_ratio'])*100:.0f}% 冷却{int(cfg.get('cool_bars',20))}根 side={side}")
     else:
@@ -143,9 +144,9 @@ def run(name, overrides=None):
     log("=" * 56)
 
     tf = cfg.get("timeframe", "15m")
-    ema_span = int(cfg["ema_span"])
-    history_bars = int(cfg.get("history_bars", max(1500, ema_span * 3 + 200)))
-    warmup_target = ema_span * 3 + 200
+    span = int(cfg["n_entry"]) if is_turtle else int(cfg["ema_span"])
+    history_bars = int(cfg.get("history_bars", max(1500, span * 3 + 200)))
+    warmup_target = span * 3 + 200
 
     # 首次拉取
     df = None

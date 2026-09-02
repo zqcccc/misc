@@ -50,7 +50,7 @@ next-env.d.ts
 /plusPosts
 
 # deliverables: 临时交付物与回测产物（图表、HTML 报告、母 prompt 等），不纳入版本控制
-/deliverables
+/deliverables/*
 
 # 与 Next.js 无关的本地研究/回测产物
 /scripts/**/*.py
@@ -97,3 +97,14 @@ next-env.d.ts
 
 # 临时生成的研究 / 报告 HTML
 /outputs/
+
+# Impeccable 本地界面评审产物
+/.impeccable/critique/
+
+# A 股多因子量化研究（本地研究产物，与 Next 项目无关；仅保留 README 留档）
+/astock_quant/*
+!/astock_quant/README.md
+
+# A股量化策略与信号监控服务部署必需 (随 ashare-signal 镜像构建)
+!/scripts/ashare_quant/**
+!/deliverables/ashare_strategy_backtest.json

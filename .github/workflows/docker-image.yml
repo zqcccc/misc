@@ -19,7 +19,7 @@ jobs:
       with:
         repository: 172232502/misc
 
-  # 2) misc 镜像(Next 页面+API)
+  # 2) misc 镜像 (Next 页面+API)
   build-misc:
     needs: version
     runs-on: ubuntu-latest
@@ -45,9 +45,36 @@ jobs:
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
-  # 3) misc 构建成功后通知部署
+  # 3) ashare-signal 镜像 (A股量化信号检测与飞书推送 sidecar)
+  build-ashare-signal:
+    needs: version
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Login to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v2
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+    - name: Build and push ashare-signal image
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        file: ./docker/ashare-signal/Dockerfile
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: 172232502/ashare-signal:latest,172232502/ashare-signal:${{ needs.version.outputs.next_version }}
+        labels: 172232502/ashare-signal:${{ needs.version.outputs.next_version }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  # 4) 双镜像均构建成功后通知部署
   notify:
-    needs: build-misc
+    needs: [build-misc, build-ashare-signal]
     if: success()
     runs-on: ubuntu-latest
     steps:
