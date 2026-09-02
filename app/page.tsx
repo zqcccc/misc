@@ -40,6 +40,12 @@ const tools = [
     meta: '数据工具 · 持续维护',
   },
   {
+    href: '/ashare-strategy',
+    title: 'A 股策略信号与回测',
+    description: '查看最近交易日的风险状态、精选持仓与现金比例，以及全样本和样本外回测。',
+    meta: '策略看板 · 交易日盘后更新',
+  },
+  {
     href: '/trhrp-backtest',
     title: 'TRHRP 历史回测档案',
     description: '保留当时的状态识别、仓位切换、回撤与长期收益；数据已停止自动刷新。',

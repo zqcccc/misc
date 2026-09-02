@@ -16,6 +16,7 @@ const publicRoutes = [
   '/tools/merge-images',
   '/tools/compress-images',
   '/pe',
+  '/ashare-strategy',
   '/trhrp-backtest',
 ]
 
