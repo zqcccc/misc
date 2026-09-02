@@ -228,6 +228,9 @@ export default function AShareStrategyPage() {
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             涵盖 15 大核心赛道龙头 | 采用 EP004 评测规范：剥离 Beta 噪音、月度低换手控制、真实 T+1 撮合
           </p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 leading-relaxed">
+            研究用途：页面展示模型信号与历史回测，不代表未来收益，也不构成投资建议。
+          </p>
         </div>
 
         {/* 样本切换 Tab */}
