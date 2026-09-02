@@ -17,7 +17,6 @@ const publicRoutes = [
   '/tools/compress-images',
   '/pe',
   '/ashare-strategy',
-  '/trhrp-backtest',
 ]
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
