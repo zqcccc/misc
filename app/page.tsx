@@ -28,8 +28,8 @@ const tools = [
   {
     href: '/pe',
     title: '利润线与估值',
-    description: '把股价、TTM EPS、利润线、估值区间和分红记录放在一张可检查的时间轴里。',
-    meta: '数据工具 · 线上可用',
+    description: '保留股价、TTM EPS、利润线与估值区间的历史查询入口；当前仅做必要维护。',
+    meta: '历史入口 · 低频维护',
   },
   {
     href: '/tools',
@@ -59,7 +59,7 @@ export default async function Home() {
             我在这里保存亲自做过的研究、工程实践和自用工具。不同主题由同一个标准连接：说明过程，给出证据，也写清局限。
           </p>
           <div className='home-actions'>
-            <Link href='/ashare-strategy'>查看当前策略信号</Link>
+            <Link href='/smallcap-strategy'>查看微盘股策略信号</Link>
             <Link href='/about'>认识 c9cu</Link>
           </div>
           <dl className='home-principles' aria-label='内容原则'>
@@ -84,11 +84,11 @@ export default async function Home() {
             <span>交易日盘后更新</span>
           </div>
           <h2>
-            <Link href='/ashare-strategy'>A 股策略信号与回测</Link>
+            <Link href='/smallcap-strategy'>A 股小微盘轮动策略</Link>
           </h2>
-          <p>查看最近交易日的风险状态、精选持仓与现金比例，并核对全样本和样本外回测。</p>
-          <Link className='home-text-link' href='/ashare-strategy'>
-            查看当前信号与完整回测
+          <p>查看最近交易日的目标持仓、调仓记录，以及不同持股数量下的历史收益与回撤。</p>
+          <Link className='home-text-link' href='/smallcap-strategy'>
+            查看微盘股持仓与完整回测
             <span aria-hidden='true'>→</span>
           </Link>
         </article>
@@ -96,8 +96,8 @@ export default async function Home() {
 
       <section id='work' className='home-section home-work' aria-labelledby='work-title'>
         <div className='home-section-heading'>
-          <h2 id='work-title'>其他仍在维护的工具</h2>
-          <p>首页只列仍在运行、可以直接使用的页面，并说明数据来源、处理位置和研究边界。</p>
+          <h2 id='work-title'>工具入口</h2>
+          <p>仍在使用的工具会说明处理位置和数据边界；低频维护的历史工具会直接标注状态。</p>
         </div>
         <div className='home-tool-list'>
           {tools.map((tool) => (
