@@ -105,7 +105,7 @@ cmd_search() {
 
 # ---------- claim ----------
 cmd_claim() {
-  local title="" tags="" market="multi" family="other" agent="" srcs="" slug_opt=""
+  local title="" tags="" market="multi" family="other" agent="" srcs="" slug_opt="" freq="d1"
   while [ $# -gt 0 ]; do
     case "$1" in
       --tags) tags="$2"; shift 2;;
@@ -114,6 +114,7 @@ cmd_claim() {
       --agent) agent="$2"; shift 2;;
       --source) srcs="$srcs$2 "; shift 2;;
       --slug) slug_opt="$(slugify "$2")"; shift 2;;
+      --freq) freq="$2"; shift 2;;
       -*) die "未知参数 $1";;
       *) title="$1"; shift;;
     esac
@@ -141,7 +142,7 @@ cmd_claim() {
 
   sed -e "s/{{ID}}/$id/g" -e "s/{{SLUG}}/$slug/g" -e "s/{{TITLE}}/$(echo "$title" | sed 's/[&/\]/\\&/g')/g" \
       -e "s/{{MARKET}}/$market/g" -e "s/{{FAMILY}}/$family/g" -e "s/{{TAGS}}/$tags/g" \
-      -e "s/{{OWNER}}/$agent/g" -e "s/{{TS}}/$(now_iso)/g" "$TPL" > "$file"
+      -e "s/{{FREQ}}/$freq/g" -e "s/{{OWNER}}/$agent/g" -e "s/{{TS}}/$(now_iso)/g" "$TPL" > "$file"
   [ -z "$srcs" ] || set_fm "$file" sources "$srcs"
 
   printf 'agent=%s\nclaimed_at=%s\nclaimed_epoch=%s\nfile=%s\ntitle=%s\n' \
@@ -251,6 +252,67 @@ cmd_index() {
   echo "已重建 ${REGISTRY#$HOME_DIR/}"
 }
 
+
+# ---------- coverage：覆盖盘点，告诉你地图上哪里还是白的 ----------
+MARKET_AXIS="cn_stock hk_stock us_stock crypto_spot crypto_perp fx futures commodity rates multi"
+FAMILY_AXIS="reversal momentum lowvol value quality size carry microstructure flow event seasonality ml portfolio timing"
+
+cmd_coverage() {
+  local tmp; tmp="$(mktemp)"
+  local f
+  for f in "$HYP"/*.md; do
+    [ -e "$f" ] || continue
+    printf '%s\t%s\t%s\t%s\n' "$(fm "$f" market)" "$(fm "$f" family)" "$(fm "$f" verdict)" "$(fm "$f" freq)" >> "$tmp"
+  done
+
+  echo "== 市场 × 机理族 覆盖 =="
+  local m fam n verds hit_any=0
+  local blank_markets="" 
+  for m in $MARKET_AXIS; do
+    local line="" explored=0 blanks=""
+    for fam in $FAMILY_AXIS; do
+      n="$(awk -F'\t' -v m="$m" -v c="$fam" '$1==m && $2==c {k++} END{print k+0}' "$tmp")"
+      if [ "$n" -gt 0 ]; then
+        verds="$(awk -F'\t' -v m="$m" -v c="$fam" '$1==m && $2==c {printf "%s,", $3}' "$tmp" | sed 's/,$//')"
+        line="$line  $fam:$n($verds)"
+        explored=$((explored+1))
+      else
+        blanks="$blanks $fam"
+      fi
+    done
+    if [ "$explored" -gt 0 ]; then
+      hit_any=1
+      printf '%-12s%s\n' "$m" "$line"
+      printf '%-12s空白: %s\n' "" "$(echo "$blanks" | cut -c1-200)"
+    else
+      blank_markets="$blank_markets $m"
+    fi
+  done
+  [ "$hit_any" = 1 ] || echo "（台账还是空的，整张地图都可以撒点）"
+
+  echo
+  echo "== 零覆盖的市场（优先撒点）=="
+  echo " ${blank_markets:- （无，每个市场都至少有一张卡）}"
+
+  echo
+  echo "== 零覆盖的机理族（跨全部市场）=="
+  local zero=""
+  for fam in $FAMILY_AXIS; do
+    n="$(awk -F'\t' -v c="$fam" '$2==c {k++} END{print k+0}' "$tmp")"
+    [ "$n" -gt 0 ] || zero="$zero $fam"
+  done
+  echo " ${zero:- （无）}"
+
+  echo
+  echo "== 时间颗粒度分布 =="
+  awk -F'\t' '{k[$4 == "" ? "(未标注)" : $4]++} END{for(x in k) printf "  %-12s %s\n", x, k[x]}' "$tmp"
+  [ -s "$tmp" ] || echo "  （无数据）"
+  rm -f "$tmp"
+
+  echo
+  echo "提示：开放式探索时，候选池必须往上面「零覆盖」的格子里撒点，不要全堆在已探过的市场。"
+}
+
 cmd_home() { echo "$HOME_DIR"; }
 
 usage() {
@@ -261,10 +323,12 @@ qr —— 量化探索台账（多 agent 共用，先查重后占坑）
   qr claim "<一句话假设>" [选项]          原子占坑并生成假设卡
         --family <reversal|momentum|lowvol|quality|microstructure|flow|event|ml|portfolio|timing|other>
         --market <cn_stock|crypto|us_stock|fx|futures|multi>
-        --tags a,b,c   --agent <名字>   --source <URL>（可重复）   --slug <英文短名>
+        --freq <tick|m1|m15|h1|d1|w1|事件驱动>   --tags a,b,c
+        --agent <名字>   --source <URL>（可重复）   --slug <英文短名>
   qr note <ID> "<进展>"                  追加日志（状态自动转 running）
   qr verdict <ID> <PASS|FAIL|PARK> "<结论>"  收工：写裁决 + 释放锁 + 追加 KNOWLEDGE.md
   qr release <ID> ["原因"]               放弃占坑（卡片保留供查重）
+  qr coverage                            覆盖盘点：市场 × 机理族矩阵 + 零覆盖格（开放式探索起点）
   qr list [状态或裁决]                    列表
   qr stale [小时]                        找僵尸占坑（默认 6h）
   qr index                               重建 REGISTRY.md
@@ -280,6 +344,7 @@ case "${1:-}" in
   release) shift; cmd_release "$@";;
   list)   shift; cmd_list "${1:-}";;
   stale)  shift; cmd_stale "${1:-}";;
+  coverage|cov) shift; cmd_coverage;;
   index)  shift; cmd_index;;
   home)   shift; cmd_home;;
   ""|-h|--help|help) usage;;

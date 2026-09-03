@@ -5,6 +5,7 @@ title: {{TITLE}}
 status: claimed
 verdict: OPEN
 market: {{MARKET}}
+freq: {{FREQ}}
 family: {{FAMILY}}
 tags: {{TAGS}}
 owner: {{OWNER}}

@@ -5,6 +5,7 @@ title: 低波+反转多因子小微盘组合（ivol60/rev20，300只/20日）净
 status: done
 verdict: PARK
 market: cn_stock
+freq: d1
 family: lowvol
 tags: 小市值,ivol,低波,反转,多因子
 owner: seed

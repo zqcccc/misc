@@ -5,6 +5,7 @@ title: A股中期动量（60/120日、52周新高）在横截面上有正向预�
 status: done
 verdict: FAIL
 market: cn_stock
+freq: d1
 family: momentum
 tags: 动量,momentum,52周新高
 owner: seed
