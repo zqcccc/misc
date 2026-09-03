@@ -1,0 +1,287 @@
+#!/usr/bin/env bash
+# qr —— 量化探索台账 CLI（多 agent 并发安全）
+#
+# 台账是「单例」：所有 worktree / 所有 agent 共用一份，位置解析顺序为
+#   1. $QR_HOME
+#   2. <主检出目录>/quant_research      （由 git --git-common-dir 推出，跨 worktree 共享）
+#   3. 本脚本所在目录                    （主检出还没有该目录时的过渡兜底）
+set -euo pipefail
+
+SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+resolve_home() {
+  if [ -n "${QR_HOME:-}" ]; then echo "$QR_HOME"; return; fi
+  local gcd main
+  if gcd="$(git rev-parse --git-common-dir 2>/dev/null)"; then
+    gcd="$(cd "$gcd" && pwd)"
+    main="$(dirname "$gcd")/quant_research"
+    if [ -d "$main/hypotheses" ]; then echo "$main"; return; fi
+  fi
+  echo "$SELF_DIR"
+}
+
+HOME_DIR="$(resolve_home)"
+HYP="$HOME_DIR/hypotheses"
+LOCKS="$HOME_DIR/locks"
+TPL="$HOME_DIR/templates/hypothesis.md"
+[ -f "$TPL" ] || TPL="$SELF_DIR/templates/hypothesis.md"
+REGISTRY="$HOME_DIR/REGISTRY.md"
+KNOWLEDGE="$HOME_DIR/KNOWLEDGE.md"
+STALE_HOURS="${QR_STALE_HOURS:-6}"
+
+mkdir -p "$HYP" "$LOCKS"
+now_iso() { date -u +%Y-%m-%dT%H:%M:%SZ; }
+now_epoch() { date +%s; }
+die() { echo "qr: $*" >&2; exit 1; }
+
+agent_name() { echo "${1:-${QR_AGENT:-${CLAUDE_AGENT_NAME:-$(whoami)-$$}}}"; }
+
+hyp_file() {  # $1=ID
+  local f
+  f="$(ls "$HYP/$1-"*.md 2>/dev/null | head -1 || true)"
+  [ -n "$f" ] || die "找不到 $1 的假设卡"
+  echo "$f"
+}
+
+fm() {  # $1=file $2=key  取 frontmatter 字段
+  awk -v k="$2" '
+    NR==1 && $0=="---" {inf=1; next}
+    inf && $0=="---" {exit}
+    inf {
+      idx=index($0, ":")
+      if (idx>0 && substr($0,1,idx-1)==k) { v=substr($0, idx+1); sub(/^[ \t]+/,"",v); print v; exit }
+    }' "$1"
+}
+
+set_fm() {  # $1=file $2=key $3=value
+  local tmp; tmp="$(mktemp)"
+  awk -v k="$2" -v v="$3" '
+    NR==1 && $0=="---" {inf=1; print; next}
+    inf && $0=="---" {inf=0; if(!done) print k ": " v; print; next}
+    inf {
+      idx=index($0, ":")
+      if (idx>0 && substr($0,1,idx-1)==k) { print k ": " v; done=1; next }
+    }
+    {print}' "$1" > "$tmp"
+  mv "$tmp" "$1"
+}
+
+# 只保留 ASCII，避免不同 locale 下多字节文件名踩坑；中文标题落在 frontmatter 里，不进文件名
+slugify() {
+  echo "$1" | LC_ALL=C tr '[:upper:]' '[:lower:]' \
+    | LC_ALL=C sed -e 's/[^a-z0-9]\{1,\}/-/g' -e 's/^-//' -e 's/-$//' \
+    | cut -c1-48
+}
+
+# ---------- search：去重闸 ----------
+cmd_search() {
+  [ $# -ge 1 ] || die "用法: qr search <关键词> [更多关键词...]"
+  local hit=0 kw f
+  for kw in "$@"; do
+    echo "── 关键词「$kw」"
+    local found=0
+    while IFS= read -r f; do
+      [ -n "$f" ] || continue
+      found=1; hit=1
+      printf '   %s  [%s/%s]  %s\n' "$(fm "$f" id)" "$(fm "$f" status)" "$(fm "$f" verdict)" "$(fm "$f" title)"
+      printf '      %s\n' "${f#$HOME_DIR/}"
+    done < <(grep -ril -- "$kw" "$HYP" 2>/dev/null | sort)
+    if [ -f "$KNOWLEDGE" ] && grep -i -q -- "$kw" "$KNOWLEDGE" 2>/dev/null; then
+      found=1; hit=1
+      echo "   KNOWLEDGE.md 命中："
+      grep -i -- "$kw" "$KNOWLEDGE" | sed 's/^/      /'
+    fi
+    [ "$found" = 1 ] || echo "   （无命中）"
+  done
+  if [ "$hit" = 1 ]; then
+    echo
+    echo "⚠️  有命中。逐条读完命中的假设卡，确认你的想法与它们【机理不同或数据/口径不同】后才可 claim；"
+    echo "    否则不要重复探索——直接在原卡上追加 note，或换方向。"
+    return 1
+  fi
+  echo
+  echo "✅ 无命中，可以 claim。"
+}
+
+# ---------- claim ----------
+cmd_claim() {
+  local title="" tags="" market="multi" family="other" agent="" srcs="" slug_opt=""
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --tags) tags="$2"; shift 2;;
+      --market) market="$2"; shift 2;;
+      --family) family="$2"; shift 2;;
+      --agent) agent="$2"; shift 2;;
+      --source) srcs="$srcs$2 "; shift 2;;
+      --slug) slug_opt="$(slugify "$2")"; shift 2;;
+      -*) die "未知参数 $1";;
+      *) title="$1"; shift;;
+    esac
+  done
+  [ -n "$title" ] || die '用法: qr claim "<一句话假设>" --family <家族> --market <市场> --tags a,b --agent <名字>'
+  agent="$(agent_name "$agent")"
+
+  # 号段分配：mkdir 的原子性保证两个 agent 同时 claim 也拿不到同一个号。
+  # 额外校验假设卡是否已存在——防止 locks/ 目录在 git 传递中丢失后号段被重复分配。
+  local n=1 id
+  while :; do
+    id="$(printf 'H%04d' "$n")"
+    if mkdir "$LOCKS/$id" 2>/dev/null; then
+      if ls "$HYP/$id-"*.md >/dev/null 2>&1; then n=$((n+1)); continue; fi
+      : > "$LOCKS/$id/.gitkeep"   # 号段登记要能进 git，空目录 git 不跟踪
+      break
+    fi
+    n=$((n+1))
+  done
+
+  local slug file
+  slug="${slug_opt:-$(slugify "$title")}"
+  [ -n "$slug" ] || slug="$family"
+  file="$HYP/$id-$slug.md"
+
+  sed -e "s/{{ID}}/$id/g" -e "s/{{SLUG}}/$slug/g" -e "s/{{TITLE}}/$(echo "$title" | sed 's/[&/\]/\\&/g')/g" \
+      -e "s/{{MARKET}}/$market/g" -e "s/{{FAMILY}}/$family/g" -e "s/{{TAGS}}/$tags/g" \
+      -e "s/{{OWNER}}/$agent/g" -e "s/{{TS}}/$(now_iso)/g" "$TPL" > "$file"
+  [ -z "$srcs" ] || set_fm "$file" sources "$srcs"
+
+  printf 'agent=%s\nclaimed_at=%s\nclaimed_epoch=%s\nfile=%s\ntitle=%s\n' \
+    "$agent" "$(now_iso)" "$(now_epoch)" "${file#$HOME_DIR/}" "$title" > "$LOCKS/$id/owner"
+
+  cmd_index >/dev/null
+  echo "$id  已占坑 → ${file#$HOME_DIR/}"
+  echo "把机理、数据需求、先验检索结论先写进这张卡，再动手写代码。"
+}
+
+# ---------- note ----------
+cmd_note() {
+  [ $# -ge 2 ] || die '用法: qr note <ID> "<进展一句话>"'
+  local id="$1"; shift
+  local file; file="$(hyp_file "$id")"
+  printf -- '- `%s` %s：%s\n' "$(now_iso)" "$(agent_name "${QR_AGENT:-}")" "$*" >> "$file"
+  set_fm "$file" updated_at "$(now_iso)"
+  [ "$(fm "$file" status)" = "claimed" ] && set_fm "$file" status "running" || true
+  cmd_index >/dev/null
+  echo "$id 已记录。"
+}
+
+# ---------- verdict ----------
+cmd_verdict() {
+  [ $# -ge 3 ] || die '用法: qr verdict <ID> <PASS|FAIL|PARK> "<一句话结论，带数>"'
+  local id="$1" v="$2"; shift 2
+  case "$v" in PASS|FAIL|PARK) ;; *) die "裁决只能是 PASS / FAIL / PARK";; esac
+  local file; file="$(hyp_file "$id")"
+  set_fm "$file" status "done"
+  set_fm "$file" verdict "$v"
+  set_fm "$file" updated_at "$(now_iso)"
+  printf -- '- `%s` %s：**裁决 %s** —— %s\n' "$(now_iso)" "$(agent_name "${QR_AGENT:-}")" "$v" "$*" >> "$file"
+  [ -f "$KNOWLEDGE" ] || printf '# 已固化结论（读完再开工）\n\n' > "$KNOWLEDGE"
+  printf -- '- **%s** [%s] %s — %s（%s）\n' "$v" "$(fm "$file" market)" "$(fm "$file" title)" "$*" "$id" >> "$KNOWLEDGE"
+  rm -f "$LOCKS/$id/owner"
+  cmd_index >/dev/null
+  echo "$id 裁决 $v，已释放锁并写入 KNOWLEDGE.md。"
+}
+
+# ---------- release ----------
+cmd_release() {
+  [ $# -ge 1 ] || die '用法: qr release <ID> ["放弃原因"]'
+  local id="$1"; shift || true
+  local file; file="$(hyp_file "$id")"
+  set_fm "$file" status "abandoned"
+  set_fm "$file" updated_at "$(now_iso)"
+  printf -- '- `%s` %s：放弃占坑 —— %s\n' "$(now_iso)" "$(agent_name "${QR_AGENT:-}")" "${*:-未说明}" >> "$file"
+  rm -f "$LOCKS/$id/owner"
+  cmd_index >/dev/null
+  echo "$id 已释放（状态 abandoned，卡片保留，供后人查重）。"
+}
+
+# ---------- list / stale / index ----------
+cmd_list() {
+  local want="${1:-}" f
+  printf '%-7s %-10s %-8s %-10s %-14s %s\n' ID STATUS VERDICT MARKET OWNER TITLE
+  for f in "$HYP"/*.md; do
+    [ -e "$f" ] || continue
+    local st; st="$(fm "$f" status)"
+    [ -z "$want" ] || [ "$st" = "$want" ] || [ "$(fm "$f" verdict)" = "$want" ] || continue
+    printf '%-7s %-10s %-8s %-10s %-14s %s\n' \
+      "$(fm "$f" id)" "$st" "$(fm "$f" verdict)" "$(fm "$f" market)" "$(fm "$f" owner)" "$(fm "$f" title)"
+  done
+}
+
+cmd_stale() {
+  local hours="${1:-$STALE_HOURS}" now d
+  now="$(now_epoch)"
+  echo "超过 ${hours}h 未更新的活跃占坑："
+  local any=0
+  for d in "$LOCKS"/*/; do
+    [ -f "$d/owner" ] || continue
+    local ep age id
+    ep="$(sed -n 's/^claimed_epoch=//p' "$d/owner")"
+    id="$(basename "$d")"
+    local file; file="$(ls "$HYP/$id-"*.md 2>/dev/null | head -1 || true)"
+    if [ -n "$file" ]; then
+      local mt
+      mt="$(stat -f %m "$file" 2>/dev/null || stat -c %Y "$file")"
+      [ "$mt" -gt "${ep:-0}" ] && ep="$mt"
+    fi
+    age=$(( (now - ${ep:-0}) / 3600 ))
+    if [ "$age" -ge "$hours" ]; then
+      any=1
+      printf '  %s  %sh  agent=%s  %s\n' "$id" "$age" "$(sed -n 's/^agent=//p' "$d/owner")" "$(sed -n 's/^title=//p' "$d/owner")"
+    fi
+  done
+  [ "$any" = 1 ] || echo "  （无）"
+}
+
+cmd_index() {
+  {
+    echo "# 探索台账索引"
+    echo
+    echo "> 本文件由 \`./qr index\` 自动生成，不要手改。真身在 \`hypotheses/\`。"
+    echo
+    echo "| ID | 状态 | 裁决 | 市场 | 家族 | 标题 | 负责人 | 更新 |"
+    echo "|---|---|---|---|---|---|---|---|"
+    local f
+    for f in "$HYP"/*.md; do
+      [ -e "$f" ] || continue
+      printf '| [%s](%s) | %s | %s | %s | %s | %s | %s | %s |\n' \
+        "$(fm "$f" id)" "hypotheses/$(basename "$f")" "$(fm "$f" status)" "$(fm "$f" verdict)" \
+        "$(fm "$f" market)" "$(fm "$f" family)" "$(fm "$f" title)" "$(fm "$f" owner)" "$(fm "$f" updated_at)"
+    done
+  } > "$REGISTRY"
+  echo "已重建 ${REGISTRY#$HOME_DIR/}"
+}
+
+cmd_home() { echo "$HOME_DIR"; }
+
+usage() {
+  cat <<'USAGE'
+qr —— 量化探索台账（多 agent 共用，先查重后占坑）
+
+  qr search <关键词>...                  去重闸：查台账 + 已固化结论；有命中退出码 1
+  qr claim "<一句话假设>" [选项]          原子占坑并生成假设卡
+        --family <reversal|momentum|lowvol|quality|microstructure|flow|event|ml|portfolio|timing|other>
+        --market <cn_stock|crypto|us_stock|fx|futures|multi>
+        --tags a,b,c   --agent <名字>   --source <URL>（可重复）   --slug <英文短名>
+  qr note <ID> "<进展>"                  追加日志（状态自动转 running）
+  qr verdict <ID> <PASS|FAIL|PARK> "<结论>"  收工：写裁决 + 释放锁 + 追加 KNOWLEDGE.md
+  qr release <ID> ["原因"]               放弃占坑（卡片保留供查重）
+  qr list [状态或裁决]                    列表
+  qr stale [小时]                        找僵尸占坑（默认 6h）
+  qr index                               重建 REGISTRY.md
+  qr home                                打印当前台账根目录
+USAGE
+}
+
+case "${1:-}" in
+  search) shift; cmd_search "$@";;
+  claim)  shift; cmd_claim "$@";;
+  note)   shift; cmd_note "$@";;
+  verdict) shift; cmd_verdict "$@";;
+  release) shift; cmd_release "$@";;
+  list)   shift; cmd_list "${1:-}";;
+  stale)  shift; cmd_stale "${1:-}";;
+  index)  shift; cmd_index;;
+  home)   shift; cmd_home;;
+  ""|-h|--help|help) usage;;
+  *) die "未知子命令 $1（qr --help）";;
+esac
