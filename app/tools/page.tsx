@@ -44,6 +44,13 @@ const tools = [
     kind: '本地工具',
     detail: '图片只在当前浏览器处理，不会上传到本站服务器。',
   },
+  {
+    name: '元素滚动截图 (Element Scroll Capture)',
+    desc: '选定页面中任意带滚动条的内部容器（聊天记录、后台表格、代码框），自动逐屏滚动并无缝拼接为完整长图。',
+    href: '/tools/element-scroll-capture',
+    kind: 'Chrome 扩展',
+    detail: '纯前端 Manifest V3 架构，图像仅在本地内存与 IndexedDB 处理，不上传服务器；已上架 Chrome 商店。',
+  },
 ]
 
 export default function ToolsHome() {

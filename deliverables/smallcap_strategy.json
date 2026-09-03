@@ -169,6 +169,19 @@
         "min_cap": 13.23,
         "max_cap": 48.0
       },
+      "current_period": {
+        "signal_date": "2026-09-02",
+        "execution_date": null,
+        "as_of": "2026-09-02",
+        "status": "pending",
+        "trading_days_elapsed": 0,
+        "trading_days_total": 10,
+        "trading_days_remaining": 10,
+        "entry_basis": null,
+        "entry_basis_label": null,
+        "return_pct": null,
+        "returns_by_code": {}
+      },
       "current_holdings": [
         {
           "code": "sz301469",
@@ -176,12 +189,57 @@
           "name": "恒达新材",
           "target_weight": 14.29,
           "price": 28.87,
-          "change_pct": 29.04,
+          "change_pct": -1.13,
           "float_cap_billion": 13.23,
           "total_cap_billion": 25.83,
           "shares": 211900,
           "market_val": 6117553.0,
-          "factor_score": 0.4273
+          "factor_score": 0.4273,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.42729,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.41560979,
+                "percentile": 93.89,
+                "centered_score": 0.438949,
+                "contribution": 0.219474
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.0539456,
+                "percentile": 93.09,
+                "centered_score": 0.430928,
+                "contribution": 0.107732
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01825515,
+                "percentile": 90.03,
+                "centered_score": 0.400335,
+                "contribution": 0.100084
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sh688681",
@@ -189,12 +247,57 @@
           "name": "科汇股份",
           "target_weight": 14.29,
           "price": 16.46,
-          "change_pct": 16.58,
+          "change_pct": -0.72,
           "float_cap_billion": 17.23,
           "total_cap_billion": 17.23,
           "shares": 371700,
           "market_val": 6118182.0,
-          "factor_score": 0.4424
+          "factor_score": 0.4424,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.442407,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.06475126,
+                "percentile": 98.04,
+                "centered_score": 0.480422,
+                "contribution": 0.240211
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.02837843,
+                "percentile": 83.53,
+                "centered_score": 0.335309,
+                "contribution": 0.083827
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01531842,
+                "percentile": 97.35,
+                "centered_score": 0.473474,
+                "contribution": 0.118369
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sh688113",
@@ -202,12 +305,57 @@
           "name": "联测科技",
           "target_weight": 14.29,
           "price": 36.05,
-          "change_pct": 36.02,
+          "change_pct": -1.02,
           "float_cap_billion": 23.22,
           "total_cap_billion": 23.22,
           "shares": 169700,
           "market_val": 6117685.0,
-          "factor_score": 0.4183
+          "factor_score": 0.4183,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.418306,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -16.93520486,
+                "percentile": 99.07,
+                "centered_score": 0.490726,
+                "contribution": 0.245363
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.0102821,
+                "percentile": 71.7,
+                "centered_score": 0.21701,
+                "contribution": 0.054253
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01525847,
+                "percentile": 97.48,
+                "centered_score": 0.474762,
+                "contribution": 0.11869
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sh603006",
@@ -215,12 +363,57 @@
           "name": "联明股份",
           "target_weight": 14.29,
           "price": 10.97,
-          "change_pct": 11.01,
+          "change_pct": 0.0,
           "float_cap_billion": 27.89,
           "total_cap_billion": 27.89,
           "shares": 557700,
           "market_val": 6117969.0,
-          "factor_score": 0.4215
+          "factor_score": 0.4215,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.421481,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.27535806,
+                "percentile": 96.08,
+                "centered_score": 0.460845,
+                "contribution": 0.230422
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.02912623,
+                "percentile": 83.84,
+                "centered_score": 0.338402,
+                "contribution": 0.084601
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01744788,
+                "percentile": 92.58,
+                "centered_score": 0.425831,
+                "contribution": 0.106458
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sz301289",
@@ -228,12 +421,57 @@
           "name": "国缆检测",
           "target_weight": 14.29,
           "price": 44.98,
-          "change_pct": 45.0,
+          "change_pct": -0.57,
           "float_cap_billion": 34.86,
           "total_cap_billion": 35.08,
           "shares": 136000,
           "market_val": 6117280.0,
-          "factor_score": 0.4247
+          "factor_score": 0.4247,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.424704,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.59989206,
+                "percentile": 90.31,
+                "centered_score": 0.403143,
+                "contribution": 0.201571
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.04273272,
+                "percentile": 90.1,
+                "centered_score": 0.401031,
+                "contribution": 0.100258
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01414596,
+                "percentile": 99.15,
+                "centered_score": 0.491501,
+                "contribution": 0.122875
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sz002088",
@@ -241,12 +479,57 @@
           "name": "鲁阳节能",
           "target_weight": 14.29,
           "price": 8.12,
-          "change_pct": 8.15,
+          "change_pct": -0.85,
           "float_cap_billion": 41.08,
           "total_cap_billion": 41.37,
           "shares": 753500,
           "market_val": 6118420.0,
-          "factor_score": 0.4238
+          "factor_score": 0.4238,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.423789,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.30340912,
+                "percentile": 95.8,
+                "centered_score": 0.458011,
+                "contribution": 0.229006
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.02041245,
+                "percentile": 79.41,
+                "centered_score": 0.294072,
+                "contribution": 0.073518
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01460177,
+                "percentile": 98.51,
+                "centered_score": 0.485063,
+                "contribution": 0.121266
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sh603173",
@@ -254,12 +537,57 @@
           "name": "福斯达",
           "target_weight": 14.29,
           "price": 30.0,
-          "change_pct": 31.01,
+          "change_pct": -3.82,
           "float_cap_billion": 48.0,
           "total_cap_billion": 48.0,
           "shares": 203900,
           "market_val": 6117000.0,
-          "factor_score": 0.4229
+          "factor_score": 0.4229,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.422907,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.27978175,
+                "percentile": 96.03,
+                "centered_score": 0.46033,
+                "contribution": 0.230165
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.04012674,
+                "percentile": 89.12,
+                "centered_score": 0.391237,
+                "contribution": 0.097809
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01882957,
+                "percentile": 87.97,
+                "centered_score": 0.379732,
+                "contribution": 0.094933
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         }
       ],
       "rebalance_history": [
@@ -8092,6 +8420,19 @@
         "min_cap": 13.23,
         "max_cap": 48.0
       },
+      "current_period": {
+        "signal_date": "2026-09-02",
+        "execution_date": null,
+        "as_of": "2026-09-02",
+        "status": "pending",
+        "trading_days_elapsed": 0,
+        "trading_days_total": 10,
+        "trading_days_remaining": 10,
+        "entry_basis": null,
+        "entry_basis_label": null,
+        "return_pct": null,
+        "returns_by_code": {}
+      },
       "current_holdings": [
         {
           "code": "sz301469",
@@ -8099,12 +8440,57 @@
           "name": "恒达新材",
           "target_weight": 12.5,
           "price": 28.87,
-          "change_pct": 29.04,
+          "change_pct": -1.13,
           "float_cap_billion": 13.23,
           "total_cap_billion": 25.83,
           "shares": 181200,
           "market_val": 5231244.0,
-          "factor_score": 0.4273
+          "factor_score": 0.4273,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.42729,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.41560979,
+                "percentile": 93.89,
+                "centered_score": 0.438949,
+                "contribution": 0.219474
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.0539456,
+                "percentile": 93.09,
+                "centered_score": 0.430928,
+                "contribution": 0.107732
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01825515,
+                "percentile": 90.03,
+                "centered_score": 0.400335,
+                "contribution": 0.100084
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sh688681",
@@ -8112,12 +8498,57 @@
           "name": "科汇股份",
           "target_weight": 12.5,
           "price": 16.46,
-          "change_pct": 16.58,
+          "change_pct": -0.72,
           "float_cap_billion": 17.23,
           "total_cap_billion": 17.23,
           "shares": 317900,
           "market_val": 5232634.0,
-          "factor_score": 0.4424
+          "factor_score": 0.4424,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.442407,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.06475126,
+                "percentile": 98.04,
+                "centered_score": 0.480422,
+                "contribution": 0.240211
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.02837843,
+                "percentile": 83.53,
+                "centered_score": 0.335309,
+                "contribution": 0.083827
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01531842,
+                "percentile": 97.35,
+                "centered_score": 0.473474,
+                "contribution": 0.118369
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sh688013",
@@ -8125,12 +8556,57 @@
           "name": "天臣医疗",
           "target_weight": 12.5,
           "price": 25.0,
-          "change_pct": 25.27,
+          "change_pct": -1.57,
           "float_cap_billion": 20.29,
           "total_cap_billion": 20.29,
           "shares": 209300,
           "market_val": 5232500.0,
-          "factor_score": 0.4154
+          "factor_score": 0.4154,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.415356,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.24217424,
+                "percentile": 96.5,
+                "centered_score": 0.464967,
+                "contribution": 0.232483
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.02035397,
+                "percentile": 79.3,
+                "centered_score": 0.293041,
+                "contribution": 0.07326
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.0170237,
+                "percentile": 93.84,
+                "centered_score": 0.43845,
+                "contribution": 0.109612
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sh688113",
@@ -8138,12 +8614,57 @@
           "name": "联测科技",
           "target_weight": 12.5,
           "price": 36.05,
-          "change_pct": 36.02,
+          "change_pct": -1.02,
           "float_cap_billion": 23.22,
           "total_cap_billion": 23.22,
           "shares": 145100,
           "market_val": 5230855.0,
-          "factor_score": 0.4183
+          "factor_score": 0.4183,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.418306,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -16.93520486,
+                "percentile": 99.07,
+                "centered_score": 0.490726,
+                "contribution": 0.245363
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.0102821,
+                "percentile": 71.7,
+                "centered_score": 0.21701,
+                "contribution": 0.054253
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01525847,
+                "percentile": 97.48,
+                "centered_score": 0.474762,
+                "contribution": 0.11869
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sh603006",
@@ -8151,12 +8672,57 @@
           "name": "联明股份",
           "target_weight": 12.5,
           "price": 10.97,
-          "change_pct": 11.01,
+          "change_pct": 0.0,
           "float_cap_billion": 27.89,
           "total_cap_billion": 27.89,
           "shares": 477000,
           "market_val": 5232690.0,
-          "factor_score": 0.4215
+          "factor_score": 0.4215,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.421481,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.27535806,
+                "percentile": 96.08,
+                "centered_score": 0.460845,
+                "contribution": 0.230422
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.02912623,
+                "percentile": 83.84,
+                "centered_score": 0.338402,
+                "contribution": 0.084601
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01744788,
+                "percentile": 92.58,
+                "centered_score": 0.425831,
+                "contribution": 0.106458
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sz301289",
@@ -8164,12 +8730,57 @@
           "name": "国缆检测",
           "target_weight": 12.5,
           "price": 44.98,
-          "change_pct": 45.0,
+          "change_pct": -0.57,
           "float_cap_billion": 34.86,
           "total_cap_billion": 35.08,
           "shares": 116300,
           "market_val": 5231174.0,
-          "factor_score": 0.4247
+          "factor_score": 0.4247,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.424704,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.59989206,
+                "percentile": 90.31,
+                "centered_score": 0.403143,
+                "contribution": 0.201571
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.04273272,
+                "percentile": 90.1,
+                "centered_score": 0.401031,
+                "contribution": 0.100258
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01414596,
+                "percentile": 99.15,
+                "centered_score": 0.491501,
+                "contribution": 0.122875
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sz002088",
@@ -8177,12 +8788,57 @@
           "name": "鲁阳节能",
           "target_weight": 12.5,
           "price": 8.12,
-          "change_pct": 8.15,
+          "change_pct": -0.85,
           "float_cap_billion": 41.08,
           "total_cap_billion": 41.37,
           "shares": 644400,
           "market_val": 5232528.0,
-          "factor_score": 0.4238
+          "factor_score": 0.4238,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.423789,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.30340912,
+                "percentile": 95.8,
+                "centered_score": 0.458011,
+                "contribution": 0.229006
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.02041245,
+                "percentile": 79.41,
+                "centered_score": 0.294072,
+                "contribution": 0.073518
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01460177,
+                "percentile": 98.51,
+                "centered_score": 0.485063,
+                "contribution": 0.121266
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sh603173",
@@ -8190,12 +8846,57 @@
           "name": "福斯达",
           "target_weight": 12.5,
           "price": 30.0,
-          "change_pct": 31.01,
+          "change_pct": -3.82,
           "float_cap_billion": 48.0,
           "total_cap_billion": 48.0,
           "shares": 174400,
           "market_val": 5232000.0,
-          "factor_score": 0.4229
+          "factor_score": 0.4229,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.422907,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.27978175,
+                "percentile": 96.03,
+                "centered_score": 0.46033,
+                "contribution": 0.230165
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.04012674,
+                "percentile": 89.12,
+                "centered_score": 0.391237,
+                "contribution": 0.097809
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01882957,
+                "percentile": 87.97,
+                "centered_score": 0.379732,
+                "contribution": 0.094933
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         }
       ],
       "rebalance_history": [
@@ -16072,6 +16773,19 @@
         "min_cap": 13.23,
         "max_cap": 48.0
       },
+      "current_period": {
+        "signal_date": "2026-09-02",
+        "execution_date": null,
+        "as_of": "2026-09-02",
+        "status": "pending",
+        "trading_days_elapsed": 0,
+        "trading_days_total": 10,
+        "trading_days_remaining": 10,
+        "entry_basis": null,
+        "entry_basis_label": null,
+        "return_pct": null,
+        "returns_by_code": {}
+      },
       "current_holdings": [
         {
           "code": "sz301469",
@@ -16079,12 +16793,57 @@
           "name": "恒达新材",
           "target_weight": 16.67,
           "price": 28.87,
-          "change_pct": 29.04,
+          "change_pct": -1.13,
           "float_cap_billion": 13.23,
           "total_cap_billion": 25.83,
           "shares": 246900,
           "market_val": 7128003.0,
-          "factor_score": 0.4273
+          "factor_score": 0.4273,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.42729,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.41560979,
+                "percentile": 93.89,
+                "centered_score": 0.438949,
+                "contribution": 0.219474
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.0539456,
+                "percentile": 93.09,
+                "centered_score": 0.430928,
+                "contribution": 0.107732
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01825515,
+                "percentile": 90.03,
+                "centered_score": 0.400335,
+                "contribution": 0.100084
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sh688681",
@@ -16092,12 +16851,57 @@
           "name": "科汇股份",
           "target_weight": 16.67,
           "price": 16.46,
-          "change_pct": 16.58,
+          "change_pct": -0.72,
           "float_cap_billion": 17.23,
           "total_cap_billion": 17.23,
           "shares": 433000,
           "market_val": 7127180.0,
-          "factor_score": 0.4424
+          "factor_score": 0.4424,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.442407,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.06475126,
+                "percentile": 98.04,
+                "centered_score": 0.480422,
+                "contribution": 0.240211
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.02837843,
+                "percentile": 83.53,
+                "centered_score": 0.335309,
+                "contribution": 0.083827
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01531842,
+                "percentile": 97.35,
+                "centered_score": 0.473474,
+                "contribution": 0.118369
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sh603006",
@@ -16105,12 +16909,57 @@
           "name": "联明股份",
           "target_weight": 16.67,
           "price": 10.97,
-          "change_pct": 11.01,
+          "change_pct": 0.0,
           "float_cap_billion": 27.89,
           "total_cap_billion": 27.89,
           "shares": 649800,
           "market_val": 7128306.0,
-          "factor_score": 0.4215
+          "factor_score": 0.4215,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.421481,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.27535806,
+                "percentile": 96.08,
+                "centered_score": 0.460845,
+                "contribution": 0.230422
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.02912623,
+                "percentile": 83.84,
+                "centered_score": 0.338402,
+                "contribution": 0.084601
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01744788,
+                "percentile": 92.58,
+                "centered_score": 0.425831,
+                "contribution": 0.106458
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sz301289",
@@ -16118,12 +16967,57 @@
           "name": "国缆检测",
           "target_weight": 16.67,
           "price": 44.98,
-          "change_pct": 45.0,
+          "change_pct": -0.57,
           "float_cap_billion": 34.86,
           "total_cap_billion": 35.08,
           "shares": 158400,
           "market_val": 7124832.0,
-          "factor_score": 0.4247
+          "factor_score": 0.4247,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.424704,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.59989206,
+                "percentile": 90.31,
+                "centered_score": 0.403143,
+                "contribution": 0.201571
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.04273272,
+                "percentile": 90.1,
+                "centered_score": 0.401031,
+                "contribution": 0.100258
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01414596,
+                "percentile": 99.15,
+                "centered_score": 0.491501,
+                "contribution": 0.122875
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sz002088",
@@ -16131,12 +17025,57 @@
           "name": "鲁阳节能",
           "target_weight": 16.67,
           "price": 8.12,
-          "change_pct": 8.15,
+          "change_pct": -0.85,
           "float_cap_billion": 41.08,
           "total_cap_billion": 41.37,
           "shares": 877800,
           "market_val": 7127736.0,
-          "factor_score": 0.4238
+          "factor_score": 0.4238,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.423789,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.30340912,
+                "percentile": 95.8,
+                "centered_score": 0.458011,
+                "contribution": 0.229006
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.02041245,
+                "percentile": 79.41,
+                "centered_score": 0.294072,
+                "contribution": 0.073518
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01460177,
+                "percentile": 98.51,
+                "centered_score": 0.485063,
+                "contribution": 0.121266
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sh603173",
@@ -16144,12 +17083,57 @@
           "name": "福斯达",
           "target_weight": 16.67,
           "price": 30.0,
-          "change_pct": 31.01,
+          "change_pct": -3.82,
           "float_cap_billion": 48.0,
           "total_cap_billion": 48.0,
           "shares": 237600,
           "market_val": 7128000.0,
-          "factor_score": 0.4229
+          "factor_score": 0.4229,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.422907,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.27978175,
+                "percentile": 96.03,
+                "centered_score": 0.46033,
+                "contribution": 0.230165
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.04012674,
+                "percentile": 89.12,
+                "centered_score": 0.391237,
+                "contribution": 0.097809
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01882957,
+                "percentile": 87.97,
+                "centered_score": 0.379732,
+                "contribution": 0.094933
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         }
       ],
       "rebalance_history": [
@@ -23938,6 +24922,19 @@
         "min_cap": 13.23,
         "max_cap": 48.0
       },
+      "current_period": {
+        "signal_date": "2026-09-02",
+        "execution_date": null,
+        "as_of": "2026-09-02",
+        "status": "pending",
+        "trading_days_elapsed": 0,
+        "trading_days_total": 10,
+        "trading_days_remaining": 10,
+        "entry_basis": null,
+        "entry_basis_label": null,
+        "return_pct": null,
+        "returns_by_code": {}
+      },
       "current_holdings": [
         {
           "code": "sz301469",
@@ -23945,12 +24942,57 @@
           "name": "恒达新材",
           "target_weight": 20.0,
           "price": 28.87,
-          "change_pct": 29.04,
+          "change_pct": -1.13,
           "float_cap_billion": 13.23,
           "total_cap_billion": 25.83,
           "shares": 236500,
           "market_val": 6827755.0,
-          "factor_score": 0.4273
+          "factor_score": 0.4273,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.42729,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.41560979,
+                "percentile": 93.89,
+                "centered_score": 0.438949,
+                "contribution": 0.219474
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.0539456,
+                "percentile": 93.09,
+                "centered_score": 0.430928,
+                "contribution": 0.107732
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01825515,
+                "percentile": 90.03,
+                "centered_score": 0.400335,
+                "contribution": 0.100084
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sh688681",
@@ -23958,12 +25000,57 @@
           "name": "科汇股份",
           "target_weight": 20.0,
           "price": 16.46,
-          "change_pct": 16.58,
+          "change_pct": -0.72,
           "float_cap_billion": 17.23,
           "total_cap_billion": 17.23,
           "shares": 414900,
           "market_val": 6829254.0,
-          "factor_score": 0.4424
+          "factor_score": 0.4424,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.442407,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.06475126,
+                "percentile": 98.04,
+                "centered_score": 0.480422,
+                "contribution": 0.240211
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.02837843,
+                "percentile": 83.53,
+                "centered_score": 0.335309,
+                "contribution": 0.083827
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01531842,
+                "percentile": 97.35,
+                "centered_score": 0.473474,
+                "contribution": 0.118369
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sz301289",
@@ -23971,12 +25058,57 @@
           "name": "国缆检测",
           "target_weight": 20.0,
           "price": 44.98,
-          "change_pct": 45.0,
+          "change_pct": -0.57,
           "float_cap_billion": 34.86,
           "total_cap_billion": 35.08,
           "shares": 151800,
           "market_val": 6827964.0,
-          "factor_score": 0.4247
+          "factor_score": 0.4247,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.424704,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.59989206,
+                "percentile": 90.31,
+                "centered_score": 0.403143,
+                "contribution": 0.201571
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.04273272,
+                "percentile": 90.1,
+                "centered_score": 0.401031,
+                "contribution": 0.100258
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01414596,
+                "percentile": 99.15,
+                "centered_score": 0.491501,
+                "contribution": 0.122875
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sz002088",
@@ -23984,12 +25116,57 @@
           "name": "鲁阳节能",
           "target_weight": 20.0,
           "price": 8.12,
-          "change_pct": 8.15,
+          "change_pct": -0.85,
           "float_cap_billion": 41.08,
           "total_cap_billion": 41.37,
           "shares": 841100,
           "market_val": 6829732.0,
-          "factor_score": 0.4238
+          "factor_score": 0.4238,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.423789,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.30340912,
+                "percentile": 95.8,
+                "centered_score": 0.458011,
+                "contribution": 0.229006
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.02041245,
+                "percentile": 79.41,
+                "centered_score": 0.294072,
+                "contribution": 0.073518
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01460177,
+                "percentile": 98.51,
+                "centered_score": 0.485063,
+                "contribution": 0.121266
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sh603173",
@@ -23997,12 +25174,57 @@
           "name": "福斯达",
           "target_weight": 20.0,
           "price": 30.0,
-          "change_pct": 31.01,
+          "change_pct": -3.82,
           "float_cap_billion": 48.0,
           "total_cap_billion": 48.0,
           "shares": 227600,
           "market_val": 6828000.0,
-          "factor_score": 0.4229
+          "factor_score": 0.4229,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.422907,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.27978175,
+                "percentile": 96.03,
+                "centered_score": 0.46033,
+                "contribution": 0.230165
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.04012674,
+                "percentile": 89.12,
+                "centered_score": 0.391237,
+                "contribution": 0.097809
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01882957,
+                "percentile": 87.97,
+                "centered_score": 0.379732,
+                "contribution": 0.094933
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         }
       ],
       "rebalance_history": [
@@ -31755,6 +32977,19 @@
         "min_cap": 13.23,
         "max_cap": 206.67
       },
+      "current_period": {
+        "signal_date": "2026-09-02",
+        "execution_date": null,
+        "as_of": "2026-09-02",
+        "status": "pending",
+        "trading_days_elapsed": 0,
+        "trading_days_total": 10,
+        "trading_days_remaining": 10,
+        "entry_basis": null,
+        "entry_basis_label": null,
+        "return_pct": null,
+        "returns_by_code": {}
+      },
       "current_holdings": [
         {
           "code": "sz301469",
@@ -31762,12 +32997,57 @@
           "name": "恒达新材",
           "target_weight": 10.0,
           "price": 28.87,
-          "change_pct": 29.04,
+          "change_pct": -1.13,
           "float_cap_billion": 13.23,
           "total_cap_billion": 25.83,
           "shares": 136900,
           "market_val": 3952303.0,
-          "factor_score": 0.4273
+          "factor_score": 0.4273,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.42729,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.41560979,
+                "percentile": 93.89,
+                "centered_score": 0.438949,
+                "contribution": 0.219474
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.0539456,
+                "percentile": 93.09,
+                "centered_score": 0.430928,
+                "contribution": 0.107732
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01825515,
+                "percentile": 90.03,
+                "centered_score": 0.400335,
+                "contribution": 0.100084
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sh688681",
@@ -31775,12 +33055,57 @@
           "name": "科汇股份",
           "target_weight": 10.0,
           "price": 16.46,
-          "change_pct": 16.58,
+          "change_pct": -0.72,
           "float_cap_billion": 17.23,
           "total_cap_billion": 17.23,
           "shares": 240200,
           "market_val": 3953692.0,
-          "factor_score": 0.4424
+          "factor_score": 0.4424,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.442407,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.06475126,
+                "percentile": 98.04,
+                "centered_score": 0.480422,
+                "contribution": 0.240211
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.02837843,
+                "percentile": 83.53,
+                "centered_score": 0.335309,
+                "contribution": 0.083827
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01531842,
+                "percentile": 97.35,
+                "centered_score": 0.473474,
+                "contribution": 0.118369
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sh688013",
@@ -31788,12 +33113,57 @@
           "name": "天臣医疗",
           "target_weight": 10.0,
           "price": 25.0,
-          "change_pct": 25.27,
+          "change_pct": -1.57,
           "float_cap_billion": 20.29,
           "total_cap_billion": 20.29,
           "shares": 158100,
           "market_val": 3952500.0,
-          "factor_score": 0.4154
+          "factor_score": 0.4154,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.415356,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.24217424,
+                "percentile": 96.5,
+                "centered_score": 0.464967,
+                "contribution": 0.232483
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.02035397,
+                "percentile": 79.3,
+                "centered_score": 0.293041,
+                "contribution": 0.07326
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.0170237,
+                "percentile": 93.84,
+                "centered_score": 0.43845,
+                "contribution": 0.109612
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sh688113",
@@ -31801,12 +33171,57 @@
           "name": "联测科技",
           "target_weight": 10.0,
           "price": 36.05,
-          "change_pct": 36.02,
+          "change_pct": -1.02,
           "float_cap_billion": 23.22,
           "total_cap_billion": 23.22,
           "shares": 109600,
           "market_val": 3951080.0,
-          "factor_score": 0.4183
+          "factor_score": 0.4183,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.418306,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -16.93520486,
+                "percentile": 99.07,
+                "centered_score": 0.490726,
+                "contribution": 0.245363
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.0102821,
+                "percentile": 71.7,
+                "centered_score": 0.21701,
+                "contribution": 0.054253
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01525847,
+                "percentile": 97.48,
+                "centered_score": 0.474762,
+                "contribution": 0.11869
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sh603006",
@@ -31814,12 +33229,57 @@
           "name": "联明股份",
           "target_weight": 10.0,
           "price": 10.97,
-          "change_pct": 11.01,
+          "change_pct": 0.0,
           "float_cap_billion": 27.89,
           "total_cap_billion": 27.89,
           "shares": 360400,
           "market_val": 3953588.0,
-          "factor_score": 0.4215
+          "factor_score": 0.4215,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.421481,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.27535806,
+                "percentile": 96.08,
+                "centered_score": 0.460845,
+                "contribution": 0.230422
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.02912623,
+                "percentile": 83.84,
+                "centered_score": 0.338402,
+                "contribution": 0.084601
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01744788,
+                "percentile": 92.58,
+                "centered_score": 0.425831,
+                "contribution": 0.106458
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sz301289",
@@ -31827,12 +33287,57 @@
           "name": "国缆检测",
           "target_weight": 10.0,
           "price": 44.98,
-          "change_pct": 45.0,
+          "change_pct": -0.57,
           "float_cap_billion": 34.86,
           "total_cap_billion": 35.08,
           "shares": 87900,
           "market_val": 3953742.0,
-          "factor_score": 0.4247
+          "factor_score": 0.4247,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.424704,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.59989206,
+                "percentile": 90.31,
+                "centered_score": 0.403143,
+                "contribution": 0.201571
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.04273272,
+                "percentile": 90.1,
+                "centered_score": 0.401031,
+                "contribution": 0.100258
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01414596,
+                "percentile": 99.15,
+                "centered_score": 0.491501,
+                "contribution": 0.122875
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sh601368",
@@ -31840,12 +33345,57 @@
           "name": "绿城水务",
           "target_weight": 10.0,
           "price": 4.56,
-          "change_pct": 4.59,
+          "change_pct": -1.51,
           "float_cap_billion": 40.26,
           "total_cap_billion": 40.26,
           "shares": 867100,
           "market_val": 3953976.0,
-          "factor_score": 0.4137
+          "factor_score": 0.4137,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.413733,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -16.87099593,
+                "percentile": 99.61,
+                "centered_score": 0.496136,
+                "contribution": 0.248068
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.0090695,
+                "percentile": 70.41,
+                "centered_score": 0.204124,
+                "contribution": 0.051031
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01618751,
+                "percentile": 95.85,
+                "centered_score": 0.458537,
+                "contribution": 0.114634
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sz002088",
@@ -31853,12 +33403,57 @@
           "name": "鲁阳节能",
           "target_weight": 10.0,
           "price": 8.12,
-          "change_pct": 8.15,
+          "change_pct": -0.85,
           "float_cap_billion": 41.08,
           "total_cap_billion": 41.37,
           "shares": 486900,
           "market_val": 3953628.0,
-          "factor_score": 0.4238
+          "factor_score": 0.4238,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.423789,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.30340912,
+                "percentile": 95.8,
+                "centered_score": 0.458011,
+                "contribution": 0.229006
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.02041245,
+                "percentile": 79.41,
+                "centered_score": 0.294072,
+                "contribution": 0.073518
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01460177,
+                "percentile": 98.51,
+                "centered_score": 0.485063,
+                "contribution": 0.121266
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sh603173",
@@ -31866,12 +33461,57 @@
           "name": "福斯达",
           "target_weight": 10.0,
           "price": 30.0,
-          "change_pct": 31.01,
+          "change_pct": -3.82,
           "float_cap_billion": 48.0,
           "total_cap_billion": 48.0,
           "shares": 131800,
           "market_val": 3954000.0,
-          "factor_score": 0.4229
+          "factor_score": 0.4229,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.422907,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.27978175,
+                "percentile": 96.03,
+                "centered_score": 0.46033,
+                "contribution": 0.230165
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.04012674,
+                "percentile": 89.12,
+                "centered_score": 0.391237,
+                "contribution": 0.097809
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01882957,
+                "percentile": 87.97,
+                "centered_score": 0.379732,
+                "contribution": 0.094933
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sh688819",
@@ -31879,12 +33519,57 @@
           "name": "天能股份",
           "target_weight": 10.0,
           "price": 21.26,
-          "change_pct": 21.48,
+          "change_pct": -1.67,
           "float_cap_billion": 206.67,
           "total_cap_billion": 206.67,
           "shares": 186000,
           "market_val": 3954360.0,
-          "factor_score": 0.4132
+          "factor_score": 0.4132,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.41324,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.67560266,
+                "percentile": 88.85,
+                "centered_score": 0.38846,
+                "contribution": 0.19423
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.0397073,
+                "percentile": 88.97,
+                "centered_score": 0.389691,
+                "contribution": 0.097423
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01453169,
+                "percentile": 98.64,
+                "centered_score": 0.486351,
+                "contribution": 0.121588
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         }
       ],
       "rebalance_history": [
@@ -39841,6 +41526,19 @@
         "min_cap": 13.23,
         "max_cap": 206.67
       },
+      "current_period": {
+        "signal_date": "2026-09-02",
+        "execution_date": null,
+        "as_of": "2026-09-02",
+        "status": "pending",
+        "trading_days_elapsed": 0,
+        "trading_days_total": 10,
+        "trading_days_remaining": 10,
+        "entry_basis": null,
+        "entry_basis_label": null,
+        "return_pct": null,
+        "returns_by_code": {}
+      },
       "current_holdings": [
         {
           "code": "sz301469",
@@ -39848,12 +41546,57 @@
           "name": "恒达新材",
           "target_weight": 3.33,
           "price": 28.87,
-          "change_pct": 29.04,
+          "change_pct": -1.13,
           "float_cap_billion": 13.23,
           "total_cap_billion": 25.83,
           "shares": 45500,
           "market_val": 1313585.0,
-          "factor_score": 0.4273
+          "factor_score": 0.4273,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.42729,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.41560979,
+                "percentile": 93.89,
+                "centered_score": 0.438949,
+                "contribution": 0.219474
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.0539456,
+                "percentile": 93.09,
+                "centered_score": 0.430928,
+                "contribution": 0.107732
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01825515,
+                "percentile": 90.03,
+                "centered_score": 0.400335,
+                "contribution": 0.100084
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sz301515",
@@ -39861,12 +41604,57 @@
           "name": "港通医疗",
           "target_weight": 3.33,
           "price": 19.81,
-          "change_pct": 19.76,
+          "change_pct": 0.25,
           "float_cap_billion": 13.38,
           "total_cap_billion": 19.81,
           "shares": 66400,
           "market_val": 1315384.0,
-          "factor_score": 0.3927
+          "factor_score": 0.3927,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.392669,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.11048,
+                "percentile": 97.71,
+                "centered_score": 0.477074,
+                "contribution": 0.238537
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.00441396,
+                "percentile": 65.9,
+                "centered_score": 0.159021,
+                "contribution": 0.039755
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01621043,
+                "percentile": 95.75,
+                "centered_score": 0.457507,
+                "contribution": 0.114377
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sh688021",
@@ -39874,12 +41662,57 @@
           "name": "奥福科技",
           "target_weight": 3.33,
           "price": 20.95,
-          "change_pct": 20.92,
+          "change_pct": -0.85,
           "float_cap_billion": 16.01,
           "total_cap_billion": 16.01,
           "shares": 62700,
           "market_val": 1313565.0,
-          "factor_score": 0.398
+          "factor_score": 0.398,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.397951,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.14169754,
+                "percentile": 97.37,
+                "centered_score": 0.473725,
+                "contribution": 0.236862
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.00591981,
+                "percentile": 67.37,
+                "centered_score": 0.173711,
+                "contribution": 0.043428
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01552097,
+                "percentile": 97.06,
+                "centered_score": 0.470641,
+                "contribution": 0.11766
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sz301456",
@@ -39887,12 +41720,57 @@
           "name": "盘古智能",
           "target_weight": 3.33,
           "price": 23.43,
-          "change_pct": 23.73,
+          "change_pct": -1.76,
           "float_cap_billion": 16.06,
           "total_cap_billion": 35.63,
           "shares": 56100,
           "market_val": 1314423.0,
-          "factor_score": 0.3919
+          "factor_score": 0.3919,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.391895,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.11079545,
+                "percentile": 97.68,
+                "centered_score": 0.476816,
+                "contribution": 0.238408
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.00409836,
+                "percentile": 65.52,
+                "centered_score": 0.155155,
+                "contribution": 0.038789
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01618592,
+                "percentile": 95.88,
+                "centered_score": 0.458795,
+                "contribution": 0.114699
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sh688681",
@@ -39900,12 +41778,57 @@
           "name": "科汇股份",
           "target_weight": 3.33,
           "price": 16.46,
-          "change_pct": 16.58,
+          "change_pct": -0.72,
           "float_cap_billion": 17.23,
           "total_cap_billion": 17.23,
           "shares": 79900,
           "market_val": 1315154.0,
-          "factor_score": 0.4424
+          "factor_score": 0.4424,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.442407,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.06475126,
+                "percentile": 98.04,
+                "centered_score": 0.480422,
+                "contribution": 0.240211
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.02837843,
+                "percentile": 83.53,
+                "centered_score": 0.335309,
+                "contribution": 0.083827
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01531842,
+                "percentile": 97.35,
+                "centered_score": 0.473474,
+                "contribution": 0.118369
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sh688013",
@@ -39913,12 +41836,57 @@
           "name": "天臣医疗",
           "target_weight": 3.33,
           "price": 25.0,
-          "change_pct": 25.27,
+          "change_pct": -1.57,
           "float_cap_billion": 20.29,
           "total_cap_billion": 20.29,
           "shares": 52600,
           "market_val": 1315000.0,
-          "factor_score": 0.4154
+          "factor_score": 0.4154,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.415356,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.24217424,
+                "percentile": 96.5,
+                "centered_score": 0.464967,
+                "contribution": 0.232483
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.02035397,
+                "percentile": 79.3,
+                "centered_score": 0.293041,
+                "contribution": 0.07326
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.0170237,
+                "percentile": 93.84,
+                "centered_score": 0.43845,
+                "contribution": 0.109612
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sh688737",
@@ -39926,12 +41894,57 @@
           "name": "中自科技",
           "target_weight": 3.33,
           "price": 17.55,
-          "change_pct": 17.46,
+          "change_pct": -0.23,
           "float_cap_billion": 20.98,
           "total_cap_billion": 20.98,
           "shares": 74900,
           "market_val": 1314495.0,
-          "factor_score": 0.4125
+          "factor_score": 0.4125,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.412472,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -16.89944249,
+                "percentile": 99.38,
+                "centered_score": 0.493818,
+                "contribution": 0.246909
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.02951181,
+                "percentile": 84.07,
+                "centered_score": 0.340722,
+                "contribution": 0.08518
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.02028397,
+                "percentile": 82.15,
+                "centered_score": 0.32153,
+                "contribution": 0.080382
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sh688581",
@@ -39939,12 +41952,57 @@
           "name": "安杰思",
           "target_weight": 3.33,
           "price": 51.28,
-          "change_pct": 52.09,
+          "change_pct": -1.61,
           "float_cap_billion": 21.12,
           "total_cap_billion": 41.4,
           "shares": 25600,
           "market_val": 1312768.0,
-          "factor_score": 0.4094
+          "factor_score": 0.4094,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.409423,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.34188111,
+                "percentile": 95.11,
+                "centered_score": 0.451056,
+                "contribution": 0.225528
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.01444793,
+                "percentile": 75.23,
+                "centered_score": 0.25232,
+                "contribution": 0.06308
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01475948,
+                "percentile": 98.33,
+                "centered_score": 0.48326,
+                "contribution": 0.120815
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sz301220",
@@ -39952,12 +42010,57 @@
           "name": "亚香股份",
           "target_weight": 3.33,
           "price": 27.2,
-          "change_pct": 27.9,
+          "change_pct": -2.26,
           "float_cap_billion": 21.25,
           "total_cap_billion": 30.74,
           "shares": 48300,
           "market_val": 1313760.0,
-          "factor_score": 0.4055
+          "factor_score": 0.4055,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.405534,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.32324257,
+                "percentile": 95.49,
+                "centered_score": 0.45492,
+                "contribution": 0.22746
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.06102484,
+                "percentile": 94.56,
+                "centered_score": 0.445619,
+                "contribution": 0.111405
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.02176239,
+                "percentile": 76.67,
+                "centered_score": 0.266675,
+                "contribution": 0.066669
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sz301283",
@@ -39965,12 +42068,57 @@
           "name": "聚胶股份",
           "target_weight": 3.33,
           "price": 25.01,
-          "change_pct": 25.25,
+          "change_pct": -1.15,
           "float_cap_billion": 22.85,
           "total_cap_billion": 29.07,
           "shares": 52500,
           "market_val": 1313025.0,
-          "factor_score": 0.4065
+          "factor_score": 0.4065,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.406527,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.14772229,
+                "percentile": 97.35,
+                "centered_score": 0.473467,
+                "contribution": 0.236734
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.01321149,
+                "percentile": 74.25,
+                "centered_score": 0.242526,
+                "contribution": 0.060631
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01708144,
+                "percentile": 93.66,
+                "centered_score": 0.436647,
+                "contribution": 0.109162
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sh688113",
@@ -39978,12 +42126,57 @@
           "name": "联测科技",
           "target_weight": 3.33,
           "price": 36.05,
-          "change_pct": 36.02,
+          "change_pct": -1.02,
           "float_cap_billion": 23.22,
           "total_cap_billion": 23.22,
           "shares": 36400,
           "market_val": 1312220.0,
-          "factor_score": 0.4183
+          "factor_score": 0.4183,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.418306,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -16.93520486,
+                "percentile": 99.07,
+                "centered_score": 0.490726,
+                "contribution": 0.245363
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.0102821,
+                "percentile": 71.7,
+                "centered_score": 0.21701,
+                "contribution": 0.054253
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01525847,
+                "percentile": 97.48,
+                "centered_score": 0.474762,
+                "contribution": 0.11869
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sz000055",
@@ -39991,12 +42184,57 @@
           "name": "方大集团",
           "target_weight": 3.33,
           "price": 3.6,
-          "change_pct": 3.63,
+          "change_pct": -1.37,
           "float_cap_billion": 24.33,
           "total_cap_billion": 38.66,
           "shares": 365400,
           "market_val": 1315440.0,
-          "factor_score": 0.3927
+          "factor_score": 0.3927,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.392663,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.22814942,
+                "percentile": 96.65,
+                "centered_score": 0.466512,
+                "contribution": 0.233256
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.00214082,
+                "percentile": 63.84,
+                "centered_score": 0.138402,
+                "contribution": 0.034601
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01253687,
+                "percentile": 99.92,
+                "centered_score": 0.499227,
+                "contribution": 0.124807
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sz301260",
@@ -40004,12 +42242,57 @@
           "name": "格力博",
           "target_weight": 3.33,
           "price": 12.23,
-          "change_pct": 12.25,
+          "change_pct": -1.21,
           "float_cap_billion": 25.13,
           "total_cap_billion": 59.15,
           "shares": 107500,
           "market_val": 1314725.0,
-          "factor_score": 0.4124
+          "factor_score": 0.4124,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.412365,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.35581784,
+                "percentile": 94.85,
+                "centered_score": 0.44848,
+                "contribution": 0.22424
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.10027814,
+                "percentile": 98.4,
+                "centered_score": 0.484021,
+                "contribution": 0.121005
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.0217133,
+                "percentile": 76.85,
+                "centered_score": 0.268478,
+                "contribution": 0.067119
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sh603006",
@@ -40017,12 +42300,57 @@
           "name": "联明股份",
           "target_weight": 3.33,
           "price": 10.97,
-          "change_pct": 11.01,
+          "change_pct": 0.0,
           "float_cap_billion": 27.89,
           "total_cap_billion": 27.89,
           "shares": 119900,
           "market_val": 1315303.0,
-          "factor_score": 0.4215
+          "factor_score": 0.4215,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.421481,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.27535806,
+                "percentile": 96.08,
+                "centered_score": 0.460845,
+                "contribution": 0.230422
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.02912623,
+                "percentile": 83.84,
+                "centered_score": 0.338402,
+                "contribution": 0.084601
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01744788,
+                "percentile": 92.58,
+                "centered_score": 0.425831,
+                "contribution": 0.106458
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sz000529",
@@ -40030,12 +42358,57 @@
           "name": "广弘控股",
           "target_weight": 3.33,
           "price": 5.01,
-          "change_pct": 5.08,
+          "change_pct": -1.96,
           "float_cap_billion": 28.55,
           "total_cap_billion": 29.25,
           "shares": 262500,
           "market_val": 1315125.0,
-          "factor_score": 0.3972
+          "factor_score": 0.3972,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.397249,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -16.9542349,
+                "percentile": 98.89,
+                "centered_score": 0.488923,
+                "contribution": 0.244462
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.0084554,
+                "percentile": 70.0,
+                "centered_score": 0.2,
+                "contribution": 0.05
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01796669,
+                "percentile": 91.12,
+                "centered_score": 0.411151,
+                "contribution": 0.102788
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sh688162",
@@ -40043,12 +42416,57 @@
           "name": "巨一科技",
           "target_weight": 3.33,
           "price": 24.91,
-          "change_pct": 24.51,
+          "change_pct": 0.48,
           "float_cap_billion": 34.15,
           "total_cap_billion": 34.15,
           "shares": 52800,
           "market_val": 1315248.0,
-          "factor_score": 0.3915
+          "factor_score": 0.3915,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.39151,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.31917455,
+                "percentile": 95.54,
+                "centered_score": 0.455435,
+                "contribution": 0.227718
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.00574654,
+                "percentile": 67.24,
+                "centered_score": 0.172423,
+                "contribution": 0.043106
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01481134,
+                "percentile": 98.27,
+                "centered_score": 0.482745,
+                "contribution": 0.120686
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sh605218",
@@ -40056,12 +42474,57 @@
           "name": "伟时电子",
           "target_weight": 3.33,
           "price": 14.23,
-          "change_pct": 14.6,
+          "change_pct": -5.76,
           "float_cap_billion": 34.55,
           "total_cap_billion": 34.55,
           "shares": 92400,
           "market_val": 1314852.0,
-          "factor_score": 0.4055
+          "factor_score": 0.4055,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.405463,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.58380304,
+                "percentile": 90.65,
+                "centered_score": 0.406491,
+                "contribution": 0.203246
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.06071341,
+                "percentile": 94.51,
+                "centered_score": 0.445103,
+                "contribution": 0.111276
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01920822,
+                "percentile": 86.38,
+                "centered_score": 0.363765,
+                "contribution": 0.090941
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sz301289",
@@ -40069,12 +42532,57 @@
           "name": "国缆检测",
           "target_weight": 3.33,
           "price": 44.98,
-          "change_pct": 45.0,
+          "change_pct": -0.57,
           "float_cap_billion": 34.86,
           "total_cap_billion": 35.08,
           "shares": 29200,
           "market_val": 1313416.0,
-          "factor_score": 0.4247
+          "factor_score": 0.4247,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.424704,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.59989206,
+                "percentile": 90.31,
+                "centered_score": 0.403143,
+                "contribution": 0.201571
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.04273272,
+                "percentile": 90.1,
+                "centered_score": 0.401031,
+                "contribution": 0.100258
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01414596,
+                "percentile": 99.15,
+                "centered_score": 0.491501,
+                "contribution": 0.122875
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sh603759",
@@ -40082,12 +42590,57 @@
           "name": "海天股份",
           "target_weight": 3.33,
           "price": 7.65,
-          "change_pct": 7.61,
+          "change_pct": 0.26,
           "float_cap_billion": 35.32,
           "total_cap_billion": 35.32,
           "shares": 171900,
           "market_val": 1315035.0,
-          "factor_score": 0.4017
+          "factor_score": 0.4017,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.401723,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.40919529,
+                "percentile": 93.97,
+                "centered_score": 0.439722,
+                "contribution": 0.219861
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.0405162,
+                "percentile": 89.33,
+                "centered_score": 0.393299,
+                "contribution": 0.098325
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01997405,
+                "percentile": 83.41,
+                "centered_score": 0.334149,
+                "contribution": 0.083537
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sh601368",
@@ -40095,12 +42648,57 @@
           "name": "绿城水务",
           "target_weight": 3.33,
           "price": 4.56,
-          "change_pct": 4.59,
+          "change_pct": -1.51,
           "float_cap_billion": 40.26,
           "total_cap_billion": 40.26,
           "shares": 288400,
           "market_val": 1315104.0,
-          "factor_score": 0.4137
+          "factor_score": 0.4137,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.413733,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -16.87099593,
+                "percentile": 99.61,
+                "centered_score": 0.496136,
+                "contribution": 0.248068
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.0090695,
+                "percentile": 70.41,
+                "centered_score": 0.204124,
+                "contribution": 0.051031
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01618751,
+                "percentile": 95.85,
+                "centered_score": 0.458537,
+                "contribution": 0.114634
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sh688236",
@@ -40108,12 +42706,57 @@
           "name": "春立医疗",
           "target_weight": 3.33,
           "price": 13.98,
-          "change_pct": 14.19,
+          "change_pct": -1.83,
           "float_cap_billion": 40.32,
           "total_cap_billion": 53.62,
           "shares": 94000,
           "market_val": 1314120.0,
-          "factor_score": 0.395
+          "factor_score": 0.395,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.394964,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.3577018,
+                "percentile": 94.8,
+                "centered_score": 0.447965,
+                "contribution": 0.223982
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.04081637,
+                "percentile": 89.48,
+                "centered_score": 0.394845,
+                "contribution": 0.098711
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.02118009,
+                "percentile": 78.91,
+                "centered_score": 0.289081,
+                "contribution": 0.07227
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sz002088",
@@ -40121,12 +42764,57 @@
           "name": "鲁阳节能",
           "target_weight": 3.33,
           "price": 8.12,
-          "change_pct": 8.15,
+          "change_pct": -0.85,
           "float_cap_billion": 41.08,
           "total_cap_billion": 41.37,
           "shares": 162000,
           "market_val": 1315440.0,
-          "factor_score": 0.4238
+          "factor_score": 0.4238,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.423789,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.30340912,
+                "percentile": 95.8,
+                "centered_score": 0.458011,
+                "contribution": 0.229006
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.02041245,
+                "percentile": 79.41,
+                "centered_score": 0.294072,
+                "contribution": 0.073518
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01460177,
+                "percentile": 98.51,
+                "centered_score": 0.485063,
+                "contribution": 0.121266
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sz301268",
@@ -40134,12 +42822,57 @@
           "name": "铭利达",
           "target_weight": 3.33,
           "price": 13.01,
-          "change_pct": 13.1,
+          "change_pct": -1.44,
           "float_cap_billion": 47.17,
           "total_cap_billion": 52.15,
           "shares": 101100,
           "market_val": 1315311.0,
-          "factor_score": 0.4132
+          "factor_score": 0.4132,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.413237,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.64057396,
+                "percentile": 89.52,
+                "centered_score": 0.395157,
+                "contribution": 0.197579
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.03543586,
+                "percentile": 86.91,
+                "centered_score": 0.369072,
+                "contribution": 0.092268
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01392161,
+                "percentile": 99.36,
+                "centered_score": 0.493562,
+                "contribution": 0.12339
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sh603173",
@@ -40147,12 +42880,57 @@
           "name": "福斯达",
           "target_weight": 3.33,
           "price": 30.0,
-          "change_pct": 31.01,
+          "change_pct": -3.82,
           "float_cap_billion": 48.0,
           "total_cap_billion": 48.0,
           "shares": 43800,
           "market_val": 1314000.0,
-          "factor_score": 0.4229
+          "factor_score": 0.4229,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.422907,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.27978175,
+                "percentile": 96.03,
+                "centered_score": 0.46033,
+                "contribution": 0.230165
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.04012674,
+                "percentile": 89.12,
+                "centered_score": 0.391237,
+                "contribution": 0.097809
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01882957,
+                "percentile": 87.97,
+                "centered_score": 0.379732,
+                "contribution": 0.094933
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sh600939",
@@ -40160,12 +42938,57 @@
           "name": "重庆建工",
           "target_weight": 3.33,
           "price": 2.66,
-          "change_pct": 2.69,
+          "change_pct": -1.48,
           "float_cap_billion": 50.61,
           "total_cap_billion": 50.61,
           "shares": 494500,
           "market_val": 1315370.0,
-          "factor_score": 0.393
+          "factor_score": 0.393,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.392988,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.17136958,
+                "percentile": 97.14,
+                "centered_score": 0.471406,
+                "contribution": 0.235703
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.00333667,
+                "percentile": 64.77,
+                "centered_score": 0.14768,
+                "contribution": 0.03692
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01485462,
+                "percentile": 98.15,
+                "centered_score": 0.481458,
+                "contribution": 0.120364
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sh600279",
@@ -40173,12 +42996,57 @@
           "name": "重庆港",
           "target_weight": 3.33,
           "price": 4.37,
-          "change_pct": 4.37,
+          "change_pct": -0.46,
           "float_cap_billion": 51.87,
           "total_cap_billion": 51.87,
           "shares": 301000,
           "market_val": 1315370.0,
-          "factor_score": 0.3948
+          "factor_score": 0.3948,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.394798,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.19328564,
+                "percentile": 96.96,
+                "centered_score": 0.469603,
+                "contribution": 0.234802
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.00713074,
+                "percentile": 68.74,
+                "centered_score": 0.187371,
+                "contribution": 0.046843
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01638027,
+                "percentile": 95.26,
+                "centered_score": 0.452614,
+                "contribution": 0.113153
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sh600826",
@@ -40186,12 +43054,57 @@
           "name": "兰生股份",
           "target_weight": 3.33,
           "price": 7.69,
-          "change_pct": 7.71,
+          "change_pct": -0.9,
           "float_cap_billion": 55.69,
           "total_cap_billion": 55.69,
           "shares": 171000,
           "market_val": 1314990.0,
-          "factor_score": 0.3941
+          "factor_score": 0.3941,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.394117,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.43549115,
+                "percentile": 93.53,
+                "centered_score": 0.435343,
+                "contribution": 0.217671
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.03183603,
+                "percentile": 84.92,
+                "centered_score": 0.349227,
+                "contribution": 0.087307
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01942748,
+                "percentile": 85.66,
+                "centered_score": 0.356554,
+                "contribution": 0.089139
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sh603013",
@@ -40199,12 +43112,57 @@
           "name": "亚普股份",
           "target_weight": 3.33,
           "price": 14.72,
-          "change_pct": 14.68,
+          "change_pct": -0.47,
           "float_cap_billion": 74.81,
           "total_cap_billion": 74.81,
           "shares": 89300,
           "market_val": 1314496.0,
-          "factor_score": 0.406
+          "factor_score": 0.406,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.40604,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.76291268,
+                "percentile": 86.42,
+                "centered_score": 0.364245,
+                "contribution": 0.182123
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.07234889,
+                "percentile": 96.29,
+                "centered_score": 0.462887,
+                "contribution": 0.115722
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01717657,
+                "percentile": 93.28,
+                "centered_score": 0.432784,
+                "contribution": 0.108196
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sh688161",
@@ -40212,12 +43170,57 @@
           "name": "威高骨科",
           "target_weight": 3.33,
           "price": 21.68,
-          "change_pct": 21.77,
+          "change_pct": -1.45,
           "float_cap_billion": 86.72,
           "total_cap_billion": 86.72,
           "shares": 60600,
           "market_val": 1313808.0,
-          "factor_score": 0.4123
+          "factor_score": 0.4123,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.412263,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.10914343,
+                "percentile": 97.73,
+                "centered_score": 0.477331,
+                "contribution": 0.238666
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.01724935,
+                "percentile": 77.29,
+                "centered_score": 0.272938,
+                "contribution": 0.068235
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01764823,
+                "percentile": 92.15,
+                "centered_score": 0.421452,
+                "contribution": 0.105363
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         },
         {
           "code": "sh688819",
@@ -40225,12 +43228,57 @@
           "name": "天能股份",
           "target_weight": 3.33,
           "price": 21.26,
-          "change_pct": 21.48,
+          "change_pct": -1.67,
           "float_cap_billion": 206.67,
           "total_cap_billion": 206.67,
           "shares": 61800,
           "market_val": 1313868.0,
-          "factor_score": 0.4132
+          "factor_score": 0.4132,
+          "quote_time": "2026-09-02 收盘",
+          "factor_breakdown": {
+            "as_of": "2026-09-02",
+            "total_score": 0.41324,
+            "items": [
+              {
+                "key": "liqsize20",
+                "label": "20 日成交额规模",
+                "short_label": "小盘规模（成交额代理）",
+                "direction": "过去 20 日平均成交额越小，得分越高",
+                "formula": "-ln(mean(成交额, 20日))",
+                "weight": 1.0,
+                "raw_value": -17.67560266,
+                "percentile": 88.85,
+                "centered_score": 0.38846,
+                "contribution": 0.19423
+              },
+              {
+                "key": "rev5",
+                "label": "5 日短期反转",
+                "short_label": "短期反转",
+                "direction": "过去 5 日涨幅越低，得分越高",
+                "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+                "weight": 0.5,
+                "raw_value": 0.0397073,
+                "percentile": 88.97,
+                "centered_score": 0.389691,
+                "contribution": 0.097423
+              },
+              {
+                "key": "ivol60",
+                "label": "60 日低特质波动",
+                "short_label": "低特质波动",
+                "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+                "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+                "weight": 0.5,
+                "raw_value": -0.01453169,
+                "percentile": 98.64,
+                "centered_score": 0.486351,
+                "contribution": 0.121588
+              }
+            ]
+          },
+          "period_return_pct": null,
+          "period_entry_price": null
         }
       ],
       "rebalance_history": [
@@ -48850,6 +51898,40 @@
           "hs300_drawdown": -21.69
         }
       ]
+    }
+  },
+  "factor_methodology": {
+    "score_range": [
+      -0.5,
+      0.5
+    ],
+    "weight_sum": 2.0,
+    "formula": "[1.0×(小盘百分位-0.5) + 0.5×(反转百分位-0.5) + 0.5×(低特质波动百分位-0.5)] / 2.0",
+    "ranking": "每个交易日只在当日可投资股票池内做截面百分位排名；百分位越高越好",
+    "timing": "T 日收盘后计算，T+1 日开盘执行",
+    "selection": "每 10 个交易日调仓；已持仓进入前 2N 名即可保留，再用高分股补足 N 只",
+    "factors": {
+      "liqsize20": {
+        "label": "20 日成交额规模",
+        "short_label": "小盘规模（成交额代理）",
+        "direction": "过去 20 日平均成交额越小，得分越高",
+        "formula": "-ln(mean(成交额, 20日))",
+        "weight": 1.0
+      },
+      "rev5": {
+        "label": "5 日短期反转",
+        "short_label": "短期反转",
+        "direction": "过去 5 日涨幅越低，得分越高",
+        "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+        "weight": 0.5
+      },
+      "ivol60": {
+        "label": "60 日低特质波动",
+        "short_label": "低特质波动",
+        "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+        "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+        "weight": 0.5
+      }
     }
   }
 }

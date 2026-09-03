@@ -33,7 +33,7 @@ PROJECT_ROOT = os.path.dirname(AQ_ROOT)
 sys.path.insert(0, AQ_ROOT)
 sys.path.insert(0, PROJECT_ROOT)
 
-from aq import backtest, config, factors, metrics, panel, strategy, universe, validate
+from aq import backtest, config, factors, live_smallcap, metrics, panel, strategy, universe, validate
 
 # 接入报警系统
 try:
@@ -88,22 +88,15 @@ def fetch_live_snapshots(codes: list[str]) -> dict[str, dict]:
                     continue
                 parts = line.split("~")
                 if len(parts) > 45:
-                    raw_code = parts[2]
+                    quote = live_smallcap.parse_tencent_snapshot_parts(parts)
+                    raw_code = quote["raw_code"]
                     prefix = "sh" if raw_code.startswith("6") or raw_code.startswith("9") else "sz" if raw_code.startswith("0") or raw_code.startswith("3") else "bj"
                     full_code = f"{prefix}{raw_code}"
                     
-                    price = float(parts[3]) if parts[3] else 0.0
-                    chg_pct = float(parts[5]) if parts[5] else 0.0
-                    float_cap = float(parts[44]) if parts[44] else 0.0
-                    total_cap = float(parts[45]) if parts[45] else 0.0
-                    name = parts[1].replace(" ", "")
-
                     info[full_code] = {
-                        "name": name,
-                        "price": price,
-                        "change_pct": chg_pct,
-                        "float_cap_billion": round(float_cap, 2),
-                        "total_cap_billion": round(total_cap, 2),
+                        key: value
+                        for key, value in quote.items()
+                        if key != "raw_code"
                     }
         except Exception as e:
             print(f"[WARN] 获取腾讯行情快照失败: {e}", file=sys.stderr)
@@ -137,6 +130,10 @@ def build_smallcap_deliverable(
 
     weights = {"liqsize20": 1.0, "rev5": 0.5, "ivol60": 0.5}
     score = strategy.composite(fp, weights, inv_mask)
+    ranked_factors = {
+        name: strategy.masked_rank_score(fp[name], inv_mask)
+        for name in weights
+    }
     rb_dates = strategy.rebalance_dates(dates, 10, start="2019-01-02", end=dates[-1])
 
     # 1. 灵敏度矩阵测试: N in [3, 5, 6, 7, 8, 10, 15, 20, 30]
@@ -259,16 +256,36 @@ def build_smallcap_deliverable(
                 "target_weight": target_wt_val,
                 "price": round(px, 2),
                 "change_pct": round(chg, 2),
+                "quote_time": snap.get("quote_time", ""),
                 "float_cap_billion": f_cap,
                 "total_cap_billion": t_cap,
                 "shares": shares,
                 "market_val": round(shares * px, 2),
                 "factor_score": round(f_score, 4),
+                "factor_breakdown": live_smallcap.factor_breakdown_at(
+                    {name: fp[name] for name in weights},
+                    ranked_factors,
+                    latest_rb_dt,
+                    code,
+                ),
             })
             if len(holdings_list) == n:
                 break
 
         holdings_list = sorted(holdings_list, key=lambda x: (x["float_cap_billion"] if x["float_cap_billion"] > 0 else 9999))
+
+        current_period = live_smallcap.current_period_summary(
+            close,
+            [item["code"] for item in holdings_list],
+            latest_rb_dt,
+            dates[-1],
+            close_raw=panels.get("close_raw"),
+            open_panel=panels.get("open"),
+        )
+        for item in holdings_list:
+            period = current_period["returns_by_code"].get(item["code"], {})
+            item["period_return_pct"] = period.get("return_pct")
+            item["period_entry_price"] = period.get("entry_price")
 
         caps = [h["float_cap_billion"] for h in holdings_list if h["float_cap_billion"] > 0]
         cap_dist = {
@@ -332,6 +349,7 @@ def build_smallcap_deliverable(
                 "beta_small_style": round(reg_style.get("beta_小盘风格", 0.0), 2),
             },
             "cap_distribution": cap_dist,
+            "current_period": current_period,
             "current_holdings": holdings_list,
             "rebalance_history": rebalance_hist,
             "equity_curve": curve,
@@ -356,6 +374,7 @@ def build_smallcap_deliverable(
             "execution": "T 日收盘定权重，T+1 日开盘撮合成交 (严格无未来函数)",
             "friction": "双边佣金万2.5 + 印花税(历史动态税率) + 滑点冲击 0.1%",
         },
+        "factor_methodology": live_smallcap.factor_methodology(),
         "sensitivity_table": sensitivity_table,
         "configs": config_outputs,
     }

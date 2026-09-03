@@ -24,7 +24,7 @@ import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 
 from aq import backtest, config, datasource as ds, metrics, panel, strategy, universe  # noqa: E402
-from strategies_ext import common  # noqa: E402
+from strategies_ext import common, datalayer  # noqa: E402
 
 START, END = "2019-01-02", "2026-09-01"
 VERIFIED = os.path.join(config.BASE_DIR, "verified")
@@ -100,17 +100,22 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--only", default="")
     ap.add_argument("--out", default="ext_summary.json")
+    ap.add_argument("--data", default="real", choices=["real", "proxy"],
+                    help="real = baostock 补齐的真实市值/ST/成交额与 PIT 指数成分；"
+                         "proxy = 上一轮的代理口径，用来把两者的差异量化出来")
     ap.add_argument("--pool", default="base", choices=["base", "wide"],
                     help="wide = 取消「剔除最不活跃 20%」与 2000 万成交额下限，"
                          "还原平台策略真实用的全A池（含极端微盘）")
     args = ap.parse_args()
 
-    p = panel.load_panels()
+    p = datalayer.load(args.data)
     dates = p["close"].index
     if args.pool == "wide":
-        base_mask = universe.investable(p, min_amount=3e6, liquidity_top_pct=1.0)
+        base_mask = datalayer.investable(p, args.data, min_amount=3e6, liquidity_top_pct=1.0)
     else:
-        base_mask = universe.investable(p)
+        base_mask = datalayer.investable(p, args.data)
+    print(f"数据口径={args.data}  市值口径={p.get('mktcap_kind', '成交额代理')}  "
+          f"池内均值 {int(base_mask.loc['2019':].sum(axis=1).mean())} 只", flush=True)
     bench_ew = universe.equal_weight_benchmark(p, base_mask)
     win = dates[(dates >= pd.Timestamp(START)) & (dates <= pd.Timestamp(END))]
     bench_ew = bench_ew.reindex(win).fillna(0.0)
@@ -127,7 +132,7 @@ def main():
         r = res.ret.reindex(win).fillna(0.0)
         st = metrics.perf_stats(r, bench_ew, meta["title"])
         pool_ew = universe.equal_weight_benchmark(p, mask).reindex(win).fillna(0.0)
-        suffix = "" if args.pool == "base" else "_wide"
+        suffix = ("" if args.pool == "base" else "_wide") + ("" if args.data == "real" else "_proxy")
         row = {
             "key": meta["key"] + suffix, "title": meta["title"], "family": meta["family"],
             "source": meta["source"], "claimed": meta["claimed"],
@@ -162,10 +167,19 @@ def main():
            metrics.perf_stats(zz500, hs300, "中证500"),
            metrics.perf_stats(hs300, hs300, "沪深300")]
     print("\n" + metrics.stats_frame(ref).to_string(index=False))
+    sfx = "" if args.data == "real" else "_proxy"
     pd.DataFrame({"date": win.strftime("%Y-%m-%d"), "ret": bench_ew.to_numpy()}).to_csv(
-        os.path.join(VERIFIED, "bench_ew_ext.csv"), index=False)
+        os.path.join(VERIFIED, f"bench_ew_ext{sfx}.csv"), index=False)
+    # 随机组合置换检验用的宽表面板：池内个股日收益（池外为空）
+    rr = (p["close"] / p["close"].shift(1) - 1.0).reindex(win)
+    rr = rr.where(base_mask.reindex(win).shift(1).fillna(False))
+    rr = rr.loc[:, rr.notna().sum() >= 250]
+    rr.index.name = "date"
+    rr.round(6).to_csv(os.path.join(VERIFIED, f"universe_panel{sfx}.csv"))
+    print(f"随机组合面板 {rr.shape[0]} 日 × {rr.shape[1]} 只", flush=True)
     pd.DataFrame({"date": win.strftime("%Y-%m-%d"), "ret": hs300.to_numpy()}).to_csv(
         os.path.join(VERIFIED, "bench_hs300_ext.csv"), index=False)
+    args.out = args.out if args.data == "real" else args.out.replace(".json", "_proxy.json")
     path = os.path.join(VERIFIED, args.out)
     prev = json.load(open(path))["策略"] if os.path.exists(path) else []
     keep = [x for x in prev if x["key"] not in {s["key"] for s in summary}]

@@ -15,6 +15,7 @@ const publicRoutes = [
   '/tools',
   '/tools/merge-images',
   '/tools/compress-images',
+  '/tools/element-scroll-capture',
   '/pe',
   '/ashare-strategy',
 ]

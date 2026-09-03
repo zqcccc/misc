@@ -20,7 +20,77 @@ from . import factors, panel, strategy, universe
 
 ROLLING_DAYS = 400
 CONFIG_SIZES = (7, 8, 6, 5, 10, 30)
+REBALANCE_FREQUENCY = 10
 FACTOR_WEIGHTS = {"liqsize20": 1.0, "rev5": 0.5, "ivol60": 0.5}
+FACTOR_META = {
+    "liqsize20": {
+        "label": "20 日成交额规模",
+        "short_label": "小盘规模（成交额代理）",
+        "direction": "过去 20 日平均成交额越小，得分越高",
+        "formula": "-ln(mean(成交额, 20日))",
+    },
+    "rev5": {
+        "label": "5 日短期反转",
+        "short_label": "短期反转",
+        "direction": "过去 5 日涨幅越低，得分越高",
+        "formula": "-(收盘价_t / 收盘价_t-5 - 1)",
+    },
+    "ivol60": {
+        "label": "60 日低特质波动",
+        "short_label": "低特质波动",
+        "direction": "剔除全 A 等权市场波动后，残差波动越低，得分越高",
+        "formula": "-std(日收益 - beta × 全A等权收益, 60日)",
+    },
+}
+
+
+def factor_methodology() -> dict[str, Any]:
+    """前端可直接展示的生产因子口径；与实际计算常量共用同一来源。"""
+    weight_sum = sum(abs(weight) for weight in FACTOR_WEIGHTS.values())
+    return {
+        "score_range": [-0.5, 0.5],
+        "weight_sum": weight_sum,
+        "formula": (
+            "[1.0×(小盘百分位-0.5) + 0.5×(反转百分位-0.5) "
+            "+ 0.5×(低特质波动百分位-0.5)] / 2.0"
+        ),
+        "ranking": "每个交易日只在当日可投资股票池内做截面百分位排名；百分位越高越好",
+        "timing": "T 日收盘后计算，T+1 日开盘执行",
+        "selection": "每 10 个交易日调仓；已持仓进入前 2N 名即可保留，再用高分股补足 N 只",
+        "factors": {
+            name: {**FACTOR_META[name], "weight": weight}
+            for name, weight in FACTOR_WEIGHTS.items()
+        },
+    }
+
+
+def parse_tencent_snapshot_parts(parts: list[str]) -> dict[str, Any]:
+    """解析 qt.gtimg.cn 快照字段，避免把 parts[5] 的开盘价误当涨跌幅。"""
+    if len(parts) <= 45:
+        raise ValueError(f"腾讯行情字段不足: {len(parts)}")
+
+    def number(index: int) -> float:
+        try:
+            return float(parts[index]) if parts[index] else 0.0
+        except (TypeError, ValueError):
+            return 0.0
+
+    price = number(3)
+    previous_close = number(4)
+    change_pct = number(32)
+    if not parts[32] and previous_close > 0:
+        change_pct = (price / previous_close - 1.0) * 100.0
+    return {
+        "name": parts[1].replace(" ", ""),
+        "raw_code": parts[2],
+        "price": price,
+        "previous_close": previous_close,
+        "open": number(5),
+        "change_pct": change_pct,
+        "quote_time": parts[30],
+        "float_cap_billion": round(number(44), 2),
+        "total_cap_billion": round(number(45), 2),
+    }
 
 
 def atomic_write_json(path: str | Path, value: Any) -> None:
@@ -237,11 +307,11 @@ def validate_latest_cross_section(
     }
 
 
-def production_scores(
+def production_score_breakdown(
     panels: dict[str, pd.DataFrame],
     mature_codes: set[str] | None = None,
-) -> pd.DataFrame:
-    """只计算线上策略使用的三个因子，口径与全量研究实现完全一致。"""
+) -> tuple[pd.DataFrame, dict[str, pd.DataFrame], dict[str, pd.DataFrame]]:
+    """返回复合总分、三个原始因子及其居中截面百分位。"""
     close = panels["close"]
     amount = panels["amount"]
     minimal = {"close": close, "amount": amount}
@@ -263,7 +333,144 @@ def production_scores(
         "rev5": factors.rev(close, 5),
         "ivol60": factors.idio_vol(ret, 60),
     }
-    return strategy.composite(selected, FACTOR_WEIGHTS, mask)
+    ranked = {
+        name: strategy.masked_rank_score(factor, mask)
+        for name, factor in selected.items()
+    }
+    return strategy.composite(selected, FACTOR_WEIGHTS, mask), selected, ranked
+
+
+def production_scores(
+    panels: dict[str, pd.DataFrame],
+    mature_codes: set[str] | None = None,
+) -> pd.DataFrame:
+    """只计算线上策略使用的三个因子，口径与全量研究实现完全一致。"""
+    scores, _, _ = production_score_breakdown(panels, mature_codes=mature_codes)
+    return scores
+
+
+def factor_breakdown_at(
+    raw_factors: dict[str, pd.DataFrame],
+    ranked_factors: dict[str, pd.DataFrame],
+    date: str | pd.Timestamp,
+    code: str,
+) -> dict[str, Any]:
+    """把一个标的在指定交易日的因子拆解成可审计的 JSON。"""
+    timestamp = pd.Timestamp(date)
+    weight_sum = sum(abs(weight) for weight in FACTOR_WEIGHTS.values())
+    items = []
+    total_score = 0.0
+    for name, weight in FACTOR_WEIGHTS.items():
+        raw_value = float(raw_factors[name].at[timestamp, code])
+        centered_score = float(ranked_factors[name].at[timestamp, code])
+        raw_is_valid = np.isfinite(raw_value)
+        score_is_valid = np.isfinite(centered_score)
+        contribution = centered_score * weight / weight_sum if score_is_valid else 0.0
+        total_score += contribution
+        items.append({
+            "key": name,
+            **FACTOR_META[name],
+            "weight": weight,
+            "raw_value": round(raw_value, 8) if raw_is_valid else None,
+            "percentile": round((centered_score + 0.5) * 100.0, 2) if score_is_valid else None,
+            "centered_score": round(centered_score, 6) if score_is_valid else None,
+            "contribution": round(contribution, 6),
+        })
+    return {
+        "as_of": str(timestamp.date()),
+        "total_score": round(total_score, 6),
+        "items": items,
+    }
+
+
+ENTRY_BASIS_T1_OPEN = "t1_open"
+ENTRY_BASIS_SIGNAL_CLOSE = "signal_close"
+PERIOD_STATUS_PENDING = "pending"
+PERIOD_STATUS_RUNNING = "running"
+ENTRY_BASIS_META = {
+    ENTRY_BASIS_T1_OPEN: "T+1 开盘价（与回测撮合价一致）",
+    ENTRY_BASIS_SIGNAL_CLOSE: "信号日收盘价（该数据源无开盘价，含 T+1 隔夜跳空偏差）",
+}
+
+
+def current_period_summary(
+    close: pd.DataFrame,
+    codes: list[str],
+    signal_date: str | pd.Timestamp,
+    latest_date: str | pd.Timestamp,
+    close_raw: pd.DataFrame | None = None,
+    open_panel: pd.DataFrame | None = None,
+    frequency: int = REBALANCE_FREQUENCY,
+) -> dict[str, Any]:
+    """本期（上一调仓信号之后）的持仓收益，口径与 T+1 开盘执行的实盘一致。
+
+    信号在 T 日收盘生成，实际建仓在 T+1 开盘，因此 T 日当天本期收益还不存在，
+    此时返回 pending 状态，让前端明确区分"已下单持有"和"明早才买"。
+    """
+    dates = pd.DatetimeIndex(close.index)
+    signal_ts = pd.Timestamp(signal_date)
+    latest_ts = pd.Timestamp(latest_date)
+    after_signal = dates[(dates > signal_ts) & (dates <= latest_ts)]
+    elapsed = int(len(after_signal))
+
+    summary: dict[str, Any] = {
+        "signal_date": str(signal_ts.date()),
+        "execution_date": str(after_signal[0].date()) if elapsed else None,
+        "as_of": str(latest_ts.date()),
+        "status": PERIOD_STATUS_RUNNING if elapsed else PERIOD_STATUS_PENDING,
+        "trading_days_elapsed": elapsed,
+        "trading_days_total": frequency,
+        "trading_days_remaining": max(frequency - elapsed, 0),
+        "entry_date": None,
+        "entry_basis": None,
+        "entry_basis_label": None,
+        "return_pct": None,
+        "returns_by_code": {},
+    }
+    if not elapsed:
+        return summary
+
+    execution_ts = after_signal[0]
+    use_open = (
+        open_panel is not None
+        and execution_ts in open_panel.index
+        and not open_panel.loc[execution_ts, open_panel.columns.intersection(codes)].isna().all()
+    )
+    basis = ENTRY_BASIS_T1_OPEN if use_open else ENTRY_BASIS_SIGNAL_CLOSE
+    summary["entry_basis"] = basis
+    summary["entry_basis_label"] = ENTRY_BASIS_META[basis]
+
+    # 回退口径要落在面板真实存在的交易日上：滚动缓存截断或调仓日停市时，
+    # 直接 .loc[signal_ts] 会抛 KeyError 把守护进程带崩。
+    prior_dates = dates[dates <= signal_ts]
+    entry_ts = execution_ts if use_open else (prior_dates[-1] if len(prior_dates) else dates[0])
+    summary["entry_date"] = str(pd.Timestamp(entry_ts).date())
+    entry_adjusted = (open_panel if use_open else close).loc[entry_ts]
+    returns = []
+    for code in codes:
+        if code not in close.columns:
+            continue
+        entry_price = float(entry_adjusted.get(code, np.nan))
+        last_price = float(close.at[latest_ts, code]) if code in close.columns else np.nan
+        if not (np.isfinite(entry_price) and np.isfinite(last_price) and entry_price > 0):
+            continue
+        ret_pct = (last_price / entry_price - 1.0) * 100.0
+        returns.append(ret_pct)
+        # 后复权价没有实盘含义，另外给一份未复权的委托参考价。
+        display_price = None
+        if close_raw is not None and code in close_raw.columns:
+            adjusted_close = float(close.at[entry_ts, code])
+            raw_close = float(close_raw.at[entry_ts, code])
+            if np.isfinite(adjusted_close) and np.isfinite(raw_close) and adjusted_close > 0:
+                display_price = round(entry_price * raw_close / adjusted_close, 2)
+        summary["returns_by_code"][code] = {
+            "entry_price": display_price,
+            "return_pct": round(ret_pct, 2),
+        }
+
+    if returns:
+        summary["return_pct"] = round(float(np.mean(returns)), 2)
+    return summary
 
 
 def buffered_select(score: pd.Series, held: list[str], top_n: int, buffer_mult: float = 2.0) -> list[str]:
@@ -286,7 +493,7 @@ def rebalance_dates_after(
     trading_dates: pd.DatetimeIndex,
     last_rebalance_date: str | pd.Timestamp,
     through_date: str | pd.Timestamp,
-    frequency: int = 10,
+    frequency: int = REBALANCE_FREQUENCY,
 ) -> list[pd.Timestamp]:
     """沿用上一调仓日锚点，避免滚动窗口截短后调仓相位漂移。"""
     last_rb = pd.Timestamp(last_rebalance_date)

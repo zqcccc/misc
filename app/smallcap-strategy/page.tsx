@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { allocatePortfolio, formatHoldingExecution } from './allocation'
 
 function fmtPct(v: number | undefined | null, digits = 2): string {
   if (v == null || Number.isNaN(v)) return '-'
@@ -13,57 +14,48 @@ function fmtNum(v: number | undefined | null, digits = 2): string {
   return v.toFixed(digits)
 }
 
-/**
- * 根据不同板块真实交易规则计算建议股数
- * - 主板 (60/00) & 创业板 (30): 单笔委托必须是 100 股 (1手) 整数倍
- * - 科创板 (688): 单笔委托起购不小于 200 股，超过 200 股后可以以 1 股为单位递增
- */
-function getBoardExecution(code: string, targetValYuan: number, price: number, roundToHundredForKcb = false) {
-  if (price <= 0) return { shares: 0, label: '-', sub: '', isKcb: false }
-  
-  const isKcb = code.startsWith('sh688') || code.startsWith('688')
-  
-  if (isKcb) {
-    if (roundToHundredForKcb) {
-      // 若选择整百股
-      const hands = Math.floor(targetValYuan / (price * 100))
-      const shares = hands * 100
-      if (shares < 200) {
-        return { shares: 0, label: '不足200股起购', sub: '科创板门槛≥200股', isKcb: true }
-      }
-      return {
-        shares,
-        label: `${shares.toLocaleString()} 股 (${hands} 手)`,
-        sub: '科创板·整百股委托',
-        isKcb: true,
-      }
-    } else {
-      // 科创板精准规则：>=200股起，1股递增
-      const exactShares = Math.floor(targetValYuan / price)
-      if (exactShares < 200) {
-        return { shares: 0, label: '不足200股起购', sub: '科创板门槛≥200股', isKcb: true }
-      }
-      return {
-        shares: exactShares,
-        label: `${exactShares.toLocaleString()} 股`,
-        sub: '科创板·1股递增规则',
-        isKcb: true,
-      }
-    }
-  } else {
-    // 主板与创业板：整百股 (1手)
-    const hands = Math.floor(targetValYuan / (price * 100))
-    const shares = hands * 100
-    if (shares < 100) {
-      return { shares: 0, label: '不足1手 (100股)', sub: '主板/创业板门槛', isKcb: false }
-    }
-    return {
-      shares,
-      label: `${hands} 手 (${shares.toLocaleString()} 股)`,
-      sub: '整手 (100股整数倍)',
-      isKcb: false,
-    }
+function fmtSignedNum(v: number | undefined | null, digits = 4): string {
+  if (v == null || Number.isNaN(v)) return '-'
+  return `${v > 0 ? '+' : ''}${v.toFixed(digits)}`
+}
+
+// 本期状态：与 aq/live_smallcap.py 的 PERIOD_STATUS_* 保持一致。
+const PERIOD_STATUS_PENDING = 'pending'
+const ENTRY_BASIS_T1_OPEN = 't1_open'
+const PERIOD_RETURN_LABEL = '本期收益'
+const PERIOD_RETURN_HINT =
+  '口径 =（截至最新交易日收盘的后复权价 ÷ 本期建仓价 − 1）×100%，只统计本轮调仓建仓以来的这一段，'
+  + '与右侧因子分、上方回测年化都不是同一个东西。收益按后复权价计算（含期间分红送转），'
+  + '下方「建仓 ¥x」是同日的未复权委托参考价，直接与现价相除会有小幅出入。'
+
+// 涨跌列口径：来自行情快照的 (最新价 / 前收盘 - 1)，是单日涨跌，不是持有期或调仓周期收益。
+const CHANGE_PCT_LABEL = '快照涨跌'
+const CHANGE_PCT_SUBLABEL = '较前一交易日收盘'
+const CHANGE_PCT_HINT =
+  '口径 =（快照最新价 ÷ 前一交易日收盘价 − 1）×100%，即快照时点所在交易日的单日涨跌幅；'
+  + '不是持有期收益，也不是本调仓周期收益。每行第二排是该行快照时间，收盘后刷新即为当日全天涨跌。'
+
+function fmtQuoteTime(value: string | undefined, fallback: string): string {
+  if (!value) return fallback
+  if (/^\d{14}$/.test(value)) {
+    return `${value.slice(0, 4)}-${value.slice(4, 6)}-${value.slice(6, 8)} ${value.slice(8, 10)}:${value.slice(10, 12)}`
   }
+  return value
+}
+
+function fmtFactorRaw(item: any): string {
+  if (item?.raw_value == null || Number.isNaN(item.raw_value)) return '-'
+  if (item.key === 'liqsize20') {
+    const averageAmount = Math.exp(-item.raw_value)
+    return `20 日均成交额 ¥${(averageAmount / 10000).toFixed(0)} 万`
+  }
+  if (item.key === 'rev5') {
+    return `近 5 日涨跌 ${fmtPct(-item.raw_value * 100)}`
+  }
+  if (item.key === 'ivol60') {
+    return `日残差波动 ${fmtNum(-item.raw_value * 100, 2)}%`
+  }
+  return fmtNum(item.raw_value, 6)
 }
 
 export default function SmallCapStrategyPage() {
@@ -79,14 +71,16 @@ export default function SmallCapStrategyPage() {
 
   // 科创板是否取整百股 (方便部分交易软件委托)
   const [roundKcbHundred, setRoundKcbHundred] = useState(false)
+  const [expandedFactorCode, setExpandedFactorCode] = useState<string | null>(null)
 
   const [searchKey, setSearchKey] = useState('')
-  const [sortField, setSortField] = useState<'float_cap_billion' | 'price' | 'change_pct' | 'factor_score'>('float_cap_billion')
+  const [sortField, setSortField] = useState<'float_cap_billion' | 'price' | 'change_pct' | 'period_return_pct' | 'factor_score'>('float_cap_billion')
   const [sortAsc, setSortAsc] = useState(true)
 
   const equityChartRef = useRef<HTMLDivElement>(null)
   const drawdownChartRef = useRef<HTMLDivElement>(null)
   const capChartRef = useRef<HTMLDivElement>(null)
+  const holdingsTableRef = useRef<HTMLDivElement>(null)
   const chartInstance1 = useRef<any>(null)
   const chartInstance2 = useRef<any>(null)
   const chartInstance3 = useRef<any>(null)
@@ -323,12 +317,28 @@ export default function SmallCapStrategyPage() {
     return list
   }, [curConfig, searchKey, sortField, sortAsc])
 
+  const totalCapitalYuan = capitalWan * 10000
+  const portfolioExecution = useMemo(
+    () => allocatePortfolio(curConfig?.current_holdings || [], totalCapitalYuan, roundKcbHundred),
+    [curConfig, totalCapitalYuan, roundKcbHundred],
+  )
+
   const handleSort = (field: typeof sortField) => {
     if (sortField === field) {
       setSortAsc(!sortAsc)
     } else {
       setSortField(field)
       setSortAsc(true)
+    }
+  }
+
+  const toggleFactorBreakdown = (code: string) => {
+    const nextCode = expandedFactorCode === code ? null : code
+    setExpandedFactorCode(nextCode)
+    if (nextCode) {
+      requestAnimationFrame(() => {
+        holdingsTableRef.current?.scrollTo({ left: 0, behavior: 'smooth' })
+      })
     }
   }
 
@@ -353,10 +363,23 @@ export default function SmallCapStrategyPage() {
   const cap = curConfig.cap_distribution || {}
   const holdings = curConfig.current_holdings || []
   const rbHistory = curConfig.rebalance_history || []
+  // 三态：后端未升级(无字段) / 已出信号但还没到 T+1 建仓 / 本期持仓运行中。
+  // 缺字段不能当成「尚未建仓」，否则老数据会谎报本期没开仓。
+  const currentPeriod = curConfig.current_period || null
+  const hasPeriodData = Boolean(currentPeriod)
+  const isPeriodPending = hasPeriodData && currentPeriod.status === PERIOD_STATUS_PENDING
   const sensitivity = data.sensitivity_table || []
-
-  // 当前模拟总资金 (元)
-  const totalCapitalYuan = (capitalWan || 50) * 10000
+  const factorMethodology = data.factor_methodology || {
+    formula: '[1.0×(小盘百分位-0.5) + 0.5×(反转百分位-0.5) + 0.5×(低特质波动百分位-0.5)] / 2.0',
+    ranking: '每个交易日只在当日可投资股票池内做截面百分位排名；百分位越高越好',
+    timing: 'T 日收盘后计算，T+1 日开盘执行',
+    selection: '每 10 个交易日调仓；已持仓进入前 2N 名即可保留，再用高分股补足 N 只',
+    factors: {
+      liqsize20: { short_label: '小盘规模', weight: 1, formula: '-ln(mean(成交额, 20日))', direction: '过去 20 日平均成交额越小，得分越高' },
+      rev5: { short_label: '短期反转', weight: 0.5, formula: '-(收盘价_t / 收盘价_t-5 - 1)', direction: '过去 5 日涨幅越低，得分越高' },
+      ivol60: { short_label: '低特质波动', weight: 0.5, formula: '-std(日收益 - beta × 全A等权收益, 60日)', direction: '剔除市场波动后，残差波动越低，得分越高' },
+    },
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 space-y-8 font-sans">
@@ -374,7 +397,7 @@ export default function SmallCapStrategyPage() {
             <span>📦</span> {data.strategy_name}
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            小市值规模 (1.0) + 短期反转防追高 (0.5) + 低特质波动 (0.5) | 最新调仓日: <span className="font-semibold text-gray-800 dark:text-gray-200">{data.latest_rebalance_date}</span>
+            成交额规模代理 (1.0) + 短期反转防追高 (0.5) + 低特质波动 (0.5) | 最新调仓日: <span className="font-semibold text-gray-800 dark:text-gray-200">{data.latest_rebalance_date}</span>
           </p>
         </div>
 
@@ -700,7 +723,7 @@ export default function SmallCapStrategyPage() {
               <input
                 type="number"
                 min="1"
-                step="5"
+                step="1"
                 value={capitalWan}
                 onChange={(e) => setCapitalWan(Math.max(1, Number(e.target.value) || 0))}
                 className="text-xs font-bold font-mono px-2 py-1 rounded border dark:border-gray-700 bg-white dark:bg-gray-900 text-amber-600 w-16 text-right focus:outline-none focus:ring-1 focus:ring-amber-500"
@@ -708,7 +731,7 @@ export default function SmallCapStrategyPage() {
               <span className="text-xs text-gray-500">万元</span>
             </div>
             <div className="flex gap-1 ml-1">
-              {[10, 20, 50, 100].map((w) => (
+              {[1, 2, 5, 10, 20, 50, 100].map((w) => (
                 <button
                   key={w}
                   onClick={() => setCapitalWan(w)}
@@ -749,6 +772,149 @@ export default function SmallCapStrategyPage() {
           </div>
         </div>
 
+        {/* 本期周期与收益：区分「信号日」与「真正建仓的 T+1」，避免把回测年化当成当期收益 */}
+        <div className="rounded-lg border border-sky-200 bg-sky-50/60 p-3.5 text-xs text-sky-950 dark:border-sky-900/60 dark:bg-sky-950/20 dark:text-sky-100 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="font-bold text-sm">🗓️ 本期持仓周期与当期收益</h3>
+            <span className="text-[11px] text-sky-700 dark:text-sky-300">
+              每 {currentPeriod?.trading_days_total ?? 10} 个交易日轮动一次
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+            <div className="rounded-md border border-sky-100 bg-white/80 p-2.5 dark:border-sky-900/60 dark:bg-gray-950/30">
+              <div className="text-[10px] text-gray-400">① 信号日 T（收盘定权重）</div>
+              <div className="mt-0.5 font-mono font-bold text-sm">
+                {currentPeriod?.signal_date || data.latest_rebalance_date}
+              </div>
+              <div className="mt-0.5 text-[10px] text-gray-500 dark:text-gray-400">
+                当天收盘后算分选股，当天并不买入
+              </div>
+            </div>
+            <div className="rounded-md border border-sky-100 bg-white/80 p-2.5 dark:border-sky-900/60 dark:bg-gray-950/30">
+              <div className="text-[10px] text-gray-400">② 建仓日 T+1（开盘成交）</div>
+              <div className="mt-0.5 font-mono font-bold text-sm">
+                {currentPeriod?.execution_date || '下一交易日'}
+              </div>
+              <div className="mt-0.5 text-[10px] text-gray-500 dark:text-gray-400">
+                09:15~09:25 集合竞价，以开盘价成交
+              </div>
+            </div>
+            <div className="rounded-md border border-sky-100 bg-white/80 p-2.5 dark:border-sky-900/60 dark:bg-gray-950/30">
+              <div className="text-[10px] text-gray-400">③ 本期已运行</div>
+              <div className="mt-0.5 font-mono font-bold text-sm">
+                {hasPeriodData
+                  ? `${currentPeriod.trading_days_elapsed} / ${currentPeriod.trading_days_total} 个交易日`
+                  : '—'}
+              </div>
+              <div className="mt-0.5 text-[10px] text-gray-500 dark:text-gray-400">
+                {hasPeriodData
+                  ? `再过 ${currentPeriod.trading_days_remaining} 个交易日出下一期信号`
+                  : '每 10 个交易日出一次新信号'}
+              </div>
+            </div>
+            <div
+              title={PERIOD_RETURN_HINT}
+              className="rounded-md border border-sky-100 bg-white/80 p-2.5 dark:border-sky-900/60 dark:bg-gray-950/30"
+            >
+              <div className="text-[10px] text-gray-400">④ {PERIOD_RETURN_LABEL}（等权组合）</div>
+              {!hasPeriodData ? (
+                <div className="mt-0.5 font-mono font-bold text-sm text-gray-400">暂无</div>
+              ) : isPeriodPending ? (
+                <div className="mt-0.5 font-mono font-bold text-sm text-gray-400">尚未建仓</div>
+              ) : (
+                <div
+                  className={`mt-0.5 font-mono font-bold text-lg ${
+                    (currentPeriod.return_pct || 0) > 0
+                      ? 'text-rose-600 dark:text-rose-400'
+                      : (currentPeriod.return_pct || 0) < 0
+                      ? 'text-emerald-600 dark:text-emerald-400'
+                      : 'text-gray-500'
+                  }`}
+                >
+                  {fmtPct(currentPeriod.return_pct)}
+                </div>
+              )}
+              <div className="mt-0.5 text-[10px] text-gray-500 dark:text-gray-400">
+                {!hasPeriodData
+                  ? '数据源尚未提供本期口径'
+                  : isPeriodPending
+                  ? '待 T+1 开盘成交后开始计算'
+                  : `截至 ${currentPeriod.as_of} 收盘`}
+              </div>
+            </div>
+          </div>
+
+          {!hasPeriodData ? (
+            <div className="rounded-md border border-gray-200 bg-white/80 px-3 py-2 text-gray-600 dark:border-gray-700 dark:bg-gray-950/40 dark:text-gray-300">
+              当前数据文件由后端信号服务生成，尚未包含本期收益字段（服务升级后自动出现）。上面的信号日与 T+1 建仓规则依然成立。
+            </div>
+          ) : isPeriodPending ? (
+            <div className="rounded-md border border-amber-200 bg-amber-50/80 px-3 py-2 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
+              ⚠️ 本期还没开始：信号在 {currentPeriod?.signal_date || data.latest_rebalance_date} 收盘才生成，实际要到
+              <strong> 下一个交易日开盘 </strong>才买得进去。所以下表还没有本期收益，「快照涨跌」显示的是信号日当天的单日行情，
+              不代表你这一期赚了或亏了多少。
+            </div>
+          ) : (
+            <div className="rounded-md border border-sky-200/80 bg-white/80 px-3 py-2 leading-relaxed dark:border-sky-900 dark:bg-gray-950/40">
+              建仓价基准：{currentPeriod.entry_basis_label}
+              {currentPeriod.entry_basis !== ENTRY_BASIS_T1_OPEN && '；实盘若在 T+1 开盘成交，收益会与此有偏差'}。
+              组合收益按建仓时等权计算 = 各标的本期收益的算术平均，未扣佣金、印花税与滑点。
+            </div>
+          )}
+
+          <div className="text-gray-600 dark:text-gray-300 leading-relaxed">
+            页面上三个收益不要混：<strong>回测年化/累计净值</strong>是 2019 年以来的历史模拟；
+            <strong>本期收益</strong>是这一轮调仓建仓至今；<strong>快照涨跌</strong>只是最近一次行情快照那天的单日涨跌。
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-violet-200 bg-violet-50/50 p-3.5 text-xs text-violet-950 dark:border-violet-900/60 dark:bg-violet-950/20 dark:text-violet-100 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="font-bold text-sm">🧮 因子得分算法</h3>
+            <span className="text-[11px] text-violet-700 dark:text-violet-300">
+              总分范围 -0.5 ～ +0.5，越高越优
+            </span>
+          </div>
+          <div className="rounded-md border border-violet-200/80 bg-white/80 px-3 py-2 font-mono text-[11px] leading-relaxed dark:border-violet-900 dark:bg-gray-950/40">
+            总分 = {factorMethodology.formula}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            {Object.entries(factorMethodology.factors || {}).map(([key, factor]: [string, any]) => (
+              <div key={key} className="rounded-md border border-violet-100 bg-white/70 p-2.5 dark:border-violet-900/60 dark:bg-gray-950/30">
+                <div className="font-bold flex items-center justify-between gap-2">
+                  <span>{factor.short_label}</span>
+                  <span className="font-mono text-violet-600 dark:text-violet-300">权重 {factor.weight}</span>
+                </div>
+                <div className="mt-1 font-mono text-[10px] text-gray-500 dark:text-gray-400">{factor.formula}</div>
+                <div className="mt-1 text-gray-600 dark:text-gray-300">{factor.direction}</div>
+              </div>
+            ))}
+          </div>
+          <div className="space-y-1 text-gray-600 dark:text-gray-300 leading-relaxed">
+            <div>① {factorMethodology.ranking}</div>
+            <div>② {factorMethodology.selection}</div>
+            <div>③ {factorMethodology.timing}；因此持仓因子分是数据日期的收盘截面分，不是盘中预测值。</div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-amber-200 bg-amber-50/70 px-3 py-2 text-xs text-gray-700 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-gray-200">
+          <span className="font-bold text-amber-800 dark:text-amber-300">整套组合统一分配</span>
+          <span>
+            已分配 <strong>¥{Math.round(portfolioExecution.investedYuan).toLocaleString()}</strong>
+            {' / '}¥{totalCapitalYuan.toLocaleString()}
+          </span>
+          <span>
+            资金利用率 <strong>{fmtNum((portfolioExecution.investedYuan / totalCapitalYuan) * 100, 2)}%</strong>
+          </span>
+          <span>
+            覆盖 <strong>{portfolioExecution.fundedCount}/{holdings.length}</strong> 只
+          </span>
+          <span>
+            剩余现金 <strong>¥{Math.round(portfolioExecution.remainingYuan).toLocaleString()}</strong>
+          </span>
+        </div>
+
         {/* 过滤条 */}
         <div className="flex items-center justify-between gap-3 pt-1">
           <div className="relative">
@@ -772,7 +938,7 @@ export default function SmallCapStrategyPage() {
         </div>
 
         {/* 表格容器 */}
-        <div className="overflow-x-auto">
+        <div ref={holdingsTableRef} className="overflow-x-auto">
           <table className="w-full text-xs text-left">
             <thead className="bg-gray-50 dark:bg-gray-800/60 text-gray-500 dark:text-gray-400 border-y dark:border-gray-800">
               <tr>
@@ -786,9 +952,35 @@ export default function SmallCapStrategyPage() {
                 </th>
                 <th
                   onClick={() => handleSort('change_pct')}
+                  title={CHANGE_PCT_HINT}
                   className="py-2.5 px-3 cursor-pointer hover:text-amber-600"
                 >
-                  今日涨跌 {sortField === 'change_pct' && (sortAsc ? '↑' : '↓')}
+                  <div className="flex items-center gap-1">
+                    <span>{CHANGE_PCT_LABEL} {sortField === 'change_pct' && (sortAsc ? '↑' : '↓')}</span>
+                    <span className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full border border-gray-300 text-[9px] text-gray-400 dark:border-gray-600">
+                      ?
+                    </span>
+                  </div>
+                  <div className="text-[10px] font-normal whitespace-nowrap">{CHANGE_PCT_SUBLABEL}</div>
+                </th>
+                <th
+                  onClick={() => handleSort('period_return_pct')}
+                  title={PERIOD_RETURN_HINT}
+                  className="py-2.5 px-3 cursor-pointer hover:text-amber-600 bg-sky-50/60 dark:bg-sky-950/20"
+                >
+                  <div className="flex items-center gap-1 text-sky-800 dark:text-sky-300 font-bold">
+                    <span>{PERIOD_RETURN_LABEL} {sortField === 'period_return_pct' && (sortAsc ? '↑' : '↓')}</span>
+                    <span className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full border border-sky-300 text-[9px] text-sky-500 dark:border-sky-700">
+                      ?
+                    </span>
+                  </div>
+                  <div className="text-[10px] font-normal whitespace-nowrap">
+                    {!hasPeriodData
+                      ? '数据待升级'
+                      : isPeriodPending
+                      ? '本期待建仓'
+                      : `建仓 ${currentPeriod.execution_date} 起`}
+                  </div>
                 </th>
                 <th
                   onClick={() => handleSort('float_cap_billion')}
@@ -796,7 +988,7 @@ export default function SmallCapStrategyPage() {
                 >
                   流通市值 (亿) {sortField === 'float_cap_billion' && (sortAsc ? '↑' : '↓')}
                 </th>
-                <th className="py-2.5 px-3">目标占比</th>
+                <th className="py-2.5 px-3">模型目标 / 实际占比</th>
                 <th className="py-2.5 px-3 bg-amber-50/60 dark:bg-amber-950/20 text-amber-800 dark:text-amber-300 font-bold">
                   建议委托买入 (已适配板块规则)
                 </th>
@@ -805,7 +997,7 @@ export default function SmallCapStrategyPage() {
                   onClick={() => handleSort('factor_score')}
                   className="py-2.5 px-3 cursor-pointer hover:text-amber-600"
                 >
-                  因子得分 {sortField === 'factor_score' && (sortAsc ? '↑' : '↓')}
+                  因子总分 {sortField === 'factor_score' && (sortAsc ? '↑' : '↓')}
                 </th>
               </tr>
             </thead>
@@ -814,15 +1006,24 @@ export default function SmallCapStrategyPage() {
                 const isPositive = (h.change_pct || 0) > 0
                 const isNegative = (h.change_pct || 0) < 0
                 
-                // 动态计算在用户真实资金规模下的买入股数（科创板 vs 主板/创业板精准规则）
-                const targetValYuan = totalCapitalYuan * (h.target_weight / 100)
-                const px = h.price > 0 ? h.price : 1.0
-                const boardExec = getBoardExecution(h.code, targetValYuan, px, roundKcbHundred)
-                const actualCost = boardExec.shares * px
+                // 统一使用整套组合分配结果，避免逐只向下取整后产生大额闲置资金。
+                const allocated = portfolioExecution.byCode[h.code]
+                const boardExec = formatHoldingExecution(
+                  h.code,
+                  allocated?.shares || 0,
+                  roundKcbHundred,
+                )
+                const actualCost = allocated?.costYuan || 0
+                const actualWeightPct = totalCapitalYuan > 0
+                  ? (actualCost / totalCapitalYuan) * 100
+                  : 0
+
+                const factorBreakdown = h.factor_breakdown
+                const isFactorExpanded = expandedFactorCode === h.code
 
                 return (
+                  <React.Fragment key={h.code}>
                   <tr
-                    key={h.code}
                     className="hover:bg-amber-50/30 dark:hover:bg-amber-950/20 transition-colors"
                   >
                     <td className="py-2.5 px-3 text-gray-400 font-mono">{idx + 1}</td>
@@ -851,7 +1052,34 @@ export default function SmallCapStrategyPage() {
                           : 'text-gray-500'
                       }`}
                     >
-                      {fmtPct(h.change_pct)}
+                      <div>{fmtPct(h.change_pct)}</div>
+                      <div className="text-[10px] font-normal text-gray-400 whitespace-nowrap">
+                        {fmtQuoteTime(h.quote_time, data.latest_trading_date)}
+                      </div>
+                    </td>
+                    <td
+                      className={`py-2.5 px-3 font-mono font-semibold bg-sky-50/30 dark:bg-sky-950/10 ${
+                        (h.period_return_pct || 0) > 0
+                          ? 'text-rose-600 dark:text-rose-400'
+                          : (h.period_return_pct || 0) < 0
+                          ? 'text-emerald-600 dark:text-emerald-400'
+                          : 'text-gray-500'
+                      }`}
+                    >
+                      {h.period_return_pct == null ? (
+                        <div className="text-gray-400 font-normal">
+                          {hasPeriodData ? '待建仓' : '—'}
+                        </div>
+                      ) : (
+                        <div>{fmtPct(h.period_return_pct)}</div>
+                      )}
+                      <div className="text-[10px] font-normal text-gray-400 whitespace-nowrap">
+                        {h.period_entry_price != null
+                          ? `建仓 ¥${fmtNum(h.period_entry_price)}`
+                          : hasPeriodData
+                          ? 'T+1 开盘定价'
+                          : '数据待升级'}
+                      </div>
                     </td>
                     <td className="py-2.5 px-3 font-mono">
                       <span className="font-bold text-amber-700 dark:text-amber-300">
@@ -859,7 +1087,10 @@ export default function SmallCapStrategyPage() {
                       </span>
                     </td>
                     <td className="py-2.5 px-3 font-mono font-semibold text-sky-600 dark:text-sky-400">
-                      {fmtNum(h.target_weight, 2)}%
+                      <div>{fmtNum(h.target_weight, 2)}%</div>
+                      <div className="text-[10px] font-normal text-gray-400">
+                        实配 {fmtNum(actualWeightPct, 2)}%
+                      </div>
                     </td>
                     <td className="py-2.5 px-3 font-mono bg-amber-50/30 dark:bg-amber-950/10">
                       {boardExec.shares > 0 ? (
@@ -879,9 +1110,83 @@ export default function SmallCapStrategyPage() {
                       ¥{Math.round(actualCost).toLocaleString()}
                     </td>
                     <td className="py-2.5 px-3 font-mono text-gray-500">
-                      {fmtNum(h.factor_score, 4)}
+                      {factorBreakdown ? (
+                        <button
+                          type="button"
+                          aria-expanded={isFactorExpanded}
+                          onClick={() => toggleFactorBreakdown(h.code)}
+                          className="inline-flex items-center gap-1 rounded border border-violet-200 bg-violet-50 px-2 py-1 font-semibold text-violet-700 hover:bg-violet-100 dark:border-violet-900 dark:bg-violet-950/40 dark:text-violet-300"
+                        >
+                          {fmtNum(h.factor_score, 4)}
+                          <span className="text-[10px]">{isFactorExpanded ? '收起' : '看分项'}</span>
+                        </button>
+                      ) : (
+                        fmtNum(h.factor_score, 4)
+                      )}
                     </td>
                   </tr>
+                  {isFactorExpanded && factorBreakdown && (
+                    <tr className="bg-violet-50/40 dark:bg-violet-950/10">
+                      <td colSpan={10} className="px-3 py-3">
+                        <div className="sticky left-0 w-[calc(100vw-4.5rem)] md:w-auto">
+                        <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+                          <div className="font-bold text-gray-900 dark:text-gray-100">
+                            {h.name} · 因子分项
+                            <span className="ml-2 text-[10px] font-normal text-gray-400">
+                              截面日期 {factorBreakdown.as_of}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-violet-700 dark:text-violet-300">
+                              分项贡献合计 = {fmtSignedNum(factorBreakdown.total_score, 6)}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setExpandedFactorCode(null)}
+                              className="rounded border border-violet-200 px-2 py-1 text-[10px] text-violet-700 hover:bg-violet-100 dark:border-violet-900 dark:text-violet-300"
+                            >
+                              收起分项
+                            </button>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+                          {factorBreakdown.items.map((item: any) => (
+                            <div key={item.key} className="rounded-lg border bg-white p-3 dark:border-gray-800 dark:bg-gray-900/70">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="font-bold text-gray-800 dark:text-gray-200">{item.short_label}</span>
+                                <span className="font-mono text-[10px] text-gray-400">权重 {item.weight}</span>
+                              </div>
+                              <div className="mt-2 flex items-end justify-between gap-3">
+                                <div>
+                                  <div className="text-[10px] text-gray-400">全市场百分位</div>
+                                  <div className="font-mono text-lg font-bold text-violet-700 dark:text-violet-300">
+                                    {fmtNum(item.percentile, 2)}%
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-[10px] text-gray-400">计入总分</div>
+                                  <div className="font-mono font-bold text-gray-800 dark:text-gray-200">
+                                    {fmtSignedNum(item.contribution, 6)}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+                                <div
+                                  className="h-full rounded-full bg-violet-500"
+                                  style={{ width: `${Math.max(0, Math.min(100, item.percentile))}%` }}
+                                />
+                              </div>
+                              <div className="mt-2 text-[10px] text-gray-500 dark:text-gray-400">
+                                {fmtFactorRaw(item)} · 居中分 {fmtSignedNum(item.centered_score, 6)}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  </React.Fragment>
                 )
               })}
             </tbody>

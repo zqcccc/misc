@@ -3,6 +3,8 @@
  * 纯静态服务端组件：不引入任何客户端 JS、外部字体、图片或统计脚本。
  */
 
+import Link from 'next/link'
+
 const EFFECTIVE_DATE = '2026-08-23'
 const EXTENSION_NAME_ZH = '元素滚动截图'
 const EXTENSION_NAME_EN = 'Element Scroll Capture'
@@ -272,9 +274,16 @@ export default function ElementScrollCapturePrivacyPage() {
           </p>
           <p className='mt-1 text-sm text-gray-600 dark:text-gray-400'>
             本页为 Chrome 扩展「{EXTENSION_NAME_ZH}」的隐私政策。
+            <Link
+              href='/tools/element-scroll-capture'
+              className='ml-2 underline underline-offset-2 font-medium hover:text-gray-900 dark:hover:text-gray-100'
+            >
+              查看扩展详情与安装 →
+            </Link>
+            <span className='mx-2'>·</span>
             <a
               href={`#${EN_ANCHOR_ID}`}
-              className='ml-1 underline underline-offset-2 hover:text-gray-900 dark:hover:text-gray-100'
+              className='underline underline-offset-2 hover:text-gray-900 dark:hover:text-gray-100'
             >
               English version below
             </a>
@@ -295,8 +304,13 @@ export default function ElementScrollCapturePrivacyPage() {
           </p>
           <p className='mt-1 text-sm text-gray-600 dark:text-gray-400'>
             This is the privacy policy of the Chrome extension
-            {` “${EXTENSION_NAME_EN}”`}. It is an equivalent translation
-            of the Chinese version above.
+            {` “${EXTENSION_NAME_EN}”`}.
+            <Link
+              href='/tools/element-scroll-capture'
+              className='ml-2 underline underline-offset-2 font-medium hover:text-gray-900 dark:hover:text-gray-100'
+            >
+              View Extension Details & Install →
+            </Link>
           </p>
         </header>
         <SectionList sections={SECTIONS_EN} />

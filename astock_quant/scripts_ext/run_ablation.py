@@ -22,7 +22,7 @@ import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 
 from aq import backtest, config, metrics, panel, strategy, universe  # noqa: E402
-from strategies_ext import common  # noqa: E402
+from strategies_ext import common, datalayer  # noqa: E402
 
 START, END = "2019-01-02", "2026-09-01"
 VERIFIED = os.path.join(config.BASE_DIR, "verified")
@@ -93,10 +93,10 @@ def yearly(r, b):
 
 
 def main():
-    p = panel.load_panels()
+    p = datalayer.load("real")
     dates = p["close"].index
-    base_mask = universe.investable(p)
-    wide_mask = universe.investable(p, min_amount=3e6, liquidity_top_pct=1.0)
+    base_mask = datalayer.investable(p, "real")
+    wide_mask = datalayer.investable(p, "real", min_amount=3e6, liquidity_top_pct=1.0)
     win = dates[(dates >= pd.Timestamp(START)) & (dates <= pd.Timestamp(END))]
     bench = universe.equal_weight_benchmark(p, base_mask).reindex(win).fillna(0.0)
 

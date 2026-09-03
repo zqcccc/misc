@@ -313,7 +313,9 @@ def update_deliverable(
     validation: dict,
     mature_codes: set[str] | None = None,
 ) -> tuple[dict, dict, bool]:
-    scores = live.production_scores(panels, mature_codes=mature_codes)
+    scores, raw_factors, ranked_factors = live.production_score_breakdown(
+        panels, mature_codes=mature_codes
+    )
     latest = pd.Timestamp(panels["close"].index[-1])
     last_processed = pd.Timestamp(state["last_processed_date"])
     new_dates = scores.index[(scores.index > last_processed) & (scores.index <= latest)]
@@ -380,22 +382,40 @@ def update_deliverable(
                 "target_weight": round(100.0 / n, 2),
                 "price": round(price, 2),
                 "change_pct": round(float(snap.get("change_pct", old.get("change_pct", 0.0))), 2),
+                "quote_time": snap.get("quote_time", old.get("quote_time", "")),
                 "float_cap_billion": float(snap.get("float_cap_billion", old.get("float_cap_billion", 0.0))),
                 "total_cap_billion": float(snap.get("total_cap_billion", old.get("total_cap_billion", 0.0))),
                 "shares": shares,
                 "market_val": round(shares * price, 2),
                 "factor_score": factor_score,
+                "factor_breakdown": live.factor_breakdown_at(
+                    raw_factors, ranked_factors, latest, code
+                ),
             })
         cfg["current_holdings"] = sorted(
             holdings,
             key=lambda item: item["float_cap_billion"] if item["float_cap_billion"] > 0 else 9999,
         )
+        current_period = live.current_period_summary(
+            panels["close"],
+            [item["code"] for item in cfg["current_holdings"]],
+            state["last_rebalance_date"],
+            latest,
+            close_raw=panels.get("close_raw"),
+            open_panel=panels.get("open"),
+        )
+        for item in cfg["current_holdings"]:
+            period = current_period["returns_by_code"].get(item["code"], {})
+            item["period_return_pct"] = period.get("return_pct")
+            item["period_entry_price"] = period.get("entry_price")
+        cfg["current_period"] = current_period
         cfg["cap_distribution"] = _cap_distribution(cfg["current_holdings"])
 
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     deliverable["update_time"] = now
     deliverable["latest_trading_date"] = str(latest.date())
     deliverable["latest_rebalance_date"] = state["last_rebalance_date"]
+    deliverable["factor_methodology"] = live.factor_methodology()
     deliverable["runtime"] = {
         "mode": "incremental",
         "status": "healthy",
