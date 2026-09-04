@@ -119,11 +119,35 @@ next-env.d.ts
 *.parquet
 *.feather
 
-# 本地 agent 运行产物（handoff / sentinel / skills 快照）
-/.agents/
+# 本地 agent 运行产物（handoff / sentinel / skills 快照）默认不入库，
+# 但量化验收协议是所有 PASS 裁决的依据，必须随仓库版本化（见 qr protocol）
+/.agents/*
+!/.agents/skills/
+/.agents/skills/*
+!/.agents/skills/quant-backtest-protocol/
 
 # 跨市场实验沙盒（crypto/US 探索 + 缓存），与 next 项目无关，不入库
 /quant_lab/
+
+# 量化研究：**台账本体入库**（假设卡、协议、工具、市场年鉴、轮次记录、验收归档），
+# 各市场的实现目录不入库——它们是实验性探索，且依赖本地数百 MB 行情缓存，进了库也复现不了。
+/crypto_perp/
+/crypto_spot/
+/futures/
+/fx/
+/hk_southbound/
+/us_equity_timing/
+/rates/
+/us_stock/
+/quant_research/*/
+!/quant_research/hypotheses/
+!/quant_research/markets/
+!/quant_research/rounds/
+!/quant_research/templates/
+!/quant_research/tests/
+!/quant_research/locks/
+!/quant_research/portfolio/
+/quant_research/portfolio/out/
 
 # A股量化策略与信号监控服务部署必需 (随 ashare-signal 与 ashare-smallcap-quant 镜像构建)
 !/scripts/ashare_quant/**
