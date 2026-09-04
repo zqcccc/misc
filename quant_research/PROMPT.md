@@ -2,6 +2,9 @@
 
 > **启动语**：`读 quant_research/PROMPT.md 并严格照它执行。本轮预算：<N 个假设>；我的 agent 名：<name>`
 
+> 要让一个 agent **连续跑很多轮、自己挑题、自己决定什么时候停**，改用
+> `quant_research/PROMPT_LONGRUN.md`（它不替代本文件，只规定轮与轮之间的事）。
+
 ## 启动参数
 
 | 参数 | 必填 | 含义 |
