@@ -12,6 +12,9 @@ owner: seed
 claimed_at: 2026-09-03T23:14:49Z
 updated_at: 2026-09-03T23:15:48Z
 sources:
+research_role: alpha
+cause: 强度不足
+plain: 确实跑赢了同类股票，但超额有一大半来自2024这一年，八年里只有四年是正的
 ---
 
 # H0002 · 低波 + 反转多因子小微盘组合

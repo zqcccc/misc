@@ -1,0 +1,16 @@
+{
+  "sources": [
+    {
+      "provider": "official exchange/API or named secondary provider",
+      "url_or_query": "exact endpoint, symbol and parameters",
+      "retrieved_at": "YYYY-MM-DDTHH:MM:SSZ",
+      "raw_file": "path/to/immutable/raw/file",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "rows": 0,
+      "start": "YYYY-MM-DD",
+      "end": "YYYY-MM-DD",
+      "timezone": "UTC or exchange local timezone",
+      "adjustment": "unadjusted/back-adjusted/PIT corporate-action rule"
+    }
+  ]
+}

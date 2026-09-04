@@ -45,25 +45,150 @@ hyp_file() {  # $1=ID
 
 fm() {  # $1=file $2=key  取 frontmatter 字段
   awk -v k="$2" '
-    NR==1 && $0=="---" {inf=1; next}
-    inf && $0=="---" {exit}
+    NR==1 && ($0=="---" || $0=="***") {inf=1; next}
+    inf && ($0=="---" || $0=="***" || $0 ~ /^-[-]+$/) {exit}
     inf {
       idx=index($0, ":")
-      if (idx>0 && substr($0,1,idx-1)==k) { v=substr($0, idx+1); sub(/^[ \t]+/,"",v); print v; exit }
+      key=substr($0,1,idx-1); gsub(/\\_/, "_", key)
+      if (idx>0 && key==k) { v=substr($0, idx+1); sub(/^[ \t]+/,"",v); gsub(/\\_/, "_", v); print v; exit }
     }' "$1"
 }
 
 set_fm() {  # $1=file $2=key $3=value
   local tmp; tmp="$(mktemp)"
   awk -v k="$2" -v v="$3" '
-    NR==1 && $0=="---" {inf=1; print; next}
-    inf && $0=="---" {inf=0; if(!done) print k ": " v; print; next}
+    NR==1 && ($0=="---" || $0=="***") {inf=1; print; next}
+    inf && ($0=="---" || $0=="***" || $0 ~ /^-[-]+$/) {inf=0; if(!done) print k ": " v; print; next}
     inf {
       idx=index($0, ":")
-      if (idx>0 && substr($0,1,idx-1)==k) { print k ": " v; done=1; next }
+      key=substr($0,1,idx-1); gsub(/\\_/, "_", key)
+      if (idx>0 && key==k) { print k ": " v; done=1; next }
     }
     {print}' "$1" > "$tmp"
   mv "$tmp" "$1"
+  # frontmatter 没闭合时 awk 会静默丢掉这次写入——28 张历史卡就是这么少掉 summary 的
+  [ -n "$(fm "$1" "$2")" ] || [ -z "$3" ] || die "写 frontmatter.$2 失败（frontmatter 可能没有闭合的 ---）: $1"
+}
+
+# 协议本体（SKILL.md / qbt.py / references）不在台账里，PASS 又完全依赖它，
+# 所以每次裁决都把当时的协议指纹钉进卡片，否则「protocol_version: 2」只是一句自称。
+resolve_protocol() {
+  local d
+  for d in "${QBT_HOME:-}" "$(dirname "$HOME_DIR")/.agents/skills/quant-backtest-protocol" \
+           "$HOME/.claude/skills/quant-backtest-protocol"; do
+    [ -n "$d" ] && [ -f "$d/SKILL.md" ] && { ( cd "$d" && pwd -P ); return; }
+  done
+  echo ""
+}
+
+protocol_digest() {
+  local dir; dir="$(resolve_protocol)"
+  [ -n "$dir" ] || { echo "unresolved"; return; }
+  # 只按「文件名 + 内容」算，排除 __pycache__ 之类的构建产物，保证同一份协议在任何机器上指纹一致
+  find "$dir" -type f \( -name '*.md' -o -name '*.py' \) ! -path '*__pycache__*' -print0 \
+    | LC_ALL=C sort -z \
+    | while IFS= read -r -d '' f; do printf '%s\n' "${f#$dir/}"; cat "$f"; done \
+    | shasum -a 256 | cut -c1-16
+}
+
+resolve_artifact() {  # 相对路径按台账根解析
+  case "$1" in
+    /*) echo "$1";;
+    *) echo "$HOME_DIR/$1";;
+  esac
+}
+
+validate_pass_report() {  # $1=report path $2=expected role
+  local report; report="$(resolve_artifact "$1")"
+  [ -f "$report" ] || die "PASS 报告不存在: $report"
+  python3 - "$report" "${2:-alpha}" <<'PY'
+import json, sys
+p, expected_role = sys.argv[1], sys.argv[2]
+try:
+    obj = json.load(open(p, encoding="utf-8"))
+except Exception as exc:
+    raise SystemExit(f"qr: PASS 报告无法读取: {exc}")
+problems = []
+if obj.get("schema_version") != 2:
+    problems.append("schema_version 必须为 2")
+if obj.get("stage") != "candidate":
+    problems.append("stage 必须为 candidate（exploratory 不能 PASS）")
+if obj.get("role") != expected_role:
+    problems.append(f"role={obj.get('role')!r}，卡片要求 {expected_role!r}")
+if obj.get("verdict_code") != "PASS":
+    problems.append(f"verdict_code={obj.get('verdict_code')!r}，不是 PASS")
+if obj.get("falsification_failures"):
+    problems.append("falsification_failures 非空")
+for key in ("execution_check", "data_provenance", "window_consistency"):
+    val = obj.get(key)
+    if not isinstance(val, dict) or val.get("error"):
+        problems.append(f"{key} 缺失或失败")
+if problems:
+    raise SystemExit("qr: PASS 报告未通过门禁: " + "；".join(problems))
+PY
+}
+
+CAUSES="无机理 信号无增量 方向反了 成本吃穿 不可成交 样本外翻转 强度不足 尾部不可接受 容量不足 数据不可得 溢价已死 未来函数 幸存者偏差 参数拟合"
+
+# KNOWLEDGE.md 是每轮每个 agent 都要全文读的东西，它必须能扫。
+# 所以结论句禁止行话——指标名和数值留在假设卡 §7，这里只放人话。
+JARGON="alpha DSR PSR NW IC Sharpe 夏普 分位 t= t值 p= p值 beta β 置换 自助 显著性 分块"
+
+check_plain_language() {  # $1=结论句
+  local w hits=""
+  for w in $JARGON; do
+    case "$1" in *"$w"*) hits="$hits $w";; esac
+  done
+  [ -z "$hits" ] || die "结论句里不许出现行话：${hits# }
+它会原样进 KNOWLEDGE.md，而那是每个 agent 每轮都要读的东西。
+指标和数值写进假设卡 §7，这里只写人话。
+反例：「净 alpha +2.9%（NW t=0.35），β=1.007」
+正例：「剥掉大盘涨跌后基本什么都不剩——它就是把整个池子买了一遍」"
+}
+
+cmd_knowledge() {
+  local f id mark
+  {
+    printf '# 已固化结论（读完再开工）\n\n'
+    printf '每行 = 红绿灯 · 市场 · 做了什么 · 死在哪一环 · 一句人话。**数值和判读表在各自的假设卡 §7**。\n\n'
+    for f in $(ls "$HYP"/*.md 2>/dev/null | sort); do
+      [ "$(fm "$f" status)" = "done" ] || continue
+      id="$(fm "$f" id)"
+      case "$(fm "$f" verdict)" in PASS) mark="🟢";; PARK) mark="🟡";; FAIL) mark="🔴";; *) continue;; esac
+      printf -- '- %s [%s] %s —— %s —— %s（%s）\n' \
+        "$mark" "$(fm "$f" market)" "$(short_topic "$(fm "$f" title)")" \
+        "$(fm "$f" cause)" "$(plain_of "$f")" "$id"
+    done
+  } > "$KNOWLEDGE"
+  echo "已重建 ${KNOWLEDGE#$HOME_DIR/}"
+}
+
+plain_of() {  # 人话结论优先，历史卡没有就退回原 summary
+  local v; v="$(fm "$1" plain)"
+  [ -n "$v" ] || v="$(fm "$1" summary)"
+  echo "$v"
+}
+
+# 台账行只留能扫的部分：完整假设句在卡片和 REGISTRY 里
+short_topic() {
+  python3 -c '
+import sys
+t = sys.argv[1]
+LIMIT = 44
+cut = None
+# 优先在自然断句处截，但截完太短就没信息量了，退回按长度截
+for sep in ("，", "：", "；", ","):
+    i = t.find(sep)
+    if 12 <= i <= LIMIT:
+        cut = i; break
+short = t if (cut is None and len(t) <= LIMIT) else t[:cut if cut is not None else LIMIT]
+# 别留下半个括号
+for lo, hi in (("（", "）"), ("(", ")")):
+    if short.count(lo) > short.count(hi):
+        short = short[:short.rfind(lo)]
+short = short.rstrip("、/+-（( ")
+print(short + ("" if short == t else "…"))
+' "$1"
 }
 
 # 只保留 ASCII，避免不同 locale 下多字节文件名踩坑；中文标题落在 frontmatter 里，不进文件名
@@ -78,7 +203,7 @@ cmd_search() {
   [ $# -ge 1 ] || die "用法: qr search <关键词> [更多关键词...]"
   local hit=0 kw f
   for kw in "$@"; do
-    echo "── 关键词「$kw」"
+    echo "── 关键词「${kw}」"
     local found=0
     while IFS= read -r f; do
       [ -n "$f" ] || continue
@@ -105,7 +230,7 @@ cmd_search() {
 
 # ---------- claim ----------
 cmd_claim() {
-  local title="" tags="" market="multi" family="other" agent="" srcs="" slug_opt="" freq="d1"
+  local title="" tags="" market="multi" family="other" agent="" srcs="" slug_opt="" freq="d1" role="alpha" parent="" score=""
   while [ $# -gt 0 ]; do
     case "$1" in
       --tags) tags="$2"; shift 2;;
@@ -115,11 +240,19 @@ cmd_claim() {
       --source) srcs="$srcs$2 "; shift 2;;
       --slug) slug_opt="$(slugify "$2")"; shift 2;;
       --freq) freq="$2"; shift 2;;
+      --role) role="$2"; shift 2;;
+      --parent) parent="$2"; shift 2;;
+      --score) score="$2"; shift 2;;
       -*) die "未知参数 $1";;
       *) title="$1"; shift;;
     esac
   done
   [ -n "$title" ] || die '用法: qr claim "<一句话假设>" --family <家族> --market <市场> --tags a,b --agent <名字>'
+  case "$role" in alpha|diversifier|hedge|execution) ;; *) die "--role 只能是 alpha/diversifier/hedge/execution";; esac
+  if [ -n "$parent" ]; then
+    case "$parent" in H[0-9][0-9][0-9][0-9]) ;; *) die "--parent 必须是 Hxxxx 形式";; esac
+    ls "$HYP/$parent-"*.md >/dev/null 2>&1 || die "--parent $parent 没有对应的假设卡"
+  fi
   agent="$(agent_name "$agent")"
 
   # 号段分配：mkdir 的原子性保证两个 agent 同时 claim 也拿不到同一个号。
@@ -142,8 +275,10 @@ cmd_claim() {
 
   sed -e "s/{{ID}}/$id/g" -e "s/{{SLUG}}/$slug/g" -e "s/{{TITLE}}/$(echo "$title" | sed 's/[&/\]/\\&/g')/g" \
       -e "s/{{MARKET}}/$market/g" -e "s/{{FAMILY}}/$family/g" -e "s/{{TAGS}}/$tags/g" \
-      -e "s/{{FREQ}}/$freq/g" -e "s/{{OWNER}}/$agent/g" -e "s/{{TS}}/$(now_iso)/g" "$TPL" > "$file"
+      -e "s/{{FREQ}}/$freq/g" -e "s/{{OWNER}}/$agent/g" -e "s/{{ROLE}}/$role/g" \
+      -e "s/{{PARENT}}/$parent/g" -e "s/{{TS}}/$(now_iso)/g" "$TPL" > "$file"
   [ -z "$srcs" ] || set_fm "$file" sources "$srcs"
+  [ -z "$score" ] || set_fm "$file" score "$score"
 
   printf 'agent=%s\nclaimed_at=%s\nclaimed_epoch=%s\nfile=%s\ntitle=%s\n' \
     "$agent" "$(now_iso)" "$(now_epoch)" "${file#$HOME_DIR/}" "$title" > "$LOCKS/$id/owner"
@@ -170,16 +305,40 @@ cmd_verdict() {
   [ $# -ge 3 ] || die '用法: qr verdict <ID> <PASS|FAIL|PARK> "<一句话结论，带数>"'
   local id="$1" v="$2"; shift 2
   case "$v" in PASS|FAIL|PARK) ;; *) die "裁决只能是 PASS / FAIL / PARK";; esac
+  local report="" summary="" cause="" arg
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --report) [ $# -ge 2 ] || die "--report 缺路径"; report="$2"; shift 2;;
+      --cause) [ $# -ge 2 ] || die "--cause 缺值"; cause="$2"; shift 2;;
+      *) arg="$1"; summary="${summary}${summary:+ }${arg}"; shift;;
+    esac
+  done
+  [ -n "$summary" ] || die "裁决必须有一句话结论"
+  if [ "$v" != "PASS" ]; then
+    [ -n "$cause" ] || die "FAIL/PARK 必须写清死在哪一环：--cause <$(echo $CAUSES | tr ' ' '|')>"
+    case " $CAUSES " in *" $cause "*) ;; *) die "--cause 只能是：$CAUSES";; esac
+  fi
+  check_plain_language "$summary"
   local file; file="$(hyp_file "$id")"
+  if [ "$v" = "PASS" ]; then
+    [ -n "$report" ] || die "PASS 必须提供 --report verified/<ID>/verdict.json"
+    local role; role="$(fm "$file" research_role)"; role="${role:-alpha}"
+    [ "$role" = "alpha" ] || die "当前 qbt v2 只自动验收 alpha；$role 角色需专用组合/对冲/执行报告，暂不能 PASS"
+    validate_pass_report "$report" "$role"
+  fi
   set_fm "$file" status "done"
   set_fm "$file" verdict "$v"
+  set_fm "$file" protocol_sha256 "$(protocol_digest)"
+  set_fm "$file" summary "$summary"
+  set_fm "$file" plain "$summary"
+  [ -z "$cause" ] || set_fm "$file" cause "$cause"
+  [ -z "$report" ] || set_fm "$file" report "$report"
   set_fm "$file" updated_at "$(now_iso)"
-  printf -- '- `%s` %s：**裁决 %s** —— %s\n' "$(now_iso)" "$(agent_name "${QR_AGENT:-}")" "$v" "$*" >> "$file"
-  [ -f "$KNOWLEDGE" ] || printf '# 已固化结论（读完再开工）\n\n' > "$KNOWLEDGE"
-  printf -- '- **%s** [%s] %s — %s（%s）\n' "$v" "$(fm "$file" market)" "$(fm "$file" title)" "$*" "$id" >> "$KNOWLEDGE"
+  printf -- '- `%s` %s：**裁决 %s** —— %s\n' "$(now_iso)" "$(agent_name "${QR_AGENT:-}")" "$v" "$summary" >> "$file"
+  cmd_knowledge >/dev/null
   rm -f "$LOCKS/$id/owner"
   cmd_index >/dev/null
-  echo "$id 裁决 $v，已释放锁并写入 KNOWLEDGE.md。"
+  echo "$id 裁决 ${v}，已释放锁并写入 KNOWLEDGE.md。"
 }
 
 # ---------- release ----------
@@ -252,6 +411,81 @@ cmd_index() {
   echo "已重建 ${REGISTRY#$HOME_DIR/}"
 }
 
+# ---------- audit：检查台账结构与 PASS 机器门禁 ----------
+cmd_audit() {
+  local errors=0 warnings=0 legacy=0 noscreen=0 total=0 f key section value report output
+  for f in "$HYP"/*.md; do
+    [ -e "$f" ] || continue
+    total=$((total+1))
+    case "$(head -1 "$f")" in
+      ---) ;;
+      *) echo "WARN  ${f#$HOME_DIR/}: 非标准 YAML 分隔符（应为 ---）"; warnings=$((warnings+1));;
+    esac
+    if ! awk 'NR==1 && ($0=="---" || $0=="***"){inf=1; next}
+               inf && ($0=="---" || $0=="***" || $0 ~ /^-[-]+$/){found=1; exit}
+               inf && $0 !~ /^[A-Za-z_\\][A-Za-z0-9_\\]*:/ && $0 != "" {exit}
+               END{exit !found}' "$f"; then
+      echo "ERROR ${f#$HOME_DIR/}: frontmatter 没有闭合的 ---（后续 set_fm 会静默丢字段）"
+      errors=$((errors+1))
+    fi
+    for key in id title status verdict market family owner; do
+      value="$(fm "$f" "$key")"
+      if [ -z "$value" ]; then
+        echo "ERROR ${f#$HOME_DIR/}: 缺 frontmatter.$key"
+        errors=$((errors+1))
+      fi
+    done
+    if [ -z "$(fm "$f" protocol_version)" ]; then
+      legacy=$((legacy+1))
+    fi
+    if [ "$(fm "$f" status)" = "done" ] && [ -z "$(fm "$f" screen_verdict)" ]; then
+      noscreen=$((noscreen+1))
+    fi
+    value="$(fm "$f" research_role)"
+    if [ -n "$value" ]; then
+      case "$value" in
+        alpha|diversifier|hedge|execution) ;;
+        *) echo "ERROR ${f#$HOME_DIR/}: research_role=$value 不是 alpha/diversifier/hedge/execution"; errors=$((errors+1));;
+      esac
+    fi
+    value="$(fm "$f" parent)"
+    if [ -n "$value" ] && ! ls "$HYP/$value-"*.md >/dev/null 2>&1; then
+      echo "ERROR ${f#$HOME_DIR/}: parent=$value 没有对应的假设卡"
+      errors=$((errors+1))
+    fi
+    for section in 1 2 3 4 5 6 7 8 9; do
+      if ! grep -q "^## ${section}\." "$f"; then
+        echo "ERROR ${f#$HOME_DIR/}: 缺第 ${section} 节"
+        errors=$((errors+1))
+      fi
+    done
+    if [ "$(fm "$f" status)" = "done" ] && [ "$(fm "$f" verdict)" = "OPEN" ]; then
+      echo "ERROR ${f#$HOME_DIR/}: status=done 但 verdict=OPEN"
+      errors=$((errors+1))
+    fi
+    if [ "$(fm "$f" verdict)" = "PASS" ]; then
+      report="$(fm "$f" report)"
+      if [ -z "$report" ]; then
+        echo "ERROR ${f#$HOME_DIR/}: PASS 没有 report"
+        errors=$((errors+1))
+      else
+        value="$(fm "$f" protocol_sha256)"
+        if [ -z "$value" ] || [ "$value" = "unresolved" ]; then
+          echo "ERROR ${f#$HOME_DIR/}: PASS 没有可用的 protocol_sha256（无法确定按哪一版协议判的）"
+          errors=$((errors+1))
+        fi
+        value="$(fm "$f" research_role)"; value="${value:-alpha}"
+        if ! output="$(validate_pass_report "$report" "$value" 2>&1)"; then
+          echo "ERROR ${f#$HOME_DIR/}: $output"
+          errors=$((errors+1))
+        fi
+      fi
+    fi
+  done
+  echo "audit: cards=$total errors=$errors warnings=$warnings legacy_v1=$legacy 未过成本闸=$noscreen"
+  [ "$errors" -eq 0 ]
+}
+
 
 # ---------- coverage：覆盖盘点，告诉你地图上哪里还是白的 ----------
 MARKET_AXIS="cn_stock hk_stock us_stock crypto_spot crypto_perp fx futures commodity rates multi"
@@ -313,7 +547,167 @@ cmd_coverage() {
   echo "提示：开放式探索时，候选池必须往上面「零覆盖」的格子里撒点，不要全堆在已探过的市场。"
 }
 
+cmd_screen() {
+  [ $# -ge 3 ] || die '用法: qr screen <ID> --report <screen.json>（先用 qbt.py screen 生成）'
+  local id="$1"; shift
+  local report=""
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --report) [ $# -ge 2 ] || die "--report 缺路径"; report="$2"; shift 2;;
+      *) die "未知参数 $1";;
+    esac
+  done
+  [ -n "$report" ] || die "qr screen 必须提供 --report"
+  local file; file="$(hyp_file "$id")"
+  local path; path="$(resolve_artifact "$report")"
+  [ -f "$path" ] || die "screen 报告不存在: $path"
+  local parsed
+  parsed="$(python3 - "$path" <<'SCREENPY'
+import json, sys
+obj = json.load(open(sys.argv[1], encoding="utf-8"))
+if obj.get("stage") != "screen":
+    raise SystemExit("qr: 这不是 qbt.py screen 的产物（stage != screen）")
+v = obj.get("screen_verdict")
+if v not in ("GO", "THIN", "STOP"):
+    raise SystemExit(f"qr: screen_verdict 非法: {v!r}")
+r = obj.get("edge_cost_ratio")
+print(v)
+print("无成本" if r is None else r)
+print(obj.get("说人话", ""))
+SCREENPY
+)" || die "screen 报告读取失败"
+  local verdict ratio say
+  verdict="$(echo "$parsed" | sed -n 1p)"
+  ratio="$(echo "$parsed" | sed -n 2p)"
+  say="$(echo "$parsed" | sed -n 3p)"
+  set_fm "$file" screen_verdict "$verdict"
+  set_fm "$file" edge_cost_ratio "$ratio"
+  set_fm "$file" updated_at "$(now_iso)"
+  printf -- '- `%s` %s：**成本闸 %s** —— %s（毛/成本 = %s）\n' \
+    "$(now_iso)" "$(agent_name "${QR_AGENT:-}")" "$verdict" "$say" "$ratio" >> "$file"
+  cmd_index >/dev/null
+  echo "$id 成本闸：$verdict —— $say"
+  case "$verdict" in
+    STOP) echo "不要再往下写回测。直接 ./qr verdict $id FAIL --cause 成本吃穿 \"每次进出的手续费比它赚的还多（毛/成本 ${ratio} 倍）\"" >&2; return 1;;
+    THIN) echo "余量很薄，可以继续，但成本假设必须在卡里写死并做一档压力成本。" >&2;;
+  esac
+}
+
+# 死掉的课题里最值钱的往往不是裁决，而是顺手挖到的线索。
+# 以前这些线索只有出口没有入口——写进卡里就没人再看。这个命令把它们拉回候选池。
+cmd_leads() {
+  python3 - "$HYP" <<'LEADSPY'
+import glob, os, re, sys
+hyp = sys.argv[1]
+files = sorted(glob.glob(os.path.join(hyp, "*.md")))
+
+def fm(text, key):
+    m = re.search(r"^%s:[ \t]*(.*)$" % key, text, re.M)
+    return (m.group(1).strip() if m else "")
+
+# 已经被子卡接手的线索不再提示
+taken = {fm(open(f, encoding="utf-8").read(), "parent") for f in files}
+# 只认「明确写了怎么重开」的标记；「给后人的一句话」是每张卡都有的固定小节，不算线索
+PAT = re.compile(r"(重启线|复活线|复活条件)\s*[=＝:：]\s*([^。；\n]{4,90})"
+                 r"|(应另立[^。；\n]{2,70})")
+rows = []
+for f in files:
+    t = open(f, encoding="utf-8").read()
+    if fm(t, "status") != "done":
+        continue
+    hid = fm(t, "id")
+    if hid in taken:
+        continue
+    leads = []
+    for m in PAT.finditer(t):
+        leads.append((m.group(2) or m.group(3)).strip())
+    seen, uniq = set(), []
+    for x in leads:
+        if x not in seen:
+            seen.add(x); uniq.append(x)
+    if uniq:
+        rows.append((hid, fm(t, "verdict"), fm(t, "cause"), uniq[:2]))
+
+print("== 未接手的线索（来自已裁决的卡）==")
+if not rows:
+    print("  （没有未接手的线索）")
+for hid, v, cause, leads in rows:
+    print(f"\n{hid} [{v}] {cause}")
+    for x in leads:
+        print("    " + x)
+print()
+print('接手的方式：./qr claim "<新假设>" --parent <原ID> ...，这样台账里看得出族谱。')
+LEADSPY
+}
+
+# 打分卡决定了做哪个课题，但从没有人回头验过它准不准。
+# 只研究最高分的那个 = 分数没有变异 = 永远无法证伪自己的选题标准。
+cmd_scorecard() {
+  python3 - "$HYP" <<'SCPY'
+import glob, os, re, sys
+files = sorted(glob.glob(os.path.join(sys.argv[1], "*.md")))
+def fm(t, k):
+    m = re.search(r"^%s:[ \t]*(.*)$" % k, t, re.M)
+    return (m.group(1).strip() if m else "")
+rows = []
+for f in files:
+    t = open(f, encoding="utf-8").read()
+    if fm(t, "status") != "done":
+        continue
+    sc = fm(t, "score")
+    rows.append((fm(t, "id"), sc, fm(t, "verdict"), fm(t, "cause")))
+
+def pct(sc):
+    """分数写成 11/12 或 12/14；只写总分的按 14 分制处理"""
+    try:
+        a, _, b = sc.partition("/")
+        return float(a) / (float(b) if b else 14.0)
+    except ValueError:
+        return None
+scored = [r for r in rows if r[1]]
+print(f"已裁决 {len(rows)} 张，其中记录了当初打分的 {len(scored)} 张")
+if len(scored) < 8:
+    print()
+    print("样本不足，暂时无法回答「打分卡准不准」。")
+    print("注意这不只是数量问题：如果每轮只研究最高分的候选，分数就没有变异，")
+    print("再多轮也验不出预测力。所以每轮要按母提示词留一个「校准位」，")
+    print("研究一个中位分候选，让打分卡有被证伪的机会。")
+    if scored:
+        print()
+        for i, sc, v, c in scored:
+            r = pct(sc)
+            print(f"  {i}  {sc:>6s} = {r*100:5.1f}% → {v} {c}" if r else f"  {i}  {sc} → {v} {c}")
+    raise SystemExit
+buckets = {}
+for i, sc, v, c in scored:
+    r = pct(sc)
+    if r is None: continue
+    key = "高分(≥80%)" if r >= 0.80 else ("中分(55~80%)" if r >= 0.55 else "低分(<55%)")
+    b = buckets.setdefault(key, {"n": 0, "PASS": 0, "PARK": 0, "FAIL": 0})
+    b["n"] += 1; b[v] = b.get(v, 0) + 1
+print()
+print(f"{'分档':12s} {'张数':>4s} {'PASS':>5s} {'PARK':>5s} {'FAIL':>5s}")
+for k in ("高分(≥80%)", "中分(55~80%)", "低分(<55%)"):
+    if k in buckets:
+        b = buckets[k]
+        print(f"{k:12s} {b['n']:>4d} {b['PASS']:>5d} {b['PARK']:>5d} {b['FAIL']:>5d}")
+print()
+print("如果高分档和中分档的结局分布看不出差别，说明打分卡在做无用功，该改维度或改权重。")
+SCPY
+}
+
 cmd_home() { echo "$HOME_DIR"; }
+
+cmd_protocol() {
+  local dir; dir="$(resolve_protocol)"
+  if [ -z "$dir" ]; then
+    echo "协议目录: （找不到 quant-backtest-protocol，PASS 将无法通过 audit）"
+    echo "指纹:     unresolved"
+    return 1
+  fi
+  echo "协议目录: $dir"
+  echo "指纹:     $(protocol_digest)"
+}
 
 usage() {
   cat <<'USAGE'
@@ -324,15 +718,26 @@ qr —— 量化探索台账（多 agent 共用，先查重后占坑）
         --family <reversal|momentum|lowvol|quality|microstructure|flow|event|ml|portfolio|timing|other>
         --market <cn_stock|crypto|us_stock|fx|futures|multi>
         --freq <tick|m1|m15|h1|d1|w1|事件驱动>   --tags a,b,c
+        --role <alpha|diversifier|hedge|execution>   --parent <Hxxxx>   --score <总分/满分>
         --agent <名字>   --source <URL>（可重复）   --slug <英文短名>
   qr note <ID> "<进展>"                  追加日志（状态自动转 running）
-  qr verdict <ID> <PASS|FAIL|PARK> "<结论>"  收工：写裁决 + 释放锁 + 追加 KNOWLEDGE.md
+  qr verdict <ID> PASS --report <v2.json> "<结论>"  PASS 必须有严格机器报告
+  qr verdict <ID> <FAIL|PARK> --cause <死因> "<一句话人话结论>"   收工：写裁决 + 释放锁 + 重建 KNOWLEDGE.md
+        死因取值：无机理|信号无增量|方向反了|成本吃穿|不可成交|样本外翻转|强度不足|尾部不可接受
+                |容量不足|数据不可得|溢价已死|未来函数|幸存者偏差|参数拟合
+        结论句禁止行话（alpha/DSR/t 值/分位…），数值写进假设卡 §7
   qr release <ID> ["原因"]               放弃占坑（卡片保留供查重）
   qr coverage                            覆盖盘点：市场 × 机理族矩阵 + 零覆盖格（开放式探索起点）
+  qr leads                               列出已裁决卡片里还没人接手的线索（重启线/复活线/另立新卡）
+  qr scorecard                           回验打分卡：当初打几分 vs 最后什么结局
+  qr screen <ID> --report <screen.json>   A 层成本闸：毛边际够不够覆盖成本（STOP 就别写回测了）
+  qr audit                               检查卡片结构；PASS 必须通过 schema v2 机器报告
   qr list [状态或裁决]                    列表
   qr stale [小时]                        找僵尸占坑（默认 6h）
   qr index                               重建 REGISTRY.md
+  qr knowledge                           从假设卡重建 KNOWLEDGE.md（唯一写入口，裁决时自动调用）
   qr home                                打印当前台账根目录
+  qr protocol                            打印当前验收协议目录与指纹（裁决时会盖进卡片）
 USAGE
 }
 
@@ -345,7 +750,13 @@ case "${1:-}" in
   list)   shift; cmd_list "${1:-}";;
   stale)  shift; cmd_stale "${1:-}";;
   coverage|cov) shift; cmd_coverage;;
+  audit) shift; cmd_audit;;
+  leads) shift; cmd_leads;;
+  scorecard) shift; cmd_scorecard;;
   index)  shift; cmd_index;;
+  knowledge) shift; cmd_knowledge;;
+  protocol) shift; cmd_protocol;;
+  screen) shift; cmd_screen "$@";;
   home)   shift; cmd_home;;
   ""|-h|--help|help) usage;;
   *) die "未知子命令 $1（qr --help）";;

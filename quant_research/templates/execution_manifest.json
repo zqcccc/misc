@@ -1,0 +1,11 @@
+{
+  "information_time": "describe when the last input becomes public",
+  "decision_time": "describe when the signal is fully computed",
+  "execution_time": "describe the earliest executable venue and timestamp",
+  "pnl_start": "must not be earlier than execution_time",
+  "pnl_end": "describe mark/exit time",
+  "price_field": "open/vwap/quote/actual fill plus slippage rule",
+  "timezone": "exchange timezone and UTC normalization",
+  "pnl_start_not_before_execution": false,
+  "validated": false
+}

@@ -9,6 +9,16 @@ freq: {{FREQ}}
 family: {{FAMILY}}
 tags: {{TAGS}}
 owner: {{OWNER}}
+protocol_version: 2
+research_role: {{ROLE}}
+parent: {{PARENT}}
+protocol_sha256:
+score:
+screen_verdict:
+edge_cost_ratio:
+cause:
+plain:
+report:
 claimed_at: {{TS}}
 updated_at: {{TS}}
 sources:
@@ -34,28 +44,35 @@ sources:
 **不许因为"本地没现成数据"就砍掉高价值假设，也不许把假设削足适履塞进不匹配的缓存。**
 
 ## 5. 口径锁死（写完不许再改）
+- 策略角色（alpha / diversifier / hedge / execution）：
 - 宇宙 / 可投池规则：
 - 成本（单边 bp，含税费滑点）：
 - 调仓频率与持仓数：
 - 基准（同池等权 + 指数对照）：
 - 目标函数与判读线：
+- 信息→决策→成交→PnL：
+- 压力成本与容量假设：
+- 尝试账本（参数/过滤器/区间/失败变体都计入）：
 
 ## 6. 实现位置
 代码路径、入口函数、跑法（含后台长任务命令）。
 
-## 7. 验收结果（quant-backtest-protocol 四层证伪）
-| 层 | 指标 | 结果 | 判定 |
+## 7. 验收结果（quant-backtest-protocol 研究漏斗）
+| 层 | 问题 | 结果 | 判定 |
 |---|---|---|---|
-| 0 因果闸 | max\|full−truncated\| | | |
-| 1 干净口径 | 年化 / 夏普 / 回撤 / 对等权超额 | | |
-| 2 归因 | alpha、NW t、β | | |
-| 3 运气 | DSR（试验轮数 N=） | | |
-| 3′ 路径 | 分块自助 prob(profit) | | |
-| 4 置换 | 随机组合分位、p | | |
-| 补 | 逐年剔除最低 t、换手、blocked_frac | | |
+| A 快速证伪 | 付钱者 / 信号后毛边际 / 成本倍数 / 简单对照 | | |
+| B 数据因果 | max\|full−truncated\|、PIT 宇宙 | | |
+| B 成交时序 | information≤decision≤execution≤pnl_start | | |
+| B 可交易性 | 换手、成本、压力成本、blocked_frac、容量 | | |
+| C 归因 | 净 alpha、HAC/NW t、β、风险因子 | | |
+| C 搜索调整 | DSR（全部 trials）或单规格 PSR | | |
+| C 路径 | OOS 日收益分块自助 prob(profit)、P5 | | |
+| C 置换 | 匹配换手/在市比例/风险的随机分位 | | |
+| C 稳定 | walk-forward、逐年剔除、全起点、参数平台 | | |
+| 组合价值 | 加入现有组合后的增量 / 对冲或执行角色指标 | | |
 
 ## 8. 裁决
-`PASS` alpha t≥2 且 DSR≥0.90 且置换分位≥95% ｜ `FAIL` 证伪 ｜ `PARK` 有信息但不具备上仓位条件/数据不足
+`PASS` 严格报告通过，仅代表进入组合评估与 paper trading ｜ `FAIL` 已证伪 ｜ `PARK` 有信息但证据/可交易性/组合价值不足
 
 ## 9. 留给后人的一句话
 可复用的正面或负面结论。**负面结论同等重要——它就是别人不用再走一遍的那条路。**

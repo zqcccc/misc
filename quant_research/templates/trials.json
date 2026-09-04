@@ -1,0 +1,15 @@
+{
+  "research_family": "Hxxxx",
+  "objective": "locked objective used for selection",
+  "trials": [
+    {
+      "trial_id": 1,
+      "parent": null,
+      "change": "prior specification",
+      "params": {},
+      "train_sharpe": null,
+      "valid_sharpe": null,
+      "status": "planned"
+    }
+  ]
+}

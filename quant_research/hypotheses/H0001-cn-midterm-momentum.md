@@ -12,6 +12,8 @@ owner: seed
 claimed_at: 2026-09-03T23:14:49Z
 updated_at: 2026-09-03T23:15:48Z
 sources:
+cause: 方向反了
+plain: A股里涨得久的股票后面反而跌，这个市场的动量是反着来的
 ---
 
 # H0001 · A 股中期动量在横截面上有正向预测力
