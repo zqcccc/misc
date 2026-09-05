@@ -1205,13 +1205,31 @@ cmd_selfcheck() {
   bt="$(sed -n 's/^templates_fp=//p' "$base" | head -1)"
   np="$(protocol_digest)"; nc="$(protected_digest cli)"; nt="$(protected_digest templates)"
 
+  # 归因：受保护文件变了，得先分清是【你改的】还是【别人在你跑的时候做了维护】。
+  # 台账是共用的，人可以在任何时刻做已授权的协议维护；把那种情况判成你的违规，
+  # 会让整支编队因为别人的正常工作而停摆（2026-09-05 实测：gpt 因此开了一条假阳性
+  # 的 HALT/all，而那趟改动是维护者提交的）。
+  # 判据：基线记的 git HEAD 是否还在。HEAD 动了 = 期间有提交落地 = 维护，不是你。
+  local bh nh drift_by_maintenance=0
+  bh="$(sed -n 's/^git_head=//p' "$base" | head -1)"
+  nh="$(git -C "$HOME_DIR" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+  [ -n "$bh" ] && [ "$bh" != "unknown" ] && [ "$bh" != "$nh" ] && drift_by_maintenance=1
+
   echo "== 受保护文件：对比本次开工基线 =="
-  if [ "$np" = "$bp" ]; then echo "  ✅ 验收协议 $np 未变"; else
-    echo "  ❌ 验收协议在你这一趟里被改过：$bp → $np"; rc=1; fi
-  if [ "$nc" = "$bc" ]; then echo "  ✅ qr / PROMPT 未变"; else
-    echo "  ❌ qr 或 PROMPT 在你这一趟里被改过：$bc → $nc"; rc=1; fi
-  if [ "$nt" = "$bt" ]; then echo "  ✅ 模板未变"; else
-    echo "  ❌ 模板在你这一趟里被改过：$bt → $nt"; rc=1; fi
+  check_protected() {  # $1=标签 $2=基线值 $3=当前值
+    if [ "$2" = "$3" ]; then echo "  ✅ $1 $3 未变"; return 0; fi
+    if [ "$drift_by_maintenance" = 1 ]; then
+      echo "  ⚠️  $1 变了（$2 → $3），但 git HEAD 也从 ${bh} 动到了 ${nh}"
+      echo "      ——期间有提交落地，属于维护者的改动，不算你的违规。"
+      echo "      你的基线已过期：重新跑 ./qr start --agent ${agent} 取新基线再继续。"
+      return 0
+    fi
+    echo "  ❌ $1 在你这一趟里被改过：$2 → $3（HEAD 未动，说明是工作区里的未提交改动）"
+    return 1
+  }
+  check_protected "验收协议" "$bp" "$np" || rc=1
+  check_protected "qr / PROMPT" "$bc" "$nc" || rc=1
+  check_protected "模板" "$bt" "$nt" || rc=1
   echo
   echo "== 台账体检 =="
   cmd_audit || rc=1

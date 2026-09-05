@@ -70,6 +70,11 @@ expect_ok   "没动任何东西 → 自检通过" "$QRT" selfcheck --agent alice
 # 关键回归：开工前就存在的改动不算数，只有开工后的改动才算
 printf 'x = 4\n' > "$PROTO/qbt.py"
 expect_fail "开工后改协议 → 自检不通过" "$QRT" selfcheck --agent alice
+# 归因：HEAD 动了说明期间有提交落地，是维护者的改动，不该判成这个 agent 的违规
+# （2026-09-05 实测：我并发改 qr 时，gpt 的收工自检开出了一条假阳性的 HALT/all）
+sed -i '' 's/^git_head=.*/git_head=deadbee/' "$TMP/runs/alice.env" 2>/dev/null || \
+  sed -i 's/^git_head=.*/git_head=deadbee/' "$TMP/runs/alice.env"
+expect_ok "HEAD 变了 → 判为维护而非违规" "$QRT" selfcheck --agent alice
 expect_ok   "以新状态重新开工"       "$QRT" start --agent alice
 expect_ok   "同样的脏工作区，重新开工后自检通过（增量为零）" "$QRT" selfcheck --agent alice
 
