@@ -11,10 +11,12 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 KLINE_HFQ_DIR = os.path.join(DATA_DIR, "kline_hfq")
 KLINE_RAW_DIR = os.path.join(DATA_DIR, "kline_raw")
+# 重建的乘法复权序列，取代腾讯的加法复权 hfq（见 quant_research/blockers/B0005-*）
+KLINE_ADJ_DIR = os.path.join(DATA_DIR, "kline_adj")
 PANEL_DIR = os.path.join(DATA_DIR, "panel")
 REPORT_DIR = os.path.join(BASE_DIR, "reports")
 
-for _d in (DATA_DIR, KLINE_HFQ_DIR, KLINE_RAW_DIR, PANEL_DIR, REPORT_DIR):
+for _d in (DATA_DIR, KLINE_HFQ_DIR, KLINE_RAW_DIR, KLINE_ADJ_DIR, PANEL_DIR, REPORT_DIR):
     os.makedirs(_d, exist_ok=True)
 
 # ---------------------------------------------------------------- 数据区间

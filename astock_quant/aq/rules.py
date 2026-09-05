@@ -50,17 +50,23 @@ def tradability(panels: dict[str, pd.DataFrame], price: str = "open") -> dict[st
     后者用于稳健性检验。可交易性只用到成交那一刻已经发生的信息。
     """
     close, open_ = panels["close"], panels["open"]
-    high, low, vol = panels["high"], panels["low"], panels["volume"]
-    prev_close = close.shift(1)
-    exec_px = open_ if price == "open" else close
+    vol = panels["volume"]
+    # 涨跌停用【不复权】价判。涨跌停价是拿前一日不复权收盘价乘 1±幅度、四舍五入到分算的；
+    # 除权日的总收益天然不等于价格涨跌幅，所以哪怕复权做对了，拿复权价去比阈值也一定错。
+    # 旧代码用 hfq 价比阈值，实测东风汽车 sh600006 2019-04-12 开盘恰在涨停价 6.85
+    # （前收 6.23），hfq 口径只显示 +8.34%，于是 can_buy 被判成 True。见 B0005。
+    close_r, open_r = panels["close_raw"], panels["open_raw"]
+    high, low = panels["high_raw"], panels["low_raw"]
+    prev_close = close_r.shift(1)
+    exec_px = open_r if price == "open" else close_r
     open_ret = exec_px / prev_close - 1.0
-    ret = close / prev_close - 1.0
+    ret = close_r / prev_close - 1.0
 
     limits = limit_matrix(list(close.columns), close.index)
     st = infer_st_cap(ret)
     limits = limits.where(~st, 0.05)
 
-    has_bar = close.notna() & (vol > 0)
+    has_bar = close.notna() & close_r.notna() & (vol > 0)
     yizi = has_bar & (high <= low * 1.0001)          # 一字板，全天无价差
     tol = config.LIMIT_TOLERANCE
     at_up = open_ret >= (limits - tol)

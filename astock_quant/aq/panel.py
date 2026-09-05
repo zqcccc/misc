@@ -14,7 +14,12 @@ import pandas as pd
 
 from . import config, datasource as ds
 
-FIELDS = ["open", "high", "low", "close", "volume", "amount", "close_raw"]
+# open/high/low/close 走【重建的乘法复权】价（scripts/rebuild_adjusted.py 的产物），
+# 不再用腾讯的 hfq —— 那是加法复权，日收益被系统性压缩，见 quant_research/blockers/B0005-*。
+# *_raw 是不复权价：涨跌停判定与 ST 反推必须用它，因为除权日的总收益天然 ≠ 价格涨跌幅，
+# 即使复权做对了也不能拿复权价去比涨跌停价。
+FIELDS = ["open", "high", "low", "close", "volume", "amount",
+          "close_raw", "open_raw", "high_raw", "low_raw"]
 
 # 连续交易（前一日未停牌）时 A 股单日涨跌幅不可能超过 20%+，超过这个阈值
 # 只可能是数据源的复权因子出错或退市整理期的脏数据
@@ -59,17 +64,25 @@ def build_panel(codes: list[str] | None = None, verbose: bool = True) -> dict[st
         codes = [c for c in meta["code"].tolist() if ds.is_tradable_board(c)]
 
     series: dict[str, dict[str, pd.Series]] = {f: {} for f in FIELDS}
+    missing_adj = []
     for i, code in enumerate(codes):
+        adj = load_adjusted(code)
+        if adj is None or adj.empty:
+            # 没通过重建对账的标的（配股、无 baostock 对照…）宁可不进面板，
+            # 也不要放一只没对上账的进去。数量与原因见 data/rebuild_report.json。
+            missing_adj.append(code)
+            continue
         hfq = ds.load_local(code, "hfq")
         if hfq is None or hfq.empty:
             continue
-        hfq = hfq.drop_duplicates(subset="date").set_index("date")
+        hfq = hfq.drop_duplicates(subset="date").set_index("date").reindex(adj.index)
         raw = ds.load_local(code, "raw")
         if raw is not None and not raw.empty:
-            raw = raw.drop_duplicates(subset="date").set_index("date")
-            close_raw = raw["close"].reindex(hfq.index)
+            raw = raw.drop_duplicates(subset="date").set_index("date").reindex(adj.index)
+            close_raw = raw["close"]
         else:
-            close_raw = pd.Series(np.nan, index=hfq.index)
+            raw = None
+            close_raw = pd.Series(np.nan, index=adj.index)
         # 成交额估算：成交量(手) * 100 * 不复权收盘价。腾讯接口不给成交额，
         # 用收盘价近似当日均价，量级上足够做流动性过滤与 Amihud 因子。
         # 坑：科创板(688/689)返回的成交量单位是「股」不是「手」，实测中位数成交额
@@ -78,12 +91,18 @@ def build_panel(codes: list[str] | None = None, verbose: bool = True) -> dict[st
         volume = hfq["volume"] / (100.0 if _is_share_unit(code) else 1.0)
         amount = volume * 100.0 * close_raw
         for f in ["open", "high", "low", "close"]:
-            series[f][code] = hfq[f]
+            series[f][code] = adj[f]
         series["volume"][code] = volume
         series["amount"][code] = amount
         series["close_raw"][code] = close_raw
+        for f in ("open", "high", "low"):
+            series[f + "_raw"][code] = (raw[f] if raw is not None and f in raw
+                                        else pd.Series(np.nan, index=adj.index))
         if verbose and (i + 1) % 500 == 0:
             print(f"  拼接 {i + 1}/{len(codes)}", flush=True)
+    if verbose and missing_adj:
+        print(f"  跳过 {len(missing_adj)} 只没有重建复权序列的标的"
+              f"（未通过对账，见 data/rebuild_report.json）", flush=True)
 
     panels = {}
     for f in FIELDS:
@@ -99,6 +118,21 @@ def save_panels(panels: dict[str, pd.DataFrame]) -> None:
         out = df.copy()
         out.index.name = "date"
         out.to_parquet(_panel_path(f))
+
+
+def load_adjusted(code: str) -> pd.DataFrame | None:
+    """读重建的乘法复权序列（scripts/rebuild_adjusted.py 的产物）。
+
+    没有这个文件说明该标的没通过重建对账，调用方应当把它整只排除，
+    不要退回腾讯的 hfq —— 那正是 B0005 要修的东西。
+    """
+    path = os.path.join(config.KLINE_ADJ_DIR, f"{code}.csv")
+    if not os.path.exists(path):
+        return None
+    df = pd.read_csv(path)
+    if "date" not in df.columns:
+        return None
+    return df.drop_duplicates(subset="date").set_index("date").sort_index()
 
 
 def load_panels(fields: list[str] | None = None) -> dict[str, pd.DataFrame]:
