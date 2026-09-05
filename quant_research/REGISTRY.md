@@ -4,8 +4,8 @@
 
 | ID | 状态 | 裁决 | 市场 | 家族 | 标题 | 负责人 | 更新 |
 |---|---|---|---|---|---|---|---|
-| [H0001](hypotheses/H0001-cn-midterm-momentum.md) | done | FAIL | cn_stock | momentum | A股中期动量（60/120日、52周新高）在横截面上有正向预测力 | seed | 2026-09-05T07:13:59Z |
-| [H0002](hypotheses/H0002-smallcap-lowvol-reversal.md) | done | PARK | cn_stock | lowvol | 低波+反转多因子小微盘组合（ivol60/rev20，300只/20日）净超额显著 | seed | 2026-09-05T07:14:00Z |
+| [H0001](hypotheses/H0001-cn-midterm-momentum.md) | done | FAIL | cn_stock | momentum | A股中期动量（60/120日、52周新高）在横截面上有正向预测力 | seed | 2026-09-05T13:56:50Z |
+| [H0002](hypotheses/H0002-smallcap-lowvol-reversal.md) | done | PARK | cn_stock | lowvol | 低波+反转多因子小微盘组合（ivol60/rev20，300只/20日）净超额显著 | seed | 2026-09-05T14:09:13Z |
 | [H0003](hypotheses/H0003-binance-btc-eth-delta-2019-2026-0-2024-etf-ethen.md) | done | PARK | crypto_perp | carry | Binance BTC/ETH 永续资金费率 delta 中性收割（多现货+空永续）在锁死成本下 2019-2026 全期净年化>0，且 2024 制度化（ETF+Ethena）后净年化仍>0 | trae | 2026-09-04T08:55:13Z |
 | [H0004](hypotheses/H0004-hyg-ief-spy-buy-hold.md) | done | FAIL | us_stock | timing | 信用风险偏好（HYG/IEF 相对强弱）作为状态变量择时 SPY，成本后风险调整收益优于 buy&hold | claude | 2026-09-04T00:11:01Z |
 | [H0005](hypotheses/H0005-vix-vix3m-contango-backwardation-spy-2007-2026-b.md) | done | FAIL | us_stock | timing | VIX/VIX3M 期限结构比率（contango 持有、backwardation 空仓）择时 SPY，2007-2026 成本后夏普与回撤均优于 buy&hold，且不靠单一年份 | trae | 2026-09-04T00:10:07Z |
@@ -48,6 +48,7 @@
 | [H0042](hypotheses/H0042-cn-index-futures-overnight-short.md) | done | FAIL | cn_index_futures | microstructure | 在中金所股指期货（IF/IH/IC/IM，逐日按持仓量选主力合约）上做空隔夜段——每交易日收盘价开空、次日开盘价平仓、日内空仓——在锁死单边1.0bp成本与合约真实基差下，2010-2026日频资金曲线净年化>0且NW t>=2，且2019-2026后半段单独为正、随机时移置换分位>=95%、最大回撤<=20% | claude | 2026-09-05T02:16:26Z |
 | [H0043](hypotheses/H0043-cn-index-futures-overnight-long.md) | done | FAIL | cn_index_futures | carry | 在中金所股指期货（IF/IH/IC/IM，逐日按前一日持仓量选主力）上做多隔夜段——每交易日收盘价买入、次日开盘价卖出、日内空仓——在锁死单边1.0bp成本下，2016-2026主样本净年化>0且NW t>=2、对同池四指数等权的CAPM净alpha的NW t>=2，且对'一直持有同一批期货合约（全天暴露）'的静态对照仍有正的风险调整增量、逐年剔除后alpha t>=1.5、随机时移置换分位>=95%、DSR>=0.90、最大回撤<=20%、滑点翻倍后净年化仍>0 | claude | 2026-09-05T02:22:20Z |
 | [H0044](hypotheses/H0044-cboe-vpn-vix-25-2019-2026-25.md) | done | FAIL | vol | carry | 按Cboe VPN规则做空近月VIX期货并买入同到期高25点看涨期权，在2019至2026发表后样本扣除锁死成本后仍有正现金超额且最大回撤不超过25% | gpt | 2026-09-05T02:40:37Z |
-| [H0045](hypotheses/H0045-gdx-overnight-0931-cost-screen.md) | done | FAIL | us_stock | microstructure | GDX每日收盘买入并于下一交易日09:31卖出，使用可成交分钟价格后的隔夜漂移在单边3bp的乐观成本下仍值得进一步回测 | gpt | 2026-09-05T13:18:45Z |
+| [H0045](hypotheses/H0045-gdx-overnight-0931-cost-screen.md) | done | FAIL | us_stock | microstructure | GDX每日收盘买入并于下一交易日09:31卖出，使用可成交分钟价格后的隔夜漂移在单边3bp的乐观成本下仍值得进一步回测 | gpt | 2026-09-05T13:48:56Z |
 | [H0046](hypotheses/H0046-9-etf-spy-efa-eem-tlt-ief-lqd-dbc-gld-vnq-pit-ca.md) | done | FAIL | multi | carry | 9 只跨资产 ETF（SPY/EFA/EEM/TLT/IEF/LQD/DBC/GLD/VNQ）按 PIT 可算的 carry（过去 12 个月已派发现金分配 ÷ 当日未复权收盘价 − 同期 13 周国库券贴现率）做横截面排序，纯多 carry 最高 3 只、等权、月末收盘出信号次日收盘成交，2008-2026 在锁死单边 5bp 成本下对同池 9 只等权 buy&hold 净 alpha>0 且 NW t>=2，且对『恒定持有该策略平均权重』的静态对照仍有正增量 | claude | 2026-09-05T03:55:34Z |
 | [H0047](hypotheses/H0047-a-etf-if-510300-ih-510050-ic-510500-im-512100-et.md) | running | OPEN | cn_index_futures | carry | 对一个本来就要拿 A 股宽基多头的人，用中金所股指期货主力合约替代对应宽基 ETF（IF↔510300 / IH↔510050 / IC↔510500 / IM↔512100），名义敞口相同、剩余资金买场内货币 ETF 511880，逐月按持仓量换主力并付单边 1.0bp，2017-2026 相对持有后复权 ETF（含分红再投、已扣管理费）的净年化差>0 且 NW t>=2，四对里至少三对同号，最大回撤不比 ETF 深 5 个百分点以上，成本压力档×2 后仍>0 | claude | 2026-09-05T13:08:12Z |
+| [H0048](hypotheses/H0048-spy-ief-60-40-20-10-0-25-1-2020-2026-60-40-0-2-2.md) | done | FAIL | multi | lowvol | SPY/IEF 60/40组合每月用过去20日波动率把仓位缩放至10%目标且限制0.25至1倍，在2020至2026相对原60/40提高日频夏普至少0.2并减少最大回撤25% | gpt | 2026-09-05T13:58:01Z |

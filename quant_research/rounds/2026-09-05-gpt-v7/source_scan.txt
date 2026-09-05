@@ -1,0 +1,168 @@
+
+=== arxiv (52) ===
+- 2026-09-03 [cs.CL] Compile by Training: Turning Natural-Language Specifications into Local Neural Functions
+  http://arxiv.org/abs/2609.04199v1
+- 2026-09-03 [cs.AI] Clean Engineering, Unstable Measurement: A Preregistered Reliability Failure of Black-Box LLM Observers on Shared Endpoints
+  http://arxiv.org/abs/2609.04198v1
+- 2026-09-03 [cs.CL] Legibility is Not Interpretability: Comparing Judged and Actual Importance in Chain-Of-Thought Reasoning
+  http://arxiv.org/abs/2609.04194v1
+- 2026-09-03 [cs.LG] Robust PAC Learning of Concurrent Stochastic Games
+  http://arxiv.org/abs/2609.04189v1
+- 2026-09-03 [cs.DC] Para-Pipe: Exploiting Hierarchical Operator Parallelism of ML Computational Graphs on SoCs
+  http://arxiv.org/abs/2609.04168v1
+- 2026-09-03 [quant-ph] Parameterised graph theory for tensor networks: entanglement rerouting, structural simplification, and agnostic tomography
+  http://arxiv.org/abs/2609.04165v1
+- 2026-09-03 [cs.LG] A Low-Cost, Open Platform for End-to-End Autonomous Driving on a Miniature Ackermann Vehicle
+  http://arxiv.org/abs/2609.04147v1
+- 2026-09-03 [cs.LG] Prospective Coding Improves Learning in Deep Continuous-Time Recurrent Networks
+  http://arxiv.org/abs/2609.04134v1
+- 2026-09-03 [cs.LG] Constant regret in general games via higher-order optimism
+  http://arxiv.org/abs/2609.04113v1
+- 2026-09-03 [cs.CL] Sequential Beats Joint: On the Interplay between On-Policy Distillation and RLVR
+  http://arxiv.org/abs/2609.04108v1
+- 2026-09-03 [cs.LG] Hardware-Aware FP4 FlashAttention-4
+  http://arxiv.org/abs/2609.04105v1
+- 2026-09-03 [cs.AI] DRACO: Fine-Grained Credit Assignment with Dynamic Rubrics for Long-Horizon Agent Training
+  http://arxiv.org/abs/2609.04094v1
+- 2026-09-03 [cs.LG] Conditioning Degenerate Diffusion Models
+  http://arxiv.org/abs/2609.04090v1
+- 2026-09-03 [cs.LG] Subspace Inference Enables Efficient Active Reward Learning from Preferences
+  http://arxiv.org/abs/2609.04066v1
+- 2026-09-03 [cs.CC] The Head Complexity of Boolean Functions in Single-Layer Attention
+  http://arxiv.org/abs/2609.04046v1
+- 2026-09-03 [cs.CE] Influence of Extruded Filament Shape on Buildability in 3D Concrete Printing: A Geometry-Informed Deep Learning-FEM Approach
+  http://arxiv.org/abs/2609.04028v1
+- 2026-09-03 [cs.AI] FLY-EVAL++: An Evidence-Driven Evaluation Protocol for Safety-Constrained Flight Prediction with Large Language Models
+  http://arxiv.org/abs/2609.04021v1
+- 2026-09-03 [cs.LG] A location-invariant estimator of extremal quantile treatment effects for heavy-tailed distributions
+  http://arxiv.org/abs/2609.04018v1
+- 2026-09-03 [cs.AI] LLM4CKD: Large Language Models for Early Stage Chronic Kidney Disease Screening
+  http://arxiv.org/abs/2609.04013v1
+- 2026-09-03 [cs.CE] Differentiable Hybrid Modelling for Learning and Optimising Chemical Transport Processes from Experimental Data
+  http://arxiv.org/abs/2609.04011v1
+- 2026-09-03 [q-fin.MF] Bayesian Confidence Recalibration and Research-Equilibrium Criticality: Temporal Support in Robust Portfolios
+  http://arxiv.org/abs/2609.03741v1
+- 2026-09-03 [q-fin.PM] An Entropic Factor Model for Robust Portfolio Replication
+  http://arxiv.org/abs/2609.03552v1
+- 2026-09-02 [cs.CL] The Analyst in the Prompt: Role, Retrieval, and Memory Biases in LLM Financial Analysis
+  http://arxiv.org/abs/2609.03218v1
+- 2026-09-02 [q-fin.TR] Mean-field equilibrium of heterogeneous agents under market impact
+  http://arxiv.org/abs/2609.03115v1
+- 2026-09-02 [q-fin.PM] Eliciting ESG Preferences for Reinforcement Learning-Based Portfolio Optimization
+  http://arxiv.org/abs/2609.02677v1
+- 2026-09-02 [q-fin.ST] Modeling Trade Durations under Temporal Granularity Effects in Forex Markets
+  http://arxiv.org/abs/2609.02660v1
+- 2026-09-02 [q-fin.PM] Uniform Inference and Certified Capacity at a Reflexive Stability Boundary
+  http://arxiv.org/abs/2609.02535v1
+- 2026-09-02 [q-fin.PM] Switching Frictions, Heterogeneous Trading Horizons, and Long-Memory Order Flow
+  http://arxiv.org/abs/2609.02525v1
+- 2026-09-02 [q-fin.TR] Price manipulation in nonlinear transient impact models: rigidity before memory and complete positivity after memory
+  http://arxiv.org/abs/2609.02447v1
+- 2026-09-01 [q-fin.PM] Harvesting the Variance Risk Premium in Nuclear and Energy Equities: A Short-Put Portfolio Derisking Strategy
+  http://arxiv.org/abs/2609.01183v1
+- 2026-09-01 [cs.AI] Agentic Empirical Asset Pricing: Methodological Foundations
+  http://arxiv.org/abs/2609.00731v1
+- 2026-08-31 [q-fin.TR] Metaorder modelling and identification from public data
+  http://arxiv.org/abs/2608.30999v2
+- 2026-08-31 [q-fin.PM] End-to-End Neural Shrinkage of Indefinite Pairwise Correlation Matrices for Small-Cap-Inclusive Portfolios
+  http://arxiv.org/abs/2608.30446v1
+- 2026-08-31 [q-fin.MF] Optimal Block Time for AMM Liquidity Providers under Jump-Diffusion Prices
+  http://arxiv.org/abs/2608.30321v1
+- 2026-08-30 [q-fin.ST] Portfolio Risk Bounds without Cross-Asset Return Covariances: Distributional Fields from Language-Model Representations
+  http://arxiv.org/abs/2608.29692v1
+- 2026-08-30 [q-fin.ST] Wasserstein-Barycentric Interaction Fields for Spatial Factor Models: Evidence from Language-Model Representations
+  http://arxiv.org/abs/2608.29669v1
+- 2026-08-29 [q-fin.TR] The Convergence Rate of Stochastic Tracking with Application to Optimal Execution
+  http://arxiv.org/abs/2608.29468v1
+- 2026-08-29 [q-fin.ST] Deep Hedging Under Realistic Market Frictions: A Regime-Conditional Empirical Study of Dynamic Option Hedging on Bitcoin Options
+  http://arxiv.org/abs/2608.29025v1
+- 2026-08-28 [cs.AI] RetailAgent: Structured Adverse Timing in Self-Conditioned Multimodal LLM Trading Agents
+  http://arxiv.org/abs/2608.28399v1
+- 2026-08-27 [q-fin.ST] What survives honest evaluation? Leakage-safe, search-aware assessment of LLM-driven trading strategy discovery
+  http://arxiv.org/abs/2608.27734v1
+- 2026-08-27 [cs.LG] Tabular Deep Learning for Algorithmic Trading: Cross-Regime Bayesian Optimisation for Equity Signal Generation
+  http://arxiv.org/abs/2608.27076v1
+- 2026-08-26 [eess.SP] Output-Only Identification and Spectral Monitoring of Coupled Feedback Networks with Known Time-Varying Actuation
+  http://arxiv.org/abs/2608.25844v2
+- 2026-08-25 [q-fin.CP] Harvesting the Volatility Risk Premium: A Learning-to-Rank Approach
+  http://arxiv.org/abs/2608.24786v1
+- 2026-08-25 [q-fin.ST] Lead-Lag Relationships in Financial Markets: A Comparison of Multiple Clustering Algorithms
+  http://arxiv.org/abs/2608.24703v1
+- 2026-08-25 [q-fin.PM] Generalizing Markowitz Portfolio Optimization by a Quadratic Risk Measure
+  http://arxiv.org/abs/2608.24449v1
+- 2026-08-24 [q-fin.TR] Equilibrium in closed constant-function market maker economies
+  http://arxiv.org/abs/2608.23915v1
+- 2026-08-24 [q-fin.ST] Equity Strategy Backtesting: Luck or Edge? The MinervaScore as a Statistical Robustness Grade
+  http://arxiv.org/abs/2608.23808v2
+- 2026-08-24 [cs.LG] The Axiomatic Trader: Latent Regularity, Information Budgets, and the Canonical Form of a Quantitative Investment System
+  http://arxiv.org/abs/2608.23416v2
+- 2026-08-24 [q-fin.PM] KellyBoost: Growth-Optimal Portfolio Construction with Gradient-Boosted Trees
+  http://arxiv.org/abs/2608.23393v1
+- 2026-08-24 [q-fin.TR] tse_tick: A Python Library for Parsing and Querying Nikkei NEEDS Tick Data from the Tokyo Stock Exchange
+  http://arxiv.org/abs/2608.23053v1
+- 2026-08-24 [q-fin.ST] From Exponential to Polynomial: An Exact Filter for High-Dimensional MSM Models
+  http://arxiv.org/abs/2608.22864v1
+- 2026-08-24 [physics.soc-ph] The Loop-Gain Matrix: Coupled Rebalancing Feedback and the Blind Spots of Scalar Stability Monitoring
+  http://arxiv.org/abs/2608.22768v1
+
+=== hf (20) ===
+- 2026-09-02 [▲23] DRACO: Fine-Grained Credit Assignment with Dynamic Rubrics for Long-Horizon Agent Training
+  https://huggingface.co/papers/2609.04094
+- 2026-09-02 [▲24] Last Translation Benchmark
+  https://huggingface.co/papers/2609.04173
+- 2026-09-02 [▲15] Select, Compress, Reinvest: A Controlled Study of Visual-Token Allocation in Long-Video MLLMs
+  https://huggingface.co/papers/2609.03820
+- 2026-09-02 [▲45] Scal3R: Learning Efficient Multi-Relative Pose Query for Scalable Online 3D Reconstruction
+  https://huggingface.co/papers/2609.04201
+- 2026-09-02 [▲274] Compile by Training: Turning Natural-Language Specifications into Local Neural Functions
+  https://huggingface.co/papers/2609.04199
+- 2026-09-02 [▲22] PACE: Towards Surfacing Hidden Conflicts in User Requests
+  https://huggingface.co/papers/2609.03293
+- 2026-09-02 [▲65] Puffin-World: Scaling a Unified Multimodal Model with Native 3D World States
+  https://huggingface.co/papers/2609.04196
+- 2026-09-02 [▲29] Beyond Retrieval: Progressive Latent Memory Evolution for Streaming Video Understanding
+  https://huggingface.co/papers/2609.04131
+- 2026-09-02 [▲18] FlashRender: Few-Step Generative Rendering via Camera-Controlled Video MeanFlow
+  https://huggingface.co/papers/2609.03563
+- 2026-09-02 [▲23] WorldReward: Reward Modeling for Camera-Conditioned World Models
+  https://huggingface.co/papers/2609.03952
+- 2026-09-02 [▲158] Random Attention: Rethinking KV Cache Eviction for Efficient Reasoning
+  https://huggingface.co/papers/2609.03430
+- 2026-09-02 [▲73] Rethinking On-Policy Distillation of Large Language Models II: One Training Example
+  https://huggingface.co/papers/2609.04172
+- 2026-09-02 [▲24] CORE: Improving Compositional Reasoning in MLLM Embedding via Reranker Distillation
+  https://huggingface.co/papers/2609.04083
+- 2026-09-02 [▲39] Editable Visual Design
+  https://huggingface.co/papers/2609.04034
+- 2026-09-02 [▲16] Environment Evolution for Terminal Agents
+  https://huggingface.co/papers/2609.04128
+- 2026-09-02 [▲16] Principia: Relational Physics Tests for Video Models
+  https://huggingface.co/papers/2609.04200
+- 2026-09-02 [▲225] Terminal-Universe: Turning Agent Trajectories into Scalable Terminal Environments
+  https://huggingface.co/papers/2609.04148
+- 2026-09-02 [▲205] LLaDA-Image: Building Strong Image Generators with Fully Open Training Recipes
+  https://huggingface.co/papers/2609.03796
+- 2026-09-02 [▲72] Why Gated DeltaNet Survives 4-Bit Quantization: NVFP4 W4A4 for the Recurrent Half of a Hybrid 27B LLM
+  https://huggingface.co/papers/2609.04098
+- 2026-09-01 [▲43] RoboTok: An Internet-Scale Data Engine for Human Demonstration Retrieval and Dexterous Manipulation Learning
+  https://huggingface.co/papers/2609.03199
+
+=== alphaarchitect (3) ===
+- 2026-09-04 What Daily Stock Returns Tell Us About the Economy
+  https://alphaarchitect.com/daily-stock-returns-2/
+- 2026-08-31 Can ChatGPT Forecast Stock Price Movements?
+  https://alphaarchitect.com/chatgpt-forecast-stock-price/
+- 2026-08-24 Good Idea or Bad Idea: Private equity for pension plans?
+  https://alphaarchitect.com/good-idea-or-bad-idea-private-equity-for-pension-plans/
+
+=== mlquant (0) ===
+
+=== quantitativo (1) ===
+- 2026-09-01 Incubation
+  https://www.quantitativo.com/p/incubation
+
+共 76 条。
+
+失败的源：
+  ! quantocracy: <urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1016)>
+  ! reddit: HTTP Error 403: Blocked

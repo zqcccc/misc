@@ -1,0 +1,230 @@
+[
+  {
+    "id": "smallcap_momentum_value",
+    "name": "聚宽顶流: 小市值微利轮动 (SmallCap Momentum & Value)",
+    "platform": "聚宽 (JoinQuant)",
+    "description": "市值最小排名前 30，结合 5 日短期防追高反转与低特质波动过滤，双周轮动",
+    "train_metrics": {
+      "days": 730,
+      "annual_return": 30.06,
+      "daily_sharpe": 1.324,
+      "max_drawdown": -23.65,
+      "annual_turnover": 40.48,
+      "alpha_vs_hs300": 16.21,
+      "alpha_t_hs300": 1.39,
+      "alpha_vs_style": 9.4,
+      "alpha_t_style": 1.62,
+      "beta_hs300": 0.81,
+      "beta_style": 0.94,
+      "r_squared": 0.819
+    },
+    "valid_metrics": {
+      "days": 484,
+      "annual_return": 13.29,
+      "daily_sharpe": 0.671,
+      "max_drawdown": -29.02,
+      "annual_turnover": 39.84,
+      "alpha_vs_hs300": 28.63,
+      "alpha_t_hs300": 2.19,
+      "alpha_vs_style": 16.12,
+      "alpha_t_style": 2.39,
+      "beta_hs300": 0.95,
+      "beta_style": 1.05,
+      "r_squared": 0.834
+    },
+    "gap_penalty_loss": -0.3445,
+    "dsr": {
+      "试验次数": 100,
+      "试验夏普方差": 0.25,
+      "实际夏普(年化)": 0.672,
+      "纯运气可达夏普(年化)": 1.265,
+      "偏度": -0.642,
+      "峰度": 6.225,
+      "样本天数": 484,
+      "DSR": 0.2053,
+      "判定": "不显著 —— 大概率是搜出来的运气"
+    },
+    "monte_carlo_valid": {
+      "重采样次数": 5000,
+      "块长": 10,
+      "实际累计": 1.2809,
+      "盈利路径占比": 0.7282,
+      "P5": 0.7092,
+      "P50": 1.2179,
+      "P95": 2.1071
+    },
+    "test_metrics": {
+      "days": 647,
+      "annual_return": 21.18,
+      "daily_sharpe": 0.74,
+      "max_drawdown": -43.6,
+      "annual_turnover": 40.21,
+      "alpha_vs_hs300": 13.01,
+      "alpha_t_hs300": 0.68,
+      "alpha_vs_style": 10.34,
+      "alpha_t_style": 1.21,
+      "beta_hs300": 0.79,
+      "beta_style": 1.26,
+      "r_squared": 0.843
+    },
+    "crash_2024_max_dd": -43.6,
+    "equity_sample": {
+      "start": 10000000.0,
+      "end_train": 21955131.26,
+      "end_valid": 28121368.21,
+      "end_test": 46802601.06
+    }
+  },
+  {
+    "id": "dividend_lowvol_defensive",
+    "name": "果仁王牌: 低估值高股息与低波动防御 (Dividend & Low Vol)",
+    "platform": "果仁网 (Guoren)",
+    "description": "流动性前 50% 优质池，低特质低波 + 低历史波动 + 均线负乖离，逆波动率加权，月频轮动",
+    "train_metrics": {
+      "days": 730,
+      "annual_return": 18.26,
+      "daily_sharpe": 0.927,
+      "max_drawdown": -22.6,
+      "annual_turnover": 18.79,
+      "alpha_vs_hs300": 4.42,
+      "alpha_t_hs300": 0.51,
+      "alpha_vs_style": 0.29,
+      "alpha_t_style": 0.05,
+      "beta_hs300": 0.86,
+      "beta_style": 0.57,
+      "r_squared": 0.769
+    },
+    "valid_metrics": {
+      "days": 484,
+      "annual_return": -12.15,
+      "daily_sharpe": -0.593,
+      "max_drawdown": -30.27,
+      "annual_turnover": 19.81,
+      "alpha_vs_hs300": 4.09,
+      "alpha_t_hs300": 0.49,
+      "alpha_vs_style": -1.92,
+      "alpha_t_style": -0.33,
+      "beta_hs300": 0.97,
+      "beta_style": 0.51,
+      "r_squared": 0.813
+    },
+    "gap_penalty_loss": 1.353,
+    "dsr": {
+      "试验次数": 100,
+      "试验夏普方差": 0.25,
+      "实际夏普(年化)": -0.594,
+      "纯运气可达夏普(年化)": 1.265,
+      "偏度": -0.744,
+      "峰度": 8.063,
+      "样本天数": 484,
+      "DSR": 0.004,
+      "判定": "不显著 —— 大概率是搜出来的运气"
+    },
+    "monte_carlo_valid": {
+      "重采样次数": 5000,
+      "块长": 10,
+      "实际累计": 0.7734,
+      "盈利路径占比": 0.1426,
+      "P5": 0.472,
+      "P50": 0.7455,
+      "P95": 1.1585
+    },
+    "test_metrics": {
+      "days": 647,
+      "annual_return": 14.89,
+      "daily_sharpe": 0.721,
+      "max_drawdown": -24.01,
+      "annual_turnover": 20.1,
+      "alpha_vs_hs300": 5.37,
+      "alpha_t_hs300": 0.51,
+      "alpha_vs_style": 4.36,
+      "alpha_t_style": 0.51,
+      "beta_hs300": 0.83,
+      "beta_style": 0.47,
+      "r_squared": 0.705
+    },
+    "crash_2024_max_dd": -24.01,
+    "equity_sample": {
+      "start": 10000000.0,
+      "end_train": 16515510.95,
+      "end_valid": 12773583.53,
+      "end_test": 18458094.08
+    }
+  },
+  {
+    "id": "rsrs_momentum_rotation",
+    "name": "聚宽/研报精选: RSRS 阻力支撑相对强度动量轮动 (RSRS Momentum)",
+    "platform": "聚宽 (JoinQuant)",
+    "description": "High 对 Low 滚动 OLS 斜率标准化 RSRS 修正值 + 量能异动 + 20 日反转，双周轮动",
+    "train_metrics": {
+      "days": 730,
+      "annual_return": 0.75,
+      "daily_sharpe": 0.158,
+      "max_drawdown": -47.71,
+      "annual_turnover": 46.04,
+      "alpha_vs_hs300": -11.69,
+      "alpha_t_hs300": -0.94,
+      "alpha_vs_style": -19.06,
+      "alpha_t_style": -2.77,
+      "beta_hs300": 1.0,
+      "beta_style": 1.02,
+      "r_squared": 0.797
+    },
+    "valid_metrics": {
+      "days": 484,
+      "annual_return": -14.79,
+      "daily_sharpe": -0.564,
+      "max_drawdown": -34.65,
+      "annual_turnover": 46.73,
+      "alpha_vs_hs300": 1.3,
+      "alpha_t_hs300": 0.1,
+      "alpha_vs_style": -10.93,
+      "alpha_t_style": -1.33,
+      "beta_hs300": 1.0,
+      "beta_style": 1.03,
+      "r_squared": 0.781
+    },
+    "gap_penalty_loss": 0.925,
+    "dsr": {
+      "试验次数": 100,
+      "试验夏普方差": 0.25,
+      "实际夏普(年化)": -0.564,
+      "纯运气可达夏普(年化)": 1.265,
+      "偏度": -0.507,
+      "峰度": 4.632,
+      "样本天数": 484,
+      "DSR": 0.0047,
+      "判定": "不显著 —— 大概率是搜出来的运气"
+    },
+    "monte_carlo_valid": {
+      "重采样次数": 5000,
+      "块长": 10,
+      "实际累计": 0.7279,
+      "盈利路径占比": 0.1754,
+      "P5": 0.4355,
+      "P50": 0.7373,
+      "P95": 1.2546
+    },
+    "test_metrics": {
+      "days": 647,
+      "annual_return": -2.1,
+      "daily_sharpe": 0.105,
+      "max_drawdown": -35.68,
+      "annual_turnover": 45.42,
+      "alpha_vs_hs300": -11.05,
+      "alpha_t_hs300": -0.65,
+      "alpha_vs_style": -13.33,
+      "alpha_t_style": -1.51,
+      "beta_hs300": 1.03,
+      "beta_style": 1.07,
+      "r_squared": 0.839
+    },
+    "crash_2024_max_dd": -34.87,
+    "equity_sample": {
+      "start": 10000000.0,
+      "end_train": 10226075.93,
+      "end_valid": 7443573.3,
+      "end_test": 7036379.92
+    }
+  }
+]
