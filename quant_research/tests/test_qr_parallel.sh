@@ -147,6 +147,18 @@ RS="$(mkrun solo)"
 expect_ok   "只有一个运行时不带 QR_RUN 也能自检" env QR_AGENT=solo "$QRT" selfcheck --agent solo
 
 echo
+echo "== 署名是元数据，不是身份 =="
+# 名字的用途是「后来人看这张卡是谁做的」，不参与任何门禁。所以：不必由人指定、
+# 不必唯一、缺了也不该影响正确性 —— 只影响可读性。
+expect_ok "不给署名也能开工" "$QRT" start
+NAMED="$("$QRT" start --as "Claude Opus 5" 2>/dev/null | sed -n 's/.*export QR_RUN=\([^ ]*\).*/\1/p' | head -1)"
+case "$NAMED" in claude-opus-5-*) ok "token 前缀按署名 ASCII 化（$NAMED）";; *) bad "token 前缀不对：$NAMED";; esac
+if [ -f "$TMP/runs/$NAMED.env" ] && [ "$(sed -n 's/^agent=//p' "$TMP/runs/$NAMED.env")" = "Claude Opus 5" ]; then
+  ok "基线里保留了原样的署名（含空格/大小写）"
+else bad "基线没保留原样署名"; fi
+expect_ok "带空格的署名能自检" env QR_AGENT="Claude Opus 5" QR_RUN="$NAMED" "$QRT" selfcheck --agent "Claude Opus 5"
+
+echo
 echo "== locale 兼容性 =="
 # macOS 的 bash 3.2 在 C.UTF-8 下会把紧跟 $var 的中文字节读进变量名（B0006）。
 # 所有面向 agent 的输出都带中文，必须在任何 locale 下都不炸。

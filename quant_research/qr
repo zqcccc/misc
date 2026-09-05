@@ -38,7 +38,10 @@ now_iso() { date -u +%Y-%m-%dT%H:%M:%SZ; }
 now_epoch() { date +%s; }
 die() { echo "qr: $*" >&2; exit 1; }
 
-agent_name() { echo "${1:-${QR_AGENT:-${CLAUDE_AGENT_NAME:-$(whoami)-$$}}}"; }
+# 名字是【署名】，不是身份。它只回答「这张卡是谁做的」，不参与任何门禁 ——
+# 归属、基线、接管全部按 qr start 铸的 run token 走（见 mint_run / resolve_run）。
+# 所以它不必唯一、不必由人指定，agent 自己报即可；报不出来也不影响正确性，只影响可读性。
+agent_name() { echo "${1:-${QR_AGENT:-${CLAUDE_AGENT_NAME:-未署名}}}"; }
 
 hyp_file() {  # $1=ID
   local f
@@ -859,10 +862,13 @@ prune_runs() {  # $1=agent
 }
 
 mint_run() {  # $1=agent
-  local t
-  prune_runs "$1"
+  # token 会变成文件名，所以前缀走 ASCII 化的署名（署名本身可以是任何文字）。
+  # 今天已经被 locale 咬过一次（C.UTF-8 下中文把 $var 吃进变量名），不给自己埋第二个。
+  local t pre
+  pre="$(slugify "$1")"; [ -n "$pre" ] || pre="agent"
+  prune_runs "$pre"
   while :; do
-    t="$1-$(now_epoch)-$$"
+    t="$pre-$(now_epoch)-$$"
     [ -e "$RUNS/$t.env" ] || { echo "$t"; return; }
     sleep 1
   done
@@ -871,13 +877,14 @@ mint_run() {  # $1=agent
 # 解析当前运行的 token：QR_RUN 优先；没有就看这个名字下有几个运行基线。
 # 恰好一个 → 用它（单 agent 的常见情况，不给人添麻烦）；
 # 多个 → 报错并列出来（这正是原本会静默出错的场景）。
-resolve_run() {  # $1=agent  $2=用途（报错文案用）
-  local agent="$1" what="${2:-操作}" f n=0 hit=""
+resolve_run() {  # $1=agent  $2=用途（报错文案用）  $3=strict 则零基线也报错
+  local agent="$1" what="${2:-操作}" f n=0 hit="" pre
+  pre="$(slugify "$agent")"; [ -n "$pre" ] || pre="agent"
   if [ -n "${QR_RUN:-}" ]; then
     [ -f "$RUNS/$QR_RUN.env" ] || die "QR_RUN=$QR_RUN 没有对应的开工基线，先跑 ./qr start --agent ${agent}"
     echo "$QR_RUN"; return
   fi
-  for f in "$RUNS/$agent"-*.env; do
+  for f in "$RUNS/$pre"-*.env; do
     [ -e "$f" ] || continue
     n=$((n+1)); hit="$(basename "${f%.env}")"
   done
@@ -892,7 +899,7 @@ resolve_run() {  # $1=agent  $2=用途（报错文案用）
   {
     echo "qr: ${agent} 名下有 $n 个并发运行，无法确定这次 ${what} 属于哪一个。"
     echo "同名并发是正常的，但每次运行要带上自己的 token："
-    for f in "$RUNS/$agent"-*.env; do
+    for f in "$RUNS/$pre"-*.env; do
       [ -e "$f" ] || continue
       echo "  export QR_RUN=$(basename "${f%.env}")   # 开工于 $(sed -n 's/^started_at=//p' "$f" | head -1)"
     done
@@ -1247,9 +1254,14 @@ RJPY
 cmd_start() {
   local agent=""
   while [ $# -gt 0 ]; do
-    case "$1" in --agent) agent="$2"; shift 2;; -*) die "未知参数 $1";; *) agent="$1"; shift;; esac
+    case "$1" in --agent|--as) agent="$2"; shift 2;; -*) die "未知参数 $1";; *) agent="$1"; shift;; esac
   done
   agent="$(agent_name "$agent")"
+  if [ "$agent" = "未署名" ]; then
+    echo "提示：没给署名。名字只用于「后来人看这张卡是谁做的」，不参与门禁，"
+    echo "      但留空会让台账难读。开工时报一下你是什么：./qr start --as \"<模型/工具名>\""
+    echo
+  fi
   local pfp cfp tfp head rc=0 run
   run="$(mint_run "$agent")"
   pfp="$(protocol_digest)"; cfp="$(protected_digest cli)"; tfp="$(protected_digest templates)"
