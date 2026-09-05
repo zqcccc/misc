@@ -108,6 +108,7 @@ next-env.d.ts
 /astock_quant/data/panel_bs/
 /astock_quant/data_bs/
 /astock_quant/data/*.log
+/astock_quant/data/rebuild_report.json
 /astock_quant/verified/
 /astock_quant/reports/
 /astock_quant/strategies_ext/
