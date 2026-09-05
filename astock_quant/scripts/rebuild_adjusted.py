@@ -46,6 +46,7 @@ REPORT = os.path.join(ROOT, "data", "rebuild_report.json")
 EVENT_TOL = 3e-4      # r_raw 与交易所 pctChg 的分歧阈值：超过即判为除权日
 FIT_WIN = 20          # 事件前后各取多少个交易日拟合仿射关系
 FIT_MIN = 6           # 拟合最少需要几个点
+FIT_MIN_TAIL = 3      # 序列末尾的事件允许更短的后段（仿射只有两个未知数）
 RESID_TOL = 0.004     # 仿射拟合残差容差（约 4 倍报价跳动的一半）
 RECON_TOL = 1e-5      # 对账容差：重建收益与 pctChg 的逐日偏差
 RECON_MAX_BAD = 0.002 # 允许对不上的天数占比上限
@@ -77,10 +78,15 @@ def load(code):
 
 
 def affine_at(df, i, win=FIT_WIN):
-    """在下标 i 处求事件前后两段的 (k, c)。返回 (m, D) 或 None。"""
+    """在下标 i 处求事件前后两段的 (k, c)。返回 (m, D) 或 None。
+
+    序列末尾的事件后面没有 FIT_MIN 天，但仿射只有两个未知数，3 个点就能定且留一点余量；
+    定出来的金额还要过「与交易所口径互比」那道独立校验，所以放宽尾段是安全的。
+    """
     lo, hi = max(0, i - win), min(len(df), i + win)
     before, after = df.iloc[lo:i], df.iloc[i:hi]
-    if len(before) < FIT_MIN or len(after) < FIT_MIN:
+    tail_min = FIT_MIN if hi < len(df) else FIT_MIN_TAIL
+    if len(before) < FIT_MIN or len(after) < tail_min:
         return None
     out = []
     for seg in (before, after):
@@ -144,34 +150,45 @@ def detect(df, b):
 RATIO_GRID = [1.0 + n / 20.0 for n in range(0, 61)]
 
 
-def solve_event(prev, cur, pct, s_hint):
+def solve_event(prev, cur, pct, affine):
     """解一次公司行动的 (股数倍数 s, 每股现金 C)。
 
-    交易所关系：除权参考价 ref = (前收 − C)/s，而 ref = 当日收/(1+pct)。
-    一个方程两个未知数，所以 s 必须另有来源：仿射拟合给出估计，再在合法的送转网格上
-    搜一个既接近估计、又能让现金分红非负的候选。
+    **股数倍数只能来自仿射。** 交易所关系式 ref = (前收 − C)/s 里 s 与 C 是同一条直线上
+    的两个未知数：任何 (s, C) 组合都同样满足它，拿它去「检验」s 是恒等式。实测残差对
+    s=1.0/1.5/2.0/2.1/3.0 一律是 1e-17，选出来的值由浮点噪音决定 —— 格力 2015-07-03
+    因此被选成 s=2.10，而真值是 10转10 派30元 的 s=2.00、每股 2.99 元。
 
-    校验用事件日本身：持有者当日的总收益 TR = (s·当日收 + C)/前收 − 1，
-    按交易所定义应等于 pct·(1 − C/前收)。s 取错时这一项会差到百分数量级。
+    正确做法：s 取仿射解并吸附到合法送转网格；C 取交易所关系式（给定 s 后精确）；
+    再拿仿射自己算出的金额做**独立交叉校验** —— 这一步才是真的检查。
+    仿射的每股现金按事件后的股数计，换算成事件前股数要乘 s。
     """
+    if affine is None:
+        return None, "仿射解不出（事件前后样本不足或残差过大）"
+    m, d_new = affine
+    if abs(m) < 1e-12:
+        return None, "仿射斜率为零"
+    s_raw = 1.0 / m
     ref = cur / (1 + pct)
     if ref <= 0:
-        return None
-    best = None
-    for g in RATIO_GRID:
-        C = prev - g * ref
-        if C < -0.02:                      # 现金分红不可能为负
-            continue
-        C = max(C, 0.0)
-        tr = (g * cur + C) / prev - 1
-        err = abs(tr - pct * (1 - C / prev))
-        score = (err, abs(g - s_hint))
-        if best is None or score < best[0]:
-            best = (score, g, C, err)
-    if best is None:
-        return None
-    _, g, C, err = best
-    return g, C, err
+        return None, "除权参考价非正"
+
+    # 独立校验必须用【未吸附】的 s_raw：仿射的两段拟合同时给出 k 的跳变（→s）和 c 的
+    # 跳变（→每新股现金），把它们各自代进交易所关系式应当一致。用吸附后的 s 做这个
+    # 比较是错的 —— ∂C/∂s = −参考价（量级 10~25），吸附那 1~2% 的误差会被放大成
+    # 0.1~0.3 元，看起来像「两种口径对不上」，实际只是吸附误差。
+    if abs((prev - s_raw * ref) - s_raw * d_new) > max(0.03, 0.05 * abs(prev - s_raw * ref)):
+        return None, (f"仿射与交易所口径不自洽：{round(prev - s_raw * ref, 4)} "
+                      f"vs {round(s_raw * d_new, 4)}")
+
+    s = min(RATIO_GRID, key=lambda g: abs(g - s_raw))
+    if abs(s - s_raw) > 0.02 * max(1.0, s_raw):
+        return None, f"股数倍数 {round(s_raw, 4)} 不在合法送转网格上（疑似缩股/复杂事件）"
+    C_exch = prev - s * ref
+    # 配股：股东要掏钱，现金流为负。模型表达得了，但「参没参与」是投资者的选择，
+    # 总收益取决于这个选择，不能替它决定 —— 单独标注并隔离，不混进普通分红。
+    if C_exch < -0.02:
+        return None, f"疑似配股（解出负现金流 {round(C_exch, 4)}，股数倍数 {s}）"
+    return (s, max(C_exch, 0.0)), ""
 
 
 def exchange_cash(df, b, day, s):
@@ -216,20 +233,13 @@ def rebuild(code):
         if not np.isfinite(pct) or abs(1 + pct) < 1e-9:
             continue
         md = affine_at(df, i)
-        if md is None or abs(md[0]) < 1e-9:
+        if md is None:
             no_affine.append(str(day))
-            hint = 1.0
-        else:
-            hint = 1.0 / md[0]
-        got = solve_event(float(df.r.iloc[i - 1]), float(df.r.iloc[i]), pct, hint)
+        got, why = solve_event(float(df.r.iloc[i - 1]), float(df.r.iloc[i]), pct, md)
         if got is None:
-            unsolved.append((str(day), "无可行解"))
+            unsolved.append((str(day), why))
             continue
-        s_ratio, C, err = got
-        if err > EVENT_TOL_TR:
-            unsolved.append((str(day), f"事件日对账残差 {round(err, 5)}（疑似配股或缩股）"))
-            continue
-        events[day] = (s_ratio, C)
+        events[day] = got
 
     m = pd.Series(1.0, index=df.index)
     d = pd.Series(0.0, index=df.index)
