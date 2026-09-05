@@ -31,8 +31,9 @@ echo "== 阻塞记录 =="
 expect_ok   "开一条 WARN 阻塞"  "$QRT" blocker open "示例：某个指标口径存疑" --severity WARN
 expect_ok   "WARN 不挡 blocker list" "$QRT" blocker list
 expect_fail "非法严重级被拒"     "$QRT" blocker open "x" --severity URGENT
-expect_ok   "开一条 HALT 阻塞"  "$QRT" blocker open "验收门禁能被绕过" --severity HALT --evidence some/path
-expect_fail "有未关闭 HALT 时 list 退出码 1" "$QRT" blocker list
+expect_fail "HALT 不写 --blocks 被拒" "$QRT" blocker open "没写作用域" --severity HALT
+expect_ok   "开一条挡所有人的 HALT"  "$QRT" blocker open "验收门禁能被绕过" --severity HALT --blocks all --evidence some/path
+expect_fail "有 HALT/all 时 list 退出码 1" "$QRT" blocker list
 expect_fail "关闭阻塞必须写清怎么解决的" "$QRT" blocker close B0002
 expect_ok   "关闭 HALT"          "$QRT" blocker close B0002 "已修复并登记 v2"
 expect_ok   "HALT 关闭后 list 恢复 0" "$QRT" blocker list
@@ -73,8 +74,8 @@ expect_ok   "以新状态重新开工"       "$QRT" start --agent alice
 expect_ok   "同样的脏工作区，重新开工后自检通过（增量为零）" "$QRT" selfcheck --agent alice
 
 # HALT 阻塞挡开工
-"$QRT" blocker open "新发现的门禁漏洞" --severity HALT >/dev/null 2>&1
-expect_fail "有未关闭 HALT 时开工被挡" "$QRT" start --agent alice
+"$QRT" blocker open "新发现的门禁漏洞" --severity HALT --blocks all >/dev/null 2>&1
+expect_fail "有 HALT/all 时开工被挡" "$QRT" start --agent alice
 "$QRT" blocker close B0003 "已处理" >/dev/null 2>&1
 expect_ok   "关掉 HALT 后可以开工" "$QRT" start --agent alice
 
@@ -100,6 +101,20 @@ QR_LOCK_WAIT_TICKS=3 expect_fail "锁被占用时写命令等待后放弃" env Q
 rmdir "$TMP/locks/.mutex-ledger"
 expect_ok "锁释放后恢复正常" "$QRT" note H0001 "锁已释放"
 expect_ok "只读命令不受写锁影响" bash -c 'mkdir -p "$QR_HOME/locks/.mutex-ledger"; "'"$QRT"'" list >/dev/null; rc=$?; rmdir "$QR_HOME/locks/.mutex-ledger"; exit $rc'
+
+echo
+echo "== 阻塞作用域：挡受影响的，不挡所有人 =="
+# 这是 2026-09-05 的教训：B0005（A股数据）与 B0003（某张卡待复核）两条 HALT
+# 把整支编队挡了一整天，而它们跟加密货币、美股、外汇的研究毫无关系。
+BID="$("$QRT" blocker open "A股复权口径待修" --severity HALT --blocks market:cn_stock --evidence x 2>/dev/null | head -1 | awk '{print $1}')"
+expect_ok   "有作用域的 HALT 不挡 list"        "$QRT" blocker list
+expect_ok   "有作用域的 HALT 不挡开工"          "$QRT" start --agent alice
+expect_fail "被挡的市场不许开新课题"            env QR_AGENT=alice "$QRT" claim "A股某想法" --market cn_stock --family other
+expect_ok   "别的市场照常开课题"                env QR_AGENT=alice "$QRT" claim "币圈某想法" --market crypto_perp --family other
+expect_ok   "start 会点名被挡的市场"            bash -c '"'"$QRT"'" start --agent alice 2>/dev/null | grep -q "cn_stock"'
+"$QRT" blocker close "$BID" "数据已重建并对账" >/dev/null 2>&1
+expect_ok   "关闭后该市场恢复"                  env QR_AGENT=alice "$QRT" claim "A股另一想法" --market cn_stock --family other
+rm -f runs/alice.env 2>/dev/null || true
 
 echo
 echo "== locale 兼容性 =="

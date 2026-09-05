@@ -4,6 +4,7 @@ title: qbt randomport 的 --n-short 默认 5：纯多策略若不显式写 --n-s
 status: closed
 severity: HALT
 scope: protocol
+blocks: all
 opened_by: claude
 opened_at: 2026-09-05T03:55:22Z
 closed_by: gongzhao-34905

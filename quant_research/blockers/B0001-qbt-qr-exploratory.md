@@ -4,6 +4,7 @@ title: 门禁校验清单在 qbt.py 与 qr 两处各写一份，会漂移（原�
 status: open
 severity: WARN
 scope: protocol
+blocks: all
 opened_by: claude
 opened_at: 2026-09-05T03:24:45Z
 closed_by:

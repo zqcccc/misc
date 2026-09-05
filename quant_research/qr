@@ -290,6 +290,15 @@ cmd_claim() {
   fi
   agent="$(agent_name "$agent")"
 
+  # 作用域拦截：被 HALT 挡住的市场不许开新课题，其他市场照常。
+  # 阻塞挡的是「受影响的研究」，不是「所有研究」——一个 A 股数据问题挡不着加密货币。
+  local blocked; blocked="$(blocked_scopes "$market")"
+  if [ -n "$blocked" ]; then
+    die "市场 ${market} 正被未关闭的 HALT 阻塞挡住：${blocked}
+先 ./qr blocker list 看它们卡在哪。别的市场不受影响，可以换方向：
+  ./qr coverage 看哪些格子还是白的，挑一个不在受阻范围内的。"
+  fi
+
   # 号段分配：mkdir 的原子性保证两个 agent 同时 claim 也拿不到同一个号。
   # 额外校验假设卡是否已存在——防止 locks/ 目录在 git 传递中丢失后号段被重复分配。
   local n=1 id
@@ -885,20 +894,36 @@ blocker_file() {
   echo "$f"
 }
 
+# 作用域决定「挡谁」。严重级只说明「有多严重」，两者是正交的：
+# 一个 A 股数据问题再严重，也不该挡住加密货币的研究。
+#   all              挡所有人（协议本身出问题、门禁能被绕过这一类）
+#   market:<名字>    只挡该市场的选题与推进
+#   data:<名字>      只挡依赖该数据源的课题（无法从 claim 参数自动判定，强提示）
+#   card:<Hxxxx>     只挡这张卡，别人完全不受影响
 cmd_blocker_open() {
-  local title="" sev="HALT" evidence="" agent="" scope="protocol"
+  local title="" sev="HALT" evidence="" agent="" scope="protocol" blocks=""
   while [ $# -gt 0 ]; do
     case "$1" in
       --severity) sev="$2"; shift 2;;
       --evidence) evidence="$2"; shift 2;;
       --agent) agent="$2"; shift 2;;
       --scope) scope="$2"; shift 2;;
+      --blocks) blocks="$2"; shift 2;;
       -*) die "未知参数 $1";;
       *) title="$1"; shift;;
     esac
   done
   [ -n "$title" ] || die '用法: qr blocker open "<一句话说清卡在哪>" --severity <HALT|ASK|WARN> --evidence <路径>'
   case " $BLOCKER_SEVERITIES " in *" $sev "*) ;; *) die "--severity 只能是：$BLOCKER_SEVERITIES";; esac
+  if [ "$sev" = "HALT" ] && [ -z "$blocks" ]; then
+    die "HALT 级必须写 --blocks，说清它到底挡谁：
+  all           协议本身出问题、门禁能被绕过 —— 所有人停
+  market:<名字> 只挡该市场，例：--blocks market:cn_stock
+  data:<名字>   只挡依赖该数据源的课题，例：--blocks data:astock_quant
+  card:<Hxxxx>  只挡这一张卡，例：--blocks card:H0047
+可以逗号分隔多个。默认没有 all —— 一个 A 股数据问题不该挡住加密货币的研究。"
+  fi
+  [ -n "$blocks" ] || blocks="all"
   agent="$(agent_name "$agent")"
   local n=1 id
   while :; do
@@ -918,6 +943,7 @@ title: $title
 status: open
 severity: $sev
 scope: $scope
+blocks: $blocks
 opened_by: $agent
 opened_at: $(now_iso)
 closed_by:
@@ -939,7 +965,11 @@ ${evidence:-（未提供，补上可复现的路径或命令）}
 BLK
   echo "${id} 已记录（${sev}）→ ${file#$HOME_DIR/}"
   case "$sev" in
-    HALT) echo "HALT 级会让所有 agent 的 ./qr start 停在开工检查上，直到有人 ./qr blocker close $id";;
+    HALT) if [ "$blocks" = "all" ]; then
+            echo "HALT/all：所有 agent 的 ./qr start 都会被挡，直到有人 ./qr blocker close ${id}"
+          else
+            echo "HALT，作用域 ${blocks}：只挡这个范围内的选题，其他方向照常开工"
+          fi;;
     ASK)  echo "ASK 级不挡开工，但每次 start 都会提示，需要人给一句话决定";;
     WARN) echo "WARN 级只登记不挡路，适合「知道有这个毛病但不影响当前结论」";;
   esac
@@ -969,19 +999,36 @@ cmd_blocker_close() {
   echo "$id 已关闭。"
 }
 
-cmd_blocker_list() {  # $1=open|all ；有未关闭的 HALT 时退出码 1
-  local mode="${1:-open}" f any=0 halt=0 st sev
+cmd_blocker_list() {  # $1=open|all ；只有「挡所有人」的未关闭 HALT 才让退出码非 0
+  local mode="${1:-open}" f any=0 halt_all=0 st sev bl
   for f in "$BLOCKERS"/B*.md; do
     [ -e "$f" ] || continue
-    st="$(fm "$f" status)"; sev="$(fm "$f" severity)"
+    st="$(fm "$f" status)"; sev="$(fm "$f" severity)"; bl="$(fm "$f" blocks)"
+    [ -n "$bl" ] || bl="all"
     if [ "$mode" != "all" ] && [ "$st" != "open" ]; then continue; fi
     any=1
-    printf '  %s [%s/%s] %s\n' "$(fm "$f" id)" "$st" "$sev" "$(fm "$f" title)"
+    printf '  %s [%s/%s] 挡 %s\n' "$(fm "$f" id)" "$st" "$sev" "$bl"
+    printf '           %s\n' "$(fm "$f" title)"
     printf '           开出者 %s  %s  →  %s\n' "$(fm "$f" opened_by)" "$(fm "$f" opened_at)" "${f#$HOME_DIR/}"
-    if [ "$st" = "open" ] && [ "$sev" = "HALT" ]; then halt=1; fi
+    if [ "$st" = "open" ] && [ "$sev" = "HALT" ] && [ "$bl" = "all" ]; then halt_all=1; fi
   done
   [ "$any" = 1 ] || echo "  （无）"
-  [ "$halt" = 0 ]
+  [ "$halt_all" = 0 ]
+}
+
+# 某个市场是否被 HALT 挡住；返回挡它的阻塞 ID（空 = 没被挡）
+blocked_scopes() {  # $1=market
+  local f st sev bl hit=""
+  for f in "$BLOCKERS"/B*.md; do
+    [ -e "$f" ] || continue
+    [ "$(fm "$f" status)" = "open" ] || continue
+    [ "$(fm "$f" severity)" = "HALT" ] || continue
+    bl="$(fm "$f" blocks)"; [ -n "$bl" ] || bl="all"
+    case ",$bl," in
+      *",all,"*|*",market:$1,"*) hit="$hit $(fm "$f" id)";;
+    esac
+  done
+  echo "${hit# }"
 }
 
 cmd_blocker() {
@@ -1128,8 +1175,17 @@ cmd_start() {
   cmd_rejudge
   echo
   if [ "$rc" != 0 ]; then
-    echo "❌ 开工检查未通过。台账有错误、或有 HALT 级阻塞没关闭 —— 先处理，不要开始研究。"
+    echo "❌ 开工检查未通过：台账有错误，或存在【挡所有人】的 HALT 阻塞。先处理，不要开始研究。"
     return 1
+  fi
+  local m blocked_any=""
+  for m in $MARKET_AXIS; do
+    if [ -n "$(blocked_scopes "$m")" ]; then blocked_any="${blocked_any} ${m}"; fi
+  done
+  if [ -n "$blocked_any" ]; then
+    echo "⚠️  以下市场被 HALT 阻塞挡住，本轮不要在这些格子里选题：${blocked_any}"
+    echo "    其余市场照常。挡住的是受影响的研究，不是所有研究。"
+    echo
   fi
   echo "✅ 可以开工。研究期间 export QR_AGENT=${agent}，收工跑 ./qr selfcheck --agent ${agent}"
 }

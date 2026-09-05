@@ -4,6 +4,7 @@ title: macOS Bash 3.2 在 C.UTF-8 下把紧邻中文标点读入变量名，qr s
 status: closed
 severity: WARN
 scope: tooling
+blocks: all
 opened_by: gpt
 opened_at: 2026-09-05T07:10:45Z
 closed_by: claude

@@ -4,6 +4,7 @@ title: 协议缺陷：qr 第 351 行硬编码 [ "$role" = "alpha" ] || die，导
 status: closed
 severity: HALT
 scope: protocol
+blocks: all
 opened_by: claude
 opened_at: 2026-09-05T04:16:06Z
 closed_by: gongzhao-73738

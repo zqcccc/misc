@@ -50,7 +50,8 @@ cat GLOSSARY.md       # ①' 术语表：每个指标在问什么、多少算过
 ./qr list             # ③ 谁在探什么
 ./qr stale            # ④ 僵尸占坑（>6h 未更新，可接管，接管前先 qr note 留痕）
                       #    接管走 ./qr takeover <ID> --expect <原坑主> --agent <你>
-./qr blocker list     # ⑤ 未关闭的阻塞：HALT 会挡住开工，ASK 需要人给一句话决定
+./qr blocker list     # ⑤ 未关闭的阻塞。每条都带作用域：只有 blocks=all 会挡住开工，
+                      #    market:/card: 的只挡那个范围，其余方向照常选题
 ```
 
 收工（每张卡裁决后）跑 `./qr selfcheck --agent <你的名字>`：它一次性检查你这一趟有没有

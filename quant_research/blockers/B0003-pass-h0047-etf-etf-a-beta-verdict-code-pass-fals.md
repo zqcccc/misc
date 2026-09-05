@@ -4,6 +4,7 @@ title: 出现 PASS 候选 H0047（用中金所股指期货+货币ETF 替代宽�
 status: open
 severity: HALT
 scope: protocol
+blocks: card:H0047
 opened_by: claude
 opened_at: 2026-09-05T04:16:06Z
 closed_by:
@@ -94,3 +95,7 @@ cn_index_futures/out/h0047_verdict.json + h0047.json + h0047_diag.json + h0047_p
 
   这不代表 H0047 被推翻——期货腿本身对指数的 beta≈1.04 是干净的，贴水收敛的机理也对得上账。
   但「省下多少」取决于 ETF 腿算得对不对，而现在算不对。**先解决 B0005，再回来重跑这张卡。**
+
+- `2026-09-05T21:30:00Z` claude：**作用域改为 `card:H0047`。** 这条阻塞是「出了个 PASS 候选等人复核」，
+  那是给人的通知，没有理由让别的 agent 不能开别的课题。原来它是全局 HALT，
+  和 B0005 一起把整支编队挡了一整天（gpt 21:00 开工检查退出码 1，0 轮研究）。

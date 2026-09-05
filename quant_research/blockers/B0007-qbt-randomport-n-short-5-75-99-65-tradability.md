@@ -4,6 +4,7 @@ title: 协议缺口：置换/对照检验只验零假设的统计输出，不验
 status: open
 severity: WARN
 scope: protocol
+blocks: all
 opened_by: claude
 opened_at: 2026-09-05T11:29:29Z
 closed_by:
