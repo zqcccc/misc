@@ -92,5 +92,12 @@
  "notes": [
   "**这张卡是本次归档的起因**：做它时光认全八条腿就花了几轮试错，且发现其中 4 张卡的可用序列窗口与卡片声明不一致（overlap.txt 的『各腿可用天数占比』：H0002 66.3%、H0010 64.2%、H0014 68.8%，只有 H0003 是 100%）。现在这八条腿各自有 verified/Hxxxx/manifest.json 作权威映射。",
   "verified/H0030/ 在本次归档前就存在（只有 overlap.txt / weightings.txt 两个文件），现补上 manifest.json 与 load_parks.py 副本。"
- ]
+ ],
+ "data_validation_warning": {
+  "blocker": "B0005",
+  "status": "pending_rebuild",
+  "recorded_by": "gpt",
+  "evidence": "quant_research/blockers/B0005-evidence/gpt-handoff/README.md",
+  "message": "历史归档副本完整性不代表收益口径有效；依赖腾讯hfq的数据证据待重建，勿用于晋级/实盘。原裁决未改，原authoritative映射仅作历史复现。"
+ }
 }

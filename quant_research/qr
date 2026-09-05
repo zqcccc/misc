@@ -836,7 +836,7 @@ require_owner() {  # $1=ID $2=动作名
   explicit_agent || return 0
   me="$(agent_name "")"
   [ "$own" != "$me" ] || return 0
-  die "$id 的坑主是 $own，你是 $me，不能替他 $act。
+  die "${id} 的坑主是 ${own}，你是 ${me}，不能替他 ${act}。
 接管僵尸占坑用：./qr takeover $id --expect $own --agent $me
 （接管前先 ./qr note $id \"接管说明\" 留痕，见 PROMPT.md 阶段 0）"
 }
@@ -857,7 +857,7 @@ cmd_takeover() {
   local file; file="$(hyp_file "$id")"
   local own; own="$(owner_of "$id")"
   [ -n "$own" ] || die "$id 没有活跃占坑，不需要接管"
-  [ "$own" = "$expect" ] || die "$id 的坑主是 $own，不是你以为的 $expect —— 有人先接管了，重新跑 ./qr stale 再决定"
+  [ "$own" = "$expect" ] || die "${id} 的坑主是 ${own}，不是你以为的 ${expect} —— 有人先接管了，重新跑 ./qr stale 再决定"
   agent="$(agent_name "$agent")"
   local ep age
   ep="$(sed -n 's/^claimed_epoch=//p' "$LOCKS/$id/owner" | head -1)"
@@ -935,9 +935,9 @@ ${evidence:-（未提供，补上可复现的路径或命令）}
 
 ## 处理日志
 
-- \`$(now_iso)\` $agent：开出这条阻塞（$sev）。
+- \`$(now_iso)\` ${agent}：开出这条阻塞（${sev}）。
 BLK
-  echo "$id 已记录（$sev）→ ${file#$HOME_DIR/}"
+  echo "${id} 已记录（${sev}）→ ${file#$HOME_DIR/}"
   case "$sev" in
     HALT) echo "HALT 级会让所有 agent 的 ./qr start 停在开工检查上，直到有人 ./qr blocker close $id";;
     ASK)  echo "ASK 级不挡开工，但每次 start 都会提示，需要人给一句话决定";;
@@ -965,7 +965,7 @@ cmd_blocker_close() {
   set_fm "$file" closed_at "$(now_iso)"
   [ -z "$evidence" ] || set_fm "$file" evidence "$evidence"
   printf -- '- `%s` %s：**关闭** —— %s%s\n' "$(now_iso)" "$agent" "$note" \
-    "${evidence:+（证据：$evidence）}" >> "$file"
+    "${evidence:+（证据：${evidence}）}" >> "$file"
   echo "$id 已关闭。"
 }
 
@@ -1029,10 +1029,10 @@ cmd_protocol_register() {
   fp="$(protocol_digest)"
   [ "$fp" != "unresolved" ] || die "找不到协议目录，无法登记"
   local known; known="$(protocol_version_of "$fp")"
-  [ "$known" = "未登记" ] || die "当前指纹 $fp 已经登记为 $known，不要重复登记（版本台账只追加不改写）"
+  [ "$known" = "未登记" ] || die "当前指纹 ${fp} 已经登记为 ${known}，不要重复登记（版本台账只追加不改写）"
   grep -q "^| $version " "$PROTOCOL_LOG" 2>/dev/null && die "$version 已存在于版本台账"
   printf '| %s | `%s` | %s | `%s` | %s |\n' "$version" "$fp" "$(now_iso)" "$impact" "$note" >> "$PROTOCOL_LOG"
-  echo "已登记 $version = $fp（影响 $impact）"
+  echo "已登记 ${version} = ${fp}（影响 ${impact}）"
   echo "接下来跑 ./qr rejudge 看这次改动产生了多少张待重判的卡。"
 }
 
@@ -1114,8 +1114,8 @@ cmd_start() {
   printf 'agent=%s\nstarted_at=%s\nprotocol_fp=%s\ncli_fp=%s\ntemplates_fp=%s\ngit_head=%s\n' \
     "$agent" "$(now_iso)" "$pfp" "$cfp" "$tfp" "$head" > "$RUNS/$agent.env"
 
-  echo "== 开工基线（agent=$agent）=="
-  echo "  协议 $pfp（$(protocol_version_of "$pfp")）   CLI $cfp   模板 $tfp   HEAD $head"
+  echo "== 开工基线（agent=${agent}）=="
+  echo "  协议 ${pfp}（$(protocol_version_of "$pfp")）   CLI ${cfp}   模板 ${tfp}   HEAD ${head}"
   echo "  基线已存 runs/$agent.env —— 自检比对的是「你跑这一趟有没有改动它们」，不是工作区干不干净"
   echo
   echo "== 台账体检 =="
@@ -1131,7 +1131,7 @@ cmd_start() {
     echo "❌ 开工检查未通过。台账有错误、或有 HALT 级阻塞没关闭 —— 先处理，不要开始研究。"
     return 1
   fi
-  echo "✅ 可以开工。研究期间 export QR_AGENT=$agent，收工跑 ./qr selfcheck --agent $agent"
+  echo "✅ 可以开工。研究期间 export QR_AGENT=${agent}，收工跑 ./qr selfcheck --agent ${agent}"
 }
 
 cmd_selfcheck() {

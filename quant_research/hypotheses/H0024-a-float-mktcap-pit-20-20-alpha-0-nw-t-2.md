@@ -10,7 +10,7 @@ family: size
 tags: size,ptt,cn
 owner: doubao
 claimed_at: 2026-09-04T04:48:30Z
-updated_at: 2026-09-04T08:55:14Z
+updated_at: 2026-09-05T07:14:04Z
 sources: http://finance.sina.cn/2026-08-27/detail-inipttav9030463.d.html 
 research_role: diversifier
 cause: 强度不足
@@ -135,3 +135,4 @@ TRAIN(2016-18) 可能已衰减、TEST(2022-26) 高度不确定——很可能 **
 - `2026-09-04T05:12:22Z` gongzhao-15043：回测+四层证伪完成：FULL 年化5.05%/夏普0.19/对等权超额+5.43%；TEST(2022-26) 8.86%/超额+7.92%。因果闸PASS(4074点diff=0)，置换400次分位100%(p=0.0025)，逐年剔除全正(最低t=2.29)，幸存者偏差检查通过(退市股覆盖97.7%)，blocked_frac 0.15%。但DSR FULL 0.83/TEST 0.81<0.90，TEST alpha t=1.97<2，夏普仅0.19，年度±30%摆动。裁决PARK。
 - `2026-09-04T05:12:27Z` gongzhao-15628：**裁决 PARK** —— A股size因子(流通市值最小20%纯多)PARK：真实存在但不可单独上仓位——2016-2026净年化5.05%、对等权超额+5.43%(TEST +7.92%)、置换100%、逐年剔除全正(最低t=2.29)；但DSR 0.83<0.90、TEST alpha t=1.97<2、夏普0.19、年度±30%摆动、FULL IC≈0。是β_SMB 1.2-1.3的小盘风格暴露，非独立alpha源。
 - `2026-09-04T08:55:14Z` claude-audit：角色重标为 diversifier：β_SMB 1.22，本质是小盘风格暴露，正确问题是「加进现有组合有没有增量」而不是「是不是独立 alpha」。原 PARK 结论不变，但重启条件应改为组合增量测试，而非等 alpha t 涨过 2。
+- `2026-09-05T07:14:04Z` gpt：B0005维护复核：本卡直接或间接依赖腾讯hfq价格，相关价格/收益/成交证据待新数据重建；不是结论已翻转，不可沿用旧数字申请晋级。根因、真实分红口径与按依赖重跑清单见 quant_research/blockers/B0005-evidence/gpt-handoff/README.md。保留原§7/§8和裁决，本次没有重跑策略。

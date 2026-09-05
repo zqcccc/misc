@@ -1,0 +1,286 @@
+{
+  "purpose": "B0005 independent offline diagnosis, no strategy verdict",
+  "window": [
+    "2017-01-03",
+    "2026-09-04"
+  ],
+  "single_request_affine": {
+    "a": 1.0450198708395448,
+    "b": 3.404645926477884,
+    "train_n": 15,
+    "test_n": 12,
+    "test_max_price_residual": 0.0003907103825131486,
+    "train_max_price_residual": 0.0004424987580717854,
+    "note": "Disjoint subsequent dates; affine fit is diagnosis only, not a return reconstruction."
+  },
+  "sample_cross_source": [
+    {
+      "code": "sh601398",
+      "n": 2347,
+      "hfq_vs_bs_median_abs_bp": 19.568227895862076,
+      "raw_vs_bs_median_abs_bp": 0.0012749003983417162,
+      "hfq_disagreements_gt_1bp": 2147,
+      "raw_disagreements_gt_1bp": 12
+    },
+    {
+      "code": "sh600519",
+      "n": 2347,
+      "hfq_vs_bs_median_abs_bp": 6.183226065050551,
+      "raw_vs_bs_median_abs_bp": 0.0016427104715301816,
+      "hfq_disagreements_gt_1bp": 2113,
+      "raw_disagreements_gt_1bp": 14
+    },
+    {
+      "code": "sz000651",
+      "n": 2340,
+      "hfq_vs_bs_median_abs_bp": 19.7863841292709,
+      "raw_vs_bs_median_abs_bp": 0.0015503593621293658,
+      "hfq_disagreements_gt_1bp": 2259,
+      "raw_disagreements_gt_1bp": 15
+    },
+    {
+      "code": "sh600000",
+      "n": 2348,
+      "hfq_vs_bs_median_abs_bp": 17.187423342754222,
+      "raw_vs_bs_median_abs_bp": 0.0012573889997236597,
+      "hfq_disagreements_gt_1bp": 2235,
+      "raw_disagreements_gt_1bp": 10
+    },
+    {
+      "code": "sz000001",
+      "n": 2348,
+      "hfq_vs_bs_median_abs_bp": 6.673605734969709,
+      "raw_vs_bs_median_abs_bp": 0.0015926943262351998,
+      "hfq_disagreements_gt_1bp": 2105,
+      "raw_disagreements_gt_1bp": 12
+    }
+  ],
+  "etf_index": [
+    {
+      "etf": "sh510050",
+      "index": "sh000016",
+      "n": 2350,
+      "beta_raw_to_index": 1.0015836903460387,
+      "beta_hfq_to_index": 0.8429996872279958,
+      "note": "Price-index diagnostic only; raw ETF excludes dividends and is not a replacement benchmark."
+    },
+    {
+      "etf": "sh510300",
+      "index": "sh000300",
+      "n": 2350,
+      "beta_raw_to_index": 1.0016614034790077,
+      "beta_hfq_to_index": 0.8990995123486789,
+      "note": "Price-index diagnostic only; raw ETF excludes dividends and is not a replacement benchmark."
+    }
+  ],
+  "limit_audit": {
+    "counts": {
+      "files": 3367,
+      "eligible_days": 6359348,
+      "exact_up_open": 16570,
+      "exact_down_open": 10499,
+      "old_allows_buy_at_up": 5707,
+      "old_allows_sell_at_down": 3294,
+      "old_price_flag_misses_up": 10760,
+      "old_price_flag_misses_down": 5628
+    },
+    "examples": [
+      {
+        "code": "sh600006",
+        "date": "2019-04-12",
+        "raw_prev": 6.23,
+        "raw_open": 6.85,
+        "rounded_limit": 6.85,
+        "hfq_open_change": 0.08336280503208227,
+        "one_price_bar": false
+      },
+      {
+        "code": "sh600006",
+        "date": "2024-01-22",
+        "raw_prev": 5.35,
+        "raw_open": 5.89,
+        "rounded_limit": 5.89,
+        "hfq_open_change": 0.07832442456637945,
+        "one_price_bar": false
+      },
+      {
+        "code": "sh600008",
+        "date": "2017-04-06",
+        "raw_prev": 4.69,
+        "raw_open": 5.16,
+        "rounded_limit": 5.16,
+        "hfq_open_change": 0.08139341259533062,
+        "one_price_bar": false
+      },
+      {
+        "code": "sh600008",
+        "date": "2017-04-12",
+        "raw_prev": 6.88,
+        "raw_open": 7.57,
+        "rounded_limit": 7.57,
+        "hfq_open_change": 0.08663527707352414,
+        "one_price_bar": false
+      },
+      {
+        "code": "sh600017",
+        "date": "2024-10-08",
+        "raw_prev": 3.13,
+        "raw_open": 3.44,
+        "rounded_limit": 3.44,
+        "hfq_open_change": 0.08512585812356965,
+        "one_price_bar": false
+      },
+      {
+        "code": "sh600018",
+        "date": "2021-12-03",
+        "raw_prev": 5.06,
+        "raw_open": 5.57,
+        "rounded_limit": 5.57,
+        "hfq_open_change": 0.0732022391273146,
+        "one_price_bar": false
+      },
+      {
+        "code": "sh600021",
+        "date": "2021-09-24",
+        "raw_prev": 11.58,
+        "raw_open": 12.74,
+        "rounded_limit": 12.74,
+        "hfq_open_change": 0.08314484755270057,
+        "one_price_bar": false
+      },
+      {
+        "code": "sh600026",
+        "date": "2026-02-24",
+        "raw_prev": 16.95,
+        "raw_open": 18.65,
+        "rounded_limit": 18.65,
+        "hfq_open_change": 0.08256466247505756,
+        "one_price_bar": false
+      },
+      {
+        "code": "sh600026",
+        "date": "2026-03-02",
+        "raw_prev": 20.58,
+        "raw_open": 22.64,
+        "rounded_limit": 22.64,
+        "hfq_open_change": 0.0850403277429268,
+        "one_price_bar": false
+      },
+      {
+        "code": "sh600030",
+        "date": "2023-08-28",
+        "raw_prev": 23.43,
+        "raw_open": 25.77,
+        "rounded_limit": 25.77,
+        "hfq_open_change": 0.08632327103026638,
+        "one_price_bar": false
+      },
+      {
+        "code": "sh600030",
+        "date": "2024-09-30",
+        "raw_prev": 24.73,
+        "raw_open": 27.2,
+        "rounded_limit": 27.2,
+        "hfq_open_change": 0.08552518672725506,
+        "one_price_bar": false
+      },
+      {
+        "code": "sh600039",
+        "date": "2017-08-09",
+        "raw_prev": 4.55,
+        "raw_open": 5.01,
+        "rounded_limit": 5.01,
+        "hfq_open_change": 0.09512268102932353,
+        "one_price_bar": false
+      },
+      {
+        "code": "sh600039",
+        "date": "2020-02-06",
+        "raw_prev": 3.11,
+        "raw_open": 3.42,
+        "rounded_limit": 3.42,
+        "hfq_open_change": 0.0886662803212186,
+        "one_price_bar": false
+      },
+      {
+        "code": "sh600051",
+        "date": "2020-04-29",
+        "raw_prev": 6.78,
+        "raw_open": 7.46,
+        "rounded_limit": 7.46,
+        "hfq_open_change": 0.07417609444171158,
+        "one_price_bar": false
+      },
+      {
+        "code": "sh600051",
+        "date": "2022-03-08",
+        "raw_prev": 10.62,
+        "raw_open": 11.68,
+        "rounded_limit": 11.68,
+        "hfq_open_change": 0.07906006861140402,
+        "one_price_bar": false
+      },
+      {
+        "code": "sh600053",
+        "date": "2020-04-28",
+        "raw_prev": 26.4,
+        "raw_open": 29.04,
+        "rounded_limit": 29.04,
+        "hfq_open_change": 0.09670839897189287,
+        "one_price_bar": false
+      },
+      {
+        "code": "sh600053",
+        "date": "2021-09-03",
+        "raw_prev": 21.54,
+        "raw_open": 23.69,
+        "rounded_limit": 23.69,
+        "hfq_open_change": 0.09580391365745422,
+        "one_price_bar": false
+      },
+      {
+        "code": "sh600056",
+        "date": "2022-05-09",
+        "raw_prev": 25.6,
+        "raw_open": 28.16,
+        "rounded_limit": 28.16,
+        "hfq_open_change": 0.09002792494193179,
+        "one_price_bar": false
+      },
+      {
+        "code": "sh600056",
+        "date": "2022-12-15",
+        "raw_prev": 16.77,
+        "raw_open": 18.45,
+        "rounded_limit": 18.45,
+        "hfq_open_change": 0.0887671417047593,
+        "one_price_bar": false
+      },
+      {
+        "code": "sh600060",
+        "date": "2021-01-26",
+        "raw_prev": 11.75,
+        "raw_open": 12.93,
+        "rounded_limit": 12.93,
+        "hfq_open_change": 0.08729234088457383,
+        "one_price_bar": false
+      },
+      {
+        "code": "sh600060",
+        "date": "2024-10-08",
+        "raw_prev": 22.38,
+        "raw_open": 24.62,
+        "rounded_limit": 24.62,
+        "hfq_open_change": 0.0863132028259126,
+        "one_price_bar": false
+      }
+    ],
+    "limitations": [
+      "Main-board non-ST mature names only; cached cross-source ordinary days.",
+      "Historical reference cache is not independently PIT-certified.",
+      "Opening at limit does not prove an individual order could not fill; depth/queue evidence absent.",
+      "Counts test rule consistency; they do not measure actual strategy blocked_frac or PnL impact.",
+      "Earlier 72.6% claim used affine proxy and omitted final one-price-bar guard; do not inherit it."
+    ]
+  }
+}

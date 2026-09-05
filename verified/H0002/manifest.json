@@ -85,5 +85,12 @@
  "missing": [],
  "notes": [
   "astock_quant/verified/ 下的 ext_*.json、s0*_*returns.csv/verdict.json 属于另一条课题线（多策略平台审计/PB-ROE），不是 H0002 的产物，勿误取。"
- ]
+ ],
+ "data_validation_warning": {
+  "blocker": "B0005",
+  "status": "pending_rebuild",
+  "recorded_by": "gpt",
+  "evidence": "quant_research/blockers/B0005-evidence/gpt-handoff/README.md",
+  "message": "历史归档副本完整性不代表收益口径有效；依赖腾讯hfq的数据证据待重建，勿用于晋级/实盘。原裁决未改，原authoritative映射仅作历史复现。"
+ }
 }

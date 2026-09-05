@@ -158,5 +158,12 @@
  "notes": [
   "这张卡的证伪做得最狠也最完整：对照组增量 alpha、换手匹配置换（rho=0.2906、换手匹配度 89%）、毛/净拆解（毛超额就已经 −5.01%）全部落盘在 falsification.json / diagnostics*.json 里。",
   "cn_stock/ 三个 out 目录：out/ = H0022、out_h0024/ = H0024、out_h0028/ = 本卡。"
- ]
+ ],
+ "data_validation_warning": {
+  "blocker": "B0005",
+  "status": "pending_rebuild",
+  "recorded_by": "gpt",
+  "evidence": "quant_research/blockers/B0005-evidence/gpt-handoff/README.md",
+  "message": "历史归档副本完整性不代表收益口径有效；依赖腾讯hfq的数据证据待重建，勿用于晋级/实盘。原裁决未改，原authoritative映射仅作历史复现。"
+ }
 }

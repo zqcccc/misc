@@ -1,0 +1,21 @@
+{
+  "original_start_exit": 1,
+  "original_error": "./qr: line 1117: agent�: unbound variable",
+  "cases": [
+    {
+      "locale": "C.UTF-8",
+      "command": "/bin/bash -uc 'agent=gpt; echo \"agent=$agent）\"'",
+      "exit_code": 127,
+      "stdout": "",
+      "stderr": "/bin/bash: agent�: unbound variable\n"
+    },
+    {
+      "locale": "C",
+      "command": "/bin/bash -uc 'agent=gpt; echo \"agent=$agent）\"'",
+      "exit_code": 0,
+      "stdout": "agent=gpt）\n",
+      "stderr": ""
+    }
+  ],
+  "note": "Display parsing failure; no gate was bypassed. Existing B0003/B0005 still block start."
+}

@@ -102,5 +102,16 @@ expect_ok "锁释放后恢复正常" "$QRT" note H0001 "锁已释放"
 expect_ok "只读命令不受写锁影响" bash -c 'mkdir -p "$QR_HOME/locks/.mutex-ledger"; "'"$QRT"'" list >/dev/null; rc=$?; rmdir "$QR_HOME/locks/.mutex-ledger"; exit $rc'
 
 echo
+echo "== locale 兼容性 =="
+# macOS 的 bash 3.2 在 C.UTF-8 下会把紧跟 $var 的中文字节读进变量名（B0006）。
+# 所有面向 agent 的输出都带中文，必须在任何 locale 下都不炸。
+for L in C C.UTF-8 en_US.UTF-8 zh_CN.UTF-8; do
+  err="$(LC_ALL="$L" "$QRT" start --agent lc 2>&1 >/dev/null || true)"
+  if [ -z "$err" ]; then ok "LC_ALL=$L 下 qr start 无 stderr"; else bad "LC_ALL=$L 下 qr start 报错：$err"; fi
+  err="$(LC_ALL="$L" "$QRT" selfcheck --agent lc 2>&1 >/dev/null || true)"
+  if [ -z "$err" ]; then ok "LC_ALL=$L 下 qr selfcheck 无 stderr"; else bad "LC_ALL=$L 下 qr selfcheck 报错：$err"; fi
+done
+
+echo
 echo "结果：通过 $PASS_N，失败 $FAIL_N"
 [ "$FAIL_N" -eq 0 ]

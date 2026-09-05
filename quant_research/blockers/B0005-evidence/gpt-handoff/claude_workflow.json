@@ -1,0 +1,338 @@
+{
+  "summary": "查清腾讯行情 hfq 后复权序列失真的根因、正确口径与影响面（B0005）",
+  "agentCount": 10,
+  "logs": [
+    "五条独立路径同时排查腾讯 hfq 失真根因",
+    "[probe:pagination] failed: You've hit your session limit · resets 6pm (Asia/Singapore)",
+    "[probe:cross-source] failed: You've hit your session limit · resets 6pm (Asia/Singapore)",
+    "[probe:exdiv-truth] failed: You've hit your session limit · resets 6pm (Asia/Singapore)",
+    "[probe:api-forensics] failed: You've hit your session limit · resets 6pm (Asia/Singapore)",
+    "[refute:blast-code] failed: You've hit your session limit · resets 6pm (Asia/Singapore)",
+    "[refute:blast-code] failed: You've hit your session limit · resets 6pm (Asia/Singapore)",
+    "[refute:blast-code] failed: You've hit your session limit · resets 6pm (Asia/Singapore)",
+    "排查完成：1/5 条路径有产出",
+    "[blast:ledger] failed: You've hit your session limit · resets 6pm (Asia/Singapore)",
+    "[synthesize] failed: You've hit your session limit · resets 6pm (Asia/Singapore)"
+  ],
+  "result": {
+    "synthesis": null,
+    "angles": [
+      {
+        "angle": "blast-code",
+        "raw": {
+          "angle": "代码链路与缓存：hfq 序列从腾讯接口流到哪些代码路径、缓存里存的是不是已经坏了、哪些实盘在跑",
+          "findings": [
+            {
+              "claim": "缓存不是罪魁：本地 kline_hfq/*.csv 与现在在线拉的 hfq 逐日逐分位完全一致（maxabs_diff=0.000000），坏的是数据源语义本身，缓存只是忠实地把坏序列固化了下来。",
+              "evidence": "data/kline_hfq 5477 个文件、data/kline_raw 5472 个，全部在 2026-09-02 17:07~18:32 一轮抓完（fetch_data.py 只在文件不存在时才抓，之后永不刷新）。抽 sh601398 / sh600519 / sz000651 三只，窗口 2017-01-03~2026-09-04：cache n=2347/2347/2340，与在线 fetch_history 的重叠段 maxabs_diff=0.000000，日收益差 >1e-9 的天数 = 0/2346、0/2346、0/2339。也就是说 8 月的缓存 == 今天的在线值，重抓一遍不会修好任何东西。",
+              "repro": "cd /Users/gongzhao/code/misc/astock_quant && /Users/gongzhao/code/misc/.venv/bin/python /tmp/hfq_probe/cache_vs_live.py",
+              "confidence": "high",
+              "implication": "修复方向不是「清缓存重抓」。必须换取数口径或在 panel 层重建复权因子；缓存目录可以原地保留当原始素材（raw 是好的）。"
+            },
+            {
+              "claim": "腾讯 fqkline 的 hfq 是「加法复权」：hfq = k·raw + c（k=累计送转倍数，c=累计现金分红），不是乘法复权，因此不保收益率。r_hfq = r_raw × (k·raw/hfq)，被一个每天都在变的、小于 1 的系数系统性压缩。",
+              "evidence": "sh601398 2017-01-05~2017-02-10 无除权段最小二乘拟合 hfq_close = 1.044777·raw_close + 1.788445，max|残差| = 0.000506 —— 正好是 3 位小数报价 0.001 跳动的一半，即拟合精度已到报价精度极限。同段实测 r_hfq/r_raw 中位数 0.7267，理论值 k·raw/hfq 中位数 0.7258，吻合。对 4 只标的做 20 日滚动仿射拟合，全窗口残差中位数均为 0.00049~0.00051；只有含除权日的窗口残差才变大。预测的压缩系数 k·raw/hfq 均值 vs 实测波动率比：601398 0.6305/0.6493、600519 0.9118/0.9269、000651 0.7400/0.7889、600000 0.6961/0.6999。原始接口证据：一次拉 12 根，raw=4.430/4.440/4.450/4.460/4.470，hfq=6.417/6.427/6.438/6.448/6.459，hfq−raw = 1.987→1.989 在 5 天里持续漂移，qfq 更直接是 qfq = raw − 2.776（纯减法）。",
+              "repro": "cd /Users/gongzhao/code/misc/astock_quant && /Users/gongzhao/code/misc/.venv/bin/python -c \"\nimport pandas as pd, numpy as np\nh=pd.read_csv('data/kline_hfq/sh601398.csv').set_index('date')['close']\nr=pd.read_csv('data/kline_raw/sh601398.csv').set_index('date')['close']\nj=pd.concat([h.rename('hfq'),r.rename('raw')],axis=1).loc['2017-01-05':'2017-02-10'].dropna()\nk,c=np.polyfit(j.raw,j.hfq,1); print('k=%.6f c=%.6f max|resid|=%.6f'%(k,c,abs(k*j.raw+c-j.hfq).max()))\nprint('r_hfq/r_raw med %.4f ; k*raw/hfq med %.4f'%((j.hfq.pct_change()/j.raw.pct_change()).median(),(k*j.raw/j.hfq).median()))\"\n# 接口原始报文：/Users/gongzhao/code/misc/.venv/bin/python /tmp/hfq_probe/api_dump.py\n# 全窗口仿射拟合：cd astock_quant && .venv/bin/python /tmp/hfq_probe/affine.py",
+              "confidence": "high",
+              "implication": "「哪个序列可信」有了机理答案：raw 可信，hfq 不可信，且 hfq 不是简单缩放而是 affine，无法靠除以一个常数救回。但正因为是 affine，可以从 (hfq, raw) 两列反解出 k 和 c，进而重建正确的乘法复权因子 —— 现有缓存里的信息是足够的，不必重抓。"
+            },
+            {
+              "claim": "第三方仲裁：baostock 官方 pctChg 与 raw 日收益逐日相等（中位偏差 1e-7），与 hfq 日收益在 2346 天里有 2100+ 天不等。raw 是对的，hfq 是错的，这一点不再有歧义。",
+              "evidence": "仓库里已经躺着 5435 份 baostock 日线（astock_quant/data_bs/daily/），含交易所口径的 pctChg。窗口 2017-01-03~2026-09-04、剔除停牌日：|r_hfq − r_bs| 中位数 vs |r_raw − r_bs| 中位数 —— sh601398 1.96e-3 / 1.27e-7；sh600519 6.19e-4 / 1.64e-7；sz000651 1.98e-3 / 1.55e-7；sh600000 1.72e-3 / 1.26e-7；sz000001 6.68e-4 / 1.59e-7。偏差 >1e-4 的天数 hfq 为 2146/2113/2258/2234/2104，raw 只有 12/14/15/10/12 天（正好就是除权日的数量级）。年化波动 bs/hfq/raw：0.1771/0.1193/0.1838、0.2882/0.2677/0.2888、0.2848/0.2276/0.2884、0.2008/0.1465/0.2094、0.2929/0.2728/0.2931。",
+              "repro": "cd /Users/gongzhao/code/misc/astock_quant && /Users/gongzhao/code/misc/.venv/bin/python /tmp/hfq_probe/arbiter.py",
+              "confidence": "high",
+              "implication": "修法最省事的一条：正确的后复权收益序列 = cumprod(1+baostock.pctChg)（交易所前收盘已经处理除权除息，这正是乘法复权的定义）。数据已经在本地，不需要新数据源。另一条：从腾讯 (hfq, raw) 反解 (k,c) 重建因子。两条都可做交叉校验。"
+            },
+            {
+              "claim": "astock_quant 里没有任何一处绕开了 hfq 算收益。panel.build_panel 把 open/high/low/close 四个价格面板全部写成 hfq，全仓库 grep 不到任何地方替换过 p['close']；amount/volume/close_raw/PB 走 raw，是干净的。",
+              "evidence": "aq/panel.py:80-84 —— series['open'/'high'/'low'/'close'][code] = hfq[f]，close_raw 取 raw，amount = volume×100×close_raw。grep 'p[\"close\"] =' 与 'panels[\"close\"] =' 在 astock_quant 下 0 命中。strategies_ext/datalayer.py load(kind='real') 用 baostock 替换了 amount（amount_bs）、is_st、mktcap，甚至把 close_raw_bs 读进了面板，但 **close 原封不动还是 hfq**，close_raw_bs 只被拿去乘出 float_mktcap。scripts/build_pb_roe_factors.py:84 PB = close_raw/bps，用的是不复权，干净。monitor/ 下的 datasource 是另一套（yfinance/ccxt），与本问题无关。陷阱：strategies_ext/s08b_lowvol_raw.py 名字里的 'raw' 指「未做市值/行业中性化」，不是「不复权」，它照样用 panels['close']。",
+              "repro": "cd /Users/gongzhao/code/misc/astock_quant && grep -rn --include='*.py' 'p\\[\"close\"\\] *=\\|panels\\[\"close\"\\] *=' . | grep -v .venv ; sed -n '60,90p' aq/panel.py ; sed -n '36,55p' strategies_ext/datalayer.py",
+              "confidence": "high",
+              "implication": "没有「幸存的干净分支」可以直接对照。所有 backtest.run 出来的净值、所有 verified/*.json 的验收结论都建立在同一条坏序列上，得一起复算；amount/PB/mktcap/ST(real 分支) 这几路不用动。"
+            },
+            {
+              "claim": "最严重的下游后果不是收益率本身，而是 rules.tradability 的涨跌停判定失灵：真实开盘涨停的 35968 个股票-日里，hfq 口径只认出 9862 个，漏判 72.6%，回测因此以为「涨停当天也买得进去」；跌停漏判 76.5%，以为「跌停也卖得掉」。",
+              "evidence": "aq/rules.py:52-70 用 panels['close']/['open']（都是 hfq）算 open_ret 并与涨跌停幅度比对。收益被压缩后，真实 +10% 在 hfq 里只显示成 +7% 左右，够不到阈值。用 dH = k·dR 反解 60 日滚动 k，还原真实开盘涨跌幅后统计（全面板 2836×5282）：真实开盘涨停格子 35968 / hfq 判出 9862 / 漏判 26106（72.6%）；真实开盘跌停 33648 / 漏判 25733（76.5%）；压缩系数 damp 中位数 0.9628、p5 0.6768。收盘口径的粗算同向：真实涨停 177149 格、hfq 漏判 91413（51.6%）。附带地，universe.investable 的 infer_st_cap（过去 60 日 |涨跌幅| max ≤5% 反推 ST）因为收益被压缩而多判 ST 484209 个股票-日，比 raw 口径多 23%，会把正常股票误踢出池子。",
+              "repro": "cd /Users/gongzhao/code/misc/astock_quant && /Users/gongzhao/code/misc/.venv/bin/python /tmp/hfq_probe/limits2.py   # 开盘口径（tradability 实际用的）\ncd /Users/gongzhao/code/misc/astock_quant && /Users/gongzhao/code/misc/.venv/bin/python /tmp/hfq_probe/limits.py    # 收盘口径 + ST 反推 + 指数校验",
+              "confidence": "high",
+              "implication": "这是单向的乐观偏差，反转类/小微盘类策略最吃亏：涨停买不进本该是它们最大的实盘摩擦。修好 hfq 之后，s04/s07/s13 这类反转策略、以及 ARM1 小微盘的历史回测收益大概率要往下走。这条比「波动率被低估」更值得优先修。"
+            },
+            {
+              "claim": "ARM1 小微盘服务确实在实盘跑（docker-compose.yaml 的 ashare-smallcap-quant，restart: always，对外 /api/smallcap-strategy），它的三因子里 liqsize20 走 raw 不受影响，rev5 和 ivol60 走 hfq 受影响；实测最新截面 top50 选股会变 6 只（88% 重合）。",
+              "evidence": "astock_quant/PRODUCTION.md：生产只算 liqsize20+rev5+ivol60，T 日收盘信号 T+1 开盘执行；docker-compose.yaml:30-44 服务 ashare-smallcap-quant，挂载 ./runtime/ashare-smallcap:/data。scripts/smallcap_live_service.py:_fetch_code 同时拉 fq='hfq' 和 fq=''，close 写 hfq、close_raw/amount 写 raw —— 与离线 panel 完全同一个坑。aq/live_smallcap.py:329-338：ret=daily_return(close)（hfq）→ ivol60；rev5=factors.rev(close,5)（hfq）；liqsize20=liquidity_size(amount,20)（amount 来自 raw，干净）。机理：ivol60_i(hfq) ≈ d_i × ivol60_i(真)，d_i = k·raw/hfq 是每只股票自己的、随「累计分红/现价」变化的系数，等于把一个「累计股息率 × 上市年龄」的因子偷偷混进了特质波动率；ivol60 取负后低波为优，于是高分红老股被系统性伪装成低波而受偏好。实测（2026-09-02 截面，data/panel）：60 日 std(r_hfq)/std(r_raw) 横截面 n=5023，p1=0.5255 p5=0.6592 p25=0.8581 p50=0.9408 p75=0.9777 p95=0.9995，54.6% 的股票被压缩超过 5%、16.5% 被压缩超过 20%；ivol60 横截面 spearman(hfq,raw)=0.9617，|分位变化| 中位 3.5pp、p90 10.1pp、最大 75.6pp；rev5 spearman=0.9974（受影响很小）；复合总分 spearman=0.9936，top20/50/100 重合 17/20、44/50、89/100。",
+              "repro": "grep -n -A15 'ashare-smallcap-quant' /Users/gongzhao/code/misc/docker-compose.yaml ; sed -n '100,150p' /Users/gongzhao/code/misc/astock_quant/scripts/smallcap_live_service.py ; sed -n '309,340p' /Users/gongzhao/code/misc/astock_quant/aq/live_smallcap.py\ncd /Users/gongzhao/code/misc/astock_quant && /Users/gongzhao/code/misc/.venv/bin/python /tmp/hfq_probe/xsec.py",
+              "confidence": "high",
+              "implication": "实盘选股确实会变，但幅度是「50 只里换 6 只」这个量级，不是全盘推翻 —— 因为小微盘普遍低分红、上市年限短，d_i 中位数 0.9408 离 1 不远。所以：不必紧急停机，但每期名单里被 ivol60 挤进来的高分红老股是伪信号；修复后要重新验收 ivol60 这一维的贡献，它现在的历史 IC 里混了股息因子。"
+            },
+            {
+              "claim": "指数序列不受影响，hfq 与不复权逐日完全相等，所以基准收益、交易日历这两条路是干净的。",
+              "evidence": "panel.load_index 注释「指数无复权，hfq 与原始一致」得到验证：sh000001 与 sh000300 在 2024-01-01~2026-09-04 各 649 根，max|close_hfq − close_raw| = 0.000000。scripts_ext/run_ext.py:index_ret 用 ds.load_local(code,'hfq') 算基准收益，据此判定安全。",
+              "repro": "cd /Users/gongzhao/code/misc/astock_quant && /Users/gongzhao/code/misc/.venv/bin/python /tmp/hfq_probe/limits.py  # 末尾两行输出指数对比",
+              "confidence": "high",
+              "implication": "超额收益/alpha 归因里，基准那一半是干净的、组合那一半是脏的 —— 意味着现有的 excess return 是「被压缩的组合收益 − 正确的基准收益」，方向上系统性低估超额，且低估幅度随组合里高分红老股的权重变化。修复后 alpha 归因结论可能反转。"
+            },
+            {
+              "claim": "仓库里已有的数据质量闸门看到了这个问题但把它误判成了正常现象，闸门本身需要一起改。",
+              "evidence": "scripts_bs/build_bs_panels.py:100-106 已经在比对「腾讯后复权日收益 vs baostock 不复权日收益」，注释写的是「除权日两边会不一致（一个复权一个不复权），只看不含除权的绝大多数日子」，用 <0.5% 的容差统计一致率。data_bs/qa_report.json 记录的结果是「两源日收益一致率(<0.5%)」= 0.9496 —— 5% 的股票-日不一致，而九年里每只股票的除权日只有十来个（约 0.5%），差了一个数量级，闸门却放行了。另外 aq/panel.py 的 clean_bad_ticks 用 hfq 收益、阈值 25%，因为收益被压缩，这个脏数据探测器同样变钝。",
+              "repro": "cat /Users/gongzhao/code/misc/astock_quant/data_bs/qa_report.json ; sed -n '96,112p' /Users/gongzhao/code/misc/astock_quant/scripts_bs/build_bs_panels.py",
+              "confidence": "high",
+              "implication": "修数据之外还要修闸门：0.5% 容差 + 只看一致率的写法，对「系统性小幅压缩」这类错误天然免疫。应改成检查「不一致天数是否 ≈ 除权日数」，并且直接断言 r_hfq 与 pctChg 在非除权日上逐日相等（1e-6 量级），fail-closed。"
+            }
+          ],
+          "dead_ends": "1) 一开始怀疑是 fetch_history 的分段拼接（每次 800 根、靠把 end 往前挪）导致不同 chunk 的复权基准不同而产生跳变。排除了：直接对接口单次请求 12 根就已经能看到日内因子漂移（api_dump.py 输出），与拼接无关；而且 |Δf_close| 是每天都在变（601398 中位数 0.0020、2346 天里 1684 天变动 >0.1%），不是每 800 天出现一次的断点。\n\n2) 怀疑过是 COLUMNS 顺序错位（把 high 当 close 之类）。排除了：hfq 与 raw 两次请求返回的 volume 逐行完全相同，说明行是对齐的；且仿射拟合 hfq=k·raw+c 的残差已经压到报价精度（5e-4 = 半个跳动），换列不可能拟合得这么好。\n\n3) 怀疑过是 3 位小数四舍五入。排除了：601398 的 hfq 价位在 6~13 之间，0.001 的量化只有 ~0.01%，解释不了 35% 的波动率缺口；且量化误差不会有方向性。\n\n4) 没能确定的：k 的确切含义。601398 拟合出 k=1.0448，但工行历史上没有送转，理论上 k 应该 =1。可能是腾讯把某些分红也折算进了乘数，也可能是我取的窗口跨了半个除权周期。这一点不影响「hfq 是仿射、不保收益」的结论（残差 5e-4 已经证明形式正确），但如果要走「从 (hfq,raw) 反解因子重建正确复权」这条修法，必须先把 k 的语义搞清楚 —— 建议直接用 baostock pctChg 重建，绕开这个不确定性。\n\n5) 没做：没有逐只统计全部 5477 只的仿射残差（只抽了 5 只做全窗口、4 只做滚动拟合）。也没有量化修复后回测净值/Sharpe 会变多少 —— 那需要真的重建面板重跑，超出「只读排查」的范围，且属于别的角度。\n\n6) 没做：sh510050 等 ETF 不在本地缓存里（datasource.candidate_codes 的代码空间不含 51xxxx），所以背景里那组 ETF 数字只能在线复现，我没有本地缓存可对照；但 ETF 有分红，机理与个股完全一致，不需要单独立案。"
+        },
+        "verified": [
+          {
+            "claim": "缓存不是罪魁：本地 kline_hfq/*.csv 与现在在线拉的 hfq 逐日逐分位完全一致（maxabs_diff=0.000000），坏的是数据源语义本身，缓存只是忠实地把坏序列固化了下来。",
+            "evidence": "data/kline_hfq 5477 个文件、data/kline_raw 5472 个，全部在 2026-09-02 17:07~18:32 一轮抓完（fetch_data.py 只在文件不存在时才抓，之后永不刷新）。抽 sh601398 / sh600519 / sz000651 三只，窗口 2017-01-03~2026-09-04：cache n=2347/2347/2340，与在线 fetch_history 的重叠段 maxabs_diff=0.000000，日收益差 >1e-9 的天数 = 0/2346、0/2346、0/2339。也就是说 8 月的缓存 == 今天的在线值，重抓一遍不会修好任何东西。",
+            "repro": "cd /Users/gongzhao/code/misc/astock_quant && /Users/gongzhao/code/misc/.venv/bin/python /tmp/hfq_probe/cache_vs_live.py",
+            "confidence": "high",
+            "implication": "修复方向不是「清缓存重抓」。必须换取数口径或在 panel 层重建复权因子；缓存目录可以原地保留当原始素材（raw 是好的）。",
+            "verdict": null
+          },
+          {
+            "claim": "腾讯 fqkline 的 hfq 是「加法复权」：hfq = k·raw + c（k=累计送转倍数，c=累计现金分红），不是乘法复权，因此不保收益率。r_hfq = r_raw × (k·raw/hfq)，被一个每天都在变的、小于 1 的系数系统性压缩。",
+            "evidence": "sh601398 2017-01-05~2017-02-10 无除权段最小二乘拟合 hfq_close = 1.044777·raw_close + 1.788445，max|残差| = 0.000506 —— 正好是 3 位小数报价 0.001 跳动的一半，即拟合精度已到报价精度极限。同段实测 r_hfq/r_raw 中位数 0.7267，理论值 k·raw/hfq 中位数 0.7258，吻合。对 4 只标的做 20 日滚动仿射拟合，全窗口残差中位数均为 0.00049~0.00051；只有含除权日的窗口残差才变大。预测的压缩系数 k·raw/hfq 均值 vs 实测波动率比：601398 0.6305/0.6493、600519 0.9118/0.9269、000651 0.7400/0.7889、600000 0.6961/0.6999。原始接口证据：一次拉 12 根，raw=4.430/4.440/4.450/4.460/4.470，hfq=6.417/6.427/6.438/6.448/6.459，hfq−raw = 1.987→1.989 在 5 天里持续漂移，qfq 更直接是 qfq = raw − 2.776（纯减法）。",
+            "repro": "cd /Users/gongzhao/code/misc/astock_quant && /Users/gongzhao/code/misc/.venv/bin/python -c \"\nimport pandas as pd, numpy as np\nh=pd.read_csv('data/kline_hfq/sh601398.csv').set_index('date')['close']\nr=pd.read_csv('data/kline_raw/sh601398.csv').set_index('date')['close']\nj=pd.concat([h.rename('hfq'),r.rename('raw')],axis=1).loc['2017-01-05':'2017-02-10'].dropna()\nk,c=np.polyfit(j.raw,j.hfq,1); print('k=%.6f c=%.6f max|resid|=%.6f'%(k,c,abs(k*j.raw+c-j.hfq).max()))\nprint('r_hfq/r_raw med %.4f ; k*raw/hfq med %.4f'%((j.hfq.pct_change()/j.raw.pct_change()).median(),(k*j.raw/j.hfq).median()))\"\n# 接口原始报文：/Users/gongzhao/code/misc/.venv/bin/python /tmp/hfq_probe/api_dump.py\n# 全窗口仿射拟合：cd astock_quant && .venv/bin/python /tmp/hfq_probe/affine.py",
+            "confidence": "high",
+            "implication": "「哪个序列可信」有了机理答案：raw 可信，hfq 不可信，且 hfq 不是简单缩放而是 affine，无法靠除以一个常数救回。但正因为是 affine，可以从 (hfq, raw) 两列反解出 k 和 c，进而重建正确的乘法复权因子 —— 现有缓存里的信息是足够的，不必重抓。",
+            "verdict": null
+          },
+          {
+            "claim": "第三方仲裁：baostock 官方 pctChg 与 raw 日收益逐日相等（中位偏差 1e-7），与 hfq 日收益在 2346 天里有 2100+ 天不等。raw 是对的，hfq 是错的，这一点不再有歧义。",
+            "evidence": "仓库里已经躺着 5435 份 baostock 日线（astock_quant/data_bs/daily/），含交易所口径的 pctChg。窗口 2017-01-03~2026-09-04、剔除停牌日：|r_hfq − r_bs| 中位数 vs |r_raw − r_bs| 中位数 —— sh601398 1.96e-3 / 1.27e-7；sh600519 6.19e-4 / 1.64e-7；sz000651 1.98e-3 / 1.55e-7；sh600000 1.72e-3 / 1.26e-7；sz000001 6.68e-4 / 1.59e-7。偏差 >1e-4 的天数 hfq 为 2146/2113/2258/2234/2104，raw 只有 12/14/15/10/12 天（正好就是除权日的数量级）。年化波动 bs/hfq/raw：0.1771/0.1193/0.1838、0.2882/0.2677/0.2888、0.2848/0.2276/0.2884、0.2008/0.1465/0.2094、0.2929/0.2728/0.2931。",
+            "repro": "cd /Users/gongzhao/code/misc/astock_quant && /Users/gongzhao/code/misc/.venv/bin/python /tmp/hfq_probe/arbiter.py",
+            "confidence": "high",
+            "implication": "修法最省事的一条：正确的后复权收益序列 = cumprod(1+baostock.pctChg)（交易所前收盘已经处理除权除息，这正是乘法复权的定义）。数据已经在本地，不需要新数据源。另一条：从腾讯 (hfq, raw) 反解 (k,c) 重建因子。两条都可做交叉校验。",
+            "verdict": null
+          }
+        ]
+      }
+    ],
+    "ledger": null
+  },
+  "workflowProgress": [
+    {
+      "type": "workflow_phase",
+      "index": 1,
+      "title": "Investigate"
+    },
+    {
+      "type": "workflow_phase",
+      "index": 2,
+      "title": "Verify"
+    },
+    {
+      "type": "workflow_phase",
+      "index": 3,
+      "title": "Blast"
+    },
+    {
+      "type": "workflow_phase",
+      "index": 4,
+      "title": "Synthesize"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 1,
+      "label": "probe:api-forensics",
+      "phaseIndex": 1,
+      "phaseTitle": "Investigate",
+      "agentId": "ab74e9b94b7bb8e63",
+      "model": "claude-opus-5",
+      "state": "error",
+      "startedAt": 1788588008093,
+      "queuedAt": 1788588008075,
+      "attempt": 1,
+      "lastToolName": "Bash",
+      "lastToolSummary": "cat > /tmp/tcx/analyze7.py <<'EOF' # -*- coding: utf-8 -*- …",
+      "promptPreview": "背景（已确认的事实，不要重复验证，直接在此基础上往下查）：\n- 仓库 /Users/gongzhao/code/misc，Python 解释器用 /Users/gongzhao/code/misc/.venv/bin/python（不要用系统 python3）。\n- 行情源代码在 /Users/gongzhao/code/misc/astock_quant/aq/datasource.py，走腾讯 ifzq.gtimg.cn 的 fqkline 接口。\n  用法：sys.path.insert(0, \"/Users/gongzhao/code/misc/astock_quant\"); from aq import config, datasource as ds\n  config.DATA_START = \"2005-01-01\"; ds.fetch_history(code, fq=\"h…",
+      "lastProgressAt": 1788588538040,
+      "error": "You've hit your session limit · resets 6pm (Asia/Singapore)",
+      "tokens": 95004,
+      "toolCalls": 14,
+      "durationMs": 529944
+    },
+    {
+      "type": "workflow_agent",
+      "index": 2,
+      "label": "probe:pagination",
+      "phaseIndex": 1,
+      "phaseTitle": "Investigate",
+      "agentId": "a1e1aec9aa07b4984",
+      "model": "claude-opus-5",
+      "state": "error",
+      "startedAt": 1788588008094,
+      "queuedAt": 1788588008075,
+      "attempt": 1,
+      "lastToolName": "Bash",
+      "lastToolSummary": "ls -la /tmp/hfqprobe/",
+      "promptPreview": "背景（已确认的事实，不要重复验证，直接在此基础上往下查）：\n- 仓库 /Users/gongzhao/code/misc，Python 解释器用 /Users/gongzhao/code/misc/.venv/bin/python（不要用系统 python3）。\n- 行情源代码在 /Users/gongzhao/code/misc/astock_quant/aq/datasource.py，走腾讯 ifzq.gtimg.cn 的 fqkline 接口。\n  用法：sys.path.insert(0, \"/Users/gongzhao/code/misc/astock_quant\"); from aq import config, datasource as ds\n  config.DATA_START = \"2005-01-01\"; ds.fetch_history(code, fq=\"h…",
+      "lastProgressAt": 1788588483440,
+      "error": "You've hit your session limit · resets 6pm (Asia/Singapore)",
+      "tokens": 99093,
+      "toolCalls": 16,
+      "durationMs": 474200
+    },
+    {
+      "type": "workflow_agent",
+      "index": 3,
+      "label": "probe:exdiv-truth",
+      "phaseIndex": 1,
+      "phaseTitle": "Investigate",
+      "agentId": "a1523aa401bdf1953",
+      "model": "claude-opus-5",
+      "state": "error",
+      "startedAt": 1788588008095,
+      "queuedAt": 1788588008075,
+      "attempt": 1,
+      "lastToolName": "Bash",
+      "lastToolSummary": "cat > /tmp/hfqprobe/verify_all.py <<'PY' #!/usr/bin/env pyt…",
+      "promptPreview": "背景（已确认的事实，不要重复验证，直接在此基础上往下查）：\n- 仓库 /Users/gongzhao/code/misc，Python 解释器用 /Users/gongzhao/code/misc/.venv/bin/python（不要用系统 python3）。\n- 行情源代码在 /Users/gongzhao/code/misc/astock_quant/aq/datasource.py，走腾讯 ifzq.gtimg.cn 的 fqkline 接口。\n  用法：sys.path.insert(0, \"/Users/gongzhao/code/misc/astock_quant\"); from aq import config, datasource as ds\n  config.DATA_START = \"2005-01-01\"; ds.fetch_history(code, fq=\"h…",
+      "lastProgressAt": 1788588495576,
+      "error": "You've hit your session limit · resets 6pm (Asia/Singapore)",
+      "tokens": 102488,
+      "toolCalls": 19,
+      "durationMs": 486336
+    },
+    {
+      "type": "workflow_agent",
+      "index": 4,
+      "label": "probe:cross-source",
+      "phaseIndex": 1,
+      "phaseTitle": "Investigate",
+      "agentId": "a55be56bcab9f171a",
+      "model": "claude-opus-5",
+      "state": "error",
+      "startedAt": 1788588008095,
+      "queuedAt": 1788588008075,
+      "attempt": 1,
+      "lastToolName": "Bash",
+      "lastToolSummary": "cat > /tmp/xsrc/jumps.py <<'PY' import sys, numpy as np, pa…",
+      "promptPreview": "背景（已确认的事实，不要重复验证，直接在此基础上往下查）：\n- 仓库 /Users/gongzhao/code/misc，Python 解释器用 /Users/gongzhao/code/misc/.venv/bin/python（不要用系统 python3）。\n- 行情源代码在 /Users/gongzhao/code/misc/astock_quant/aq/datasource.py，走腾讯 ifzq.gtimg.cn 的 fqkline 接口。\n  用法：sys.path.insert(0, \"/Users/gongzhao/code/misc/astock_quant\"); from aq import config, datasource as ds\n  config.DATA_START = \"2005-01-01\"; ds.fetch_history(code, fq=\"h…",
+      "lastProgressAt": 1788588487955,
+      "error": "You've hit your session limit · resets 6pm (Asia/Singapore)",
+      "tokens": 111976,
+      "toolCalls": 26,
+      "durationMs": 478714
+    },
+    {
+      "type": "workflow_agent",
+      "index": 5,
+      "label": "probe:blast-code",
+      "phaseIndex": 1,
+      "phaseTitle": "Investigate",
+      "agentId": "a04cedc3082e180e5",
+      "model": "claude-opus-5",
+      "state": "done",
+      "startedAt": 1788588008096,
+      "queuedAt": 1788588008075,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "代码链路与缓存：hfq 序列从腾讯接口流到哪些代码路径、缓存里…",
+      "promptPreview": "背景（已确认的事实，不要重复验证，直接在此基础上往下查）：\n- 仓库 /Users/gongzhao/code/misc，Python 解释器用 /Users/gongzhao/code/misc/.venv/bin/python（不要用系统 python3）。\n- 行情源代码在 /Users/gongzhao/code/misc/astock_quant/aq/datasource.py，走腾讯 ifzq.gtimg.cn 的 fqkline 接口。\n  用法：sys.path.insert(0, \"/Users/gongzhao/code/misc/astock_quant\"); from aq import config, datasource as ds\n  config.DATA_START = \"2005-01-01\"; ds.fetch_history(code, fq=\"h…",
+      "lastProgressAt": 1788588596239,
+      "tokens": 130073,
+      "toolCalls": 36,
+      "durationMs": 586997,
+      "resultPreview": "{\"angle\":\"代码链路与缓存：hfq 序列从腾讯接口流到哪些代码路径、缓存里存的是不是已经坏了、哪些实盘在跑\",\"findings\":[{\"claim\":\"缓存不是罪魁：本地 kline_hfq/*.csv 与现在在线拉的 hfq 逐日逐分位完全一致（maxabs_diff=0.000000），坏的是数据源语义本身，缓存只是忠实地把坏序列固化了下来。\",\"evidence\":\"data/kline_hfq 5477 个文件、data/kline_raw 5472 个，全部在 2026-09-02 17:07~18:32 一轮抓完（fetch_data.py 只在文件不存在时才抓，之后永不刷新）。抽 sh601398 / sh600519 / sz000651 三只，窗口 2017-01-03~2026-09-04：cache n=2347/2347/2340，与在线 fetch_hi…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 6,
+      "label": "refute:blast-code",
+      "phaseIndex": 2,
+      "phaseTitle": "Verify",
+      "agentId": "af40a8d2cecfb655e",
+      "model": "claude-opus-5",
+      "state": "error",
+      "startedAt": 1788588596255,
+      "queuedAt": 1788588596242,
+      "attempt": 1,
+      "promptPreview": "背景（已确认的事实，不要重复验证，直接在此基础上往下查）：\n- 仓库 /Users/gongzhao/code/misc，Python 解释器用 /Users/gongzhao/code/misc/.venv/bin/python（不要用系统 python3）。\n- 行情源代码在 /Users/gongzhao/code/misc/astock_quant/aq/datasource.py，走腾讯 ifzq.gtimg.cn 的 fqkline 接口。\n  用法：sys.path.insert(0, \"/Users/gongzhao/code/misc/astock_quant\"); from aq import config, datasource as ds\n  config.DATA_START = \"2005-01-01\"; ds.fetch_history(code, fq=\"h…",
+      "lastProgressAt": 1788588596760,
+      "error": "You've hit your session limit · resets 6pm (Asia/Singapore)",
+      "tokens": 0,
+      "toolCalls": 0,
+      "durationMs": 504
+    },
+    {
+      "type": "workflow_agent",
+      "index": 7,
+      "label": "refute:blast-code",
+      "phaseIndex": 2,
+      "phaseTitle": "Verify",
+      "agentId": "a031e0ab975ee7ad2",
+      "model": "claude-opus-5",
+      "state": "error",
+      "startedAt": 1788588596255,
+      "queuedAt": 1788588596243,
+      "attempt": 1,
+      "promptPreview": "背景（已确认的事实，不要重复验证，直接在此基础上往下查）：\n- 仓库 /Users/gongzhao/code/misc，Python 解释器用 /Users/gongzhao/code/misc/.venv/bin/python（不要用系统 python3）。\n- 行情源代码在 /Users/gongzhao/code/misc/astock_quant/aq/datasource.py，走腾讯 ifzq.gtimg.cn 的 fqkline 接口。\n  用法：sys.path.insert(0, \"/Users/gongzhao/code/misc/astock_quant\"); from aq import config, datasource as ds\n  config.DATA_START = \"2005-01-01\"; ds.fetch_history(code, fq=\"h…",
+      "lastProgressAt": 1788588597283,
+      "error": "You've hit your session limit · resets 6pm (Asia/Singapore)",
+      "tokens": 0,
+      "toolCalls": 0,
+      "durationMs": 523
+    },
+    {
+      "type": "workflow_agent",
+      "index": 8,
+      "label": "refute:blast-code",
+      "phaseIndex": 2,
+      "phaseTitle": "Verify",
+      "agentId": "a385c0290ffec23a0",
+      "model": "claude-opus-5",
+      "state": "error",
+      "startedAt": 1788588596256,
+      "queuedAt": 1788588596243,
+      "attempt": 1,
+      "promptPreview": "背景（已确认的事实，不要重复验证，直接在此基础上往下查）：\n- 仓库 /Users/gongzhao/code/misc，Python 解释器用 /Users/gongzhao/code/misc/.venv/bin/python（不要用系统 python3）。\n- 行情源代码在 /Users/gongzhao/code/misc/astock_quant/aq/datasource.py，走腾讯 ifzq.gtimg.cn 的 fqkline 接口。\n  用法：sys.path.insert(0, \"/Users/gongzhao/code/misc/astock_quant\"); from aq import config, datasource as ds\n  config.DATA_START = \"2005-01-01\"; ds.fetch_history(code, fq=\"h…",
+      "lastProgressAt": 1788588597281,
+      "error": "You've hit your session limit · resets 6pm (Asia/Singapore)",
+      "tokens": 0,
+      "toolCalls": 0,
+      "durationMs": 521
+    },
+    {
+      "type": "workflow_agent",
+      "index": 9,
+      "label": "blast:ledger",
+      "phaseIndex": 3,
+      "phaseTitle": "Blast",
+      "agentId": "aebc3db47ecb753b2",
+      "model": "claude-opus-5",
+      "state": "error",
+      "startedAt": 1788588597291,
+      "queuedAt": 1788588597283,
+      "attempt": 1,
+      "promptPreview": "背景（已确认的事实，不要重复验证，直接在此基础上往下查）：\n- 仓库 /Users/gongzhao/code/misc，Python 解释器用 /Users/gongzhao/code/misc/.venv/bin/python（不要用系统 python3）。\n- 行情源代码在 /Users/gongzhao/code/misc/astock_quant/aq/datasource.py，走腾讯 ifzq.gtimg.cn 的 fqkline 接口。\n  用法：sys.path.insert(0, \"/Users/gongzhao/code/misc/astock_quant\"); from aq import config, datasource as ds\n  config.DATA_START = \"2005-01-01\"; ds.fetch_history(code, fq=\"h…",
+      "lastProgressAt": 1788588597805,
+      "error": "You've hit your session limit · resets 6pm (Asia/Singapore)",
+      "tokens": 0,
+      "toolCalls": 0,
+      "durationMs": 514
+    },
+    {
+      "type": "workflow_agent",
+      "index": 10,
+      "label": "synthesize",
+      "phaseIndex": 4,
+      "phaseTitle": "Synthesize",
+      "agentId": "aaf82b4fa990c7192",
+      "model": "claude-opus-5",
+      "state": "error",
+      "startedAt": 1788588597807,
+      "queuedAt": 1788588597806,
+      "attempt": 1,
+      "promptPreview": "背景（已确认的事实，不要重复验证，直接在此基础上往下查）：\n- 仓库 /Users/gongzhao/code/misc，Python 解释器用 /Users/gongzhao/code/misc/.venv/bin/python（不要用系统 python3）。\n- 行情源代码在 /Users/gongzhao/code/misc/astock_quant/aq/datasource.py，走腾讯 ifzq.gtimg.cn 的 fqkline 接口。\n  用法：sys.path.insert(0, \"/Users/gongzhao/code/misc/astock_quant\"); from aq import config, datasource as ds\n  config.DATA_START = \"2005-01-01\"; ds.fetch_history(code, fq=\"h…",
+      "lastProgressAt": 1788588598330,
+      "error": "You've hit your session limit · resets 6pm (Asia/Singapore)",
+      "tokens": 0,
+      "toolCalls": 0,
+      "durationMs": 523
+    }
+  ],
+  "totalTokens": 538634,
+  "totalToolCalls": 111
+}

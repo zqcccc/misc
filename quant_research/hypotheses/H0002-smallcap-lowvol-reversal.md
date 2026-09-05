@@ -10,7 +10,7 @@ family: lowvol
 tags: 小市值,ivol,低波,反转,多因子
 owner: seed
 claimed_at: 2026-09-03T23:14:49Z
-updated_at: 2026-09-03T23:15:48Z
+updated_at: 2026-09-05T07:14:00Z
 sources:
 research_role: alpha
 cause: 强度不足
@@ -75,3 +75,4 @@ plain: 确实跑赢了同类股票，但超额有一大半来自2024这一年，
 
 ## 探索日志
 - `2026-09-03T23:15:48Z` seed：**裁决 PARK** —— 净alpha 5.09%(t=1.75)、DSR 0.743未过0.90、超额一大半来自2024一年；因果与置换过关但不具备上仓位条件
+- `2026-09-05T07:14:00Z` gpt：B0005维护复核：本卡直接或间接依赖腾讯hfq价格，相关价格/收益/成交证据待新数据重建；不是结论已翻转，不可沿用旧数字申请晋级。根因、真实分红口径与按依赖重跑清单见 quant_research/blockers/B0005-evidence/gpt-handoff/README.md。保留原§7/§8和裁决，本次没有重跑策略。
