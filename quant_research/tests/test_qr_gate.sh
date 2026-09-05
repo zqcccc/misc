@@ -203,6 +203,28 @@ expect_ok   "载体替换报告可以 PASS"             "$QR" verdict $EXEC_ID P
 expect_eq   "execution 的 PASS 写回卡片"        "$(fmval $EXEC_ID verdict)" "PASS"
 
 
+echo "── 订正通道：历史不可改写，但结论必须能被作废与复算"
+# 「不许改别人已裁决的卡」要留着（数字能被悄悄改写则无从核查），但缺配套出口时，
+# 死线索会一直以原文躺在每个 agent 每轮必读的 KNOWLEDGE.md 里。
+SUP_A="$("$QR" claim "会被作废的结论" --market multi --family other 2>/dev/null | head -1 | awk '{print $1}')"
+SUP_B="$("$QR" claim "证伪它的那张卡" --market multi --family other 2>/dev/null | head -1 | awk '{print $1}')"
+"$QR" verdict "$SUP_A" FAIL --cause 无机理 "顺手发现某个方向很值得另开一张卡" >/dev/null 2>&1
+"$QR" verdict "$SUP_B" FAIL --cause 无机理 "那个方向是记账错觉，不是真行情" >/dev/null 2>&1
+expect_fail "作废必须指出是谁证伪的" "$QR" supersede "$SUP_A" "没写 by"
+expect_fail "作废必须写一句话为什么" "$QR" supersede "$SUP_A" --by "$SUP_B"
+expect_fail "--by 指向不存在的卡被拒" "$QR" supersede "$SUP_A" --by H9999 "随便"
+expect_ok   "合法作废"               "$QR" supersede "$SUP_A" --by "$SUP_B" "那个方向是记账错觉，不是真行情"
+expect_eq   "作废字段写回卡片"        "$(fmval "$SUP_A" superseded_by)" "$SUP_B"
+if grep -q "⛔" "$TMP/KNOWLEDGE.md" && grep -q "已被 $SUP_B 作废" "$TMP/KNOWLEDGE.md"; then
+  ok "KNOWLEDGE.md 就地打作废标记并指向证伪者"
+else bad "KNOWLEDGE.md 没有作废标记"; fi
+if grep -q "顺手发现某个方向很值得另开一张卡" "$(card "$SUP_A")"; then
+  ok "原卡的 plain 与 §7 一字未动（历史保留）"
+else bad "原卡内容被改写了"; fi
+expect_fail "复算必须写协议版本" "$QR" restate "$SUP_B" "只写了数字"
+expect_ok   "合法复算"           "$QR" restate "$SUP_B" --protocol v7 "新口径下结论不变"
+expect_eq   "复算字段写回卡片"    "$(fmval "$SUP_B" restated_under)" "v7"
+
 echo
 echo "qr gate: passed=$PASS_N failed=$FAIL_N"
 [ "$FAIL_N" -eq 0 ]

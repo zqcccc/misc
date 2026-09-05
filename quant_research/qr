@@ -193,9 +193,18 @@ cmd_knowledge() {
       [ "$(fm "$f" status)" = "done" ] || continue
       id="$(fm "$f" id)"
       case "$(fm "$f" verdict)" in PASS) mark="🟢";; PARK) mark="🟡";; FAIL) mark="🔴";; *) continue;; esac
-      printf -- '- %s [%s] %s —— %s —— %s（%s）\n' \
-        "$mark" "$(fm "$f" market)" "$(short_topic "$(fm "$f" title)")" \
-        "$(fm "$f" cause)" "$(plain_of "$f")" "$id"
+      local sup; sup="$(fm "$f" superseded_by)"
+      if [ -n "$sup" ]; then
+        # 被证伪的结论必须就地看得见，不能让读者自己在三十行外去发现讣告
+        printf -- '- ⛔ ~~%s [%s] %s —— %s —— %s（%s）~~\n' \
+          "$mark" "$(fm "$f" market)" "$(short_topic "$(fm "$f" title)")" \
+          "$(fm "$f" cause)" "$(plain_of "$f")" "$id"
+        printf -- '  ↳ **已被 %s 作废**：%s\n' "$sup" "$(fm "$f" superseded_why)"
+      else
+        printf -- '- %s [%s] %s —— %s —— %s（%s）\n' \
+          "$mark" "$(fm "$f" market)" "$(short_topic "$(fm "$f" title)")" \
+          "$(fm "$f" cause)" "$(plain_of "$f")" "$id"
+      fi
     done
   } > "$KNOWLEDGE"
   echo "已重建 ${KNOWLEDGE#$HOME_DIR/}"
@@ -761,6 +770,66 @@ print("如果高分档和中分档的结局分布看不出差别，说明打分�
 SCPY
 }
 
+# ---------- 订正通道：历史不可改写，但结论必须能被作废与复算 ----------
+#
+# 「不许改别人已裁决的卡的 §7 §8」这条要留着 —— 数字能被悄悄改写，任何结论都不可核查。
+# 但它缺一个配套出口，实测出过两次问题：
+#   ① H0013 的 plain 里留着一条线索，H0049 已经把它证伪（yfinance 单合约日线四价合一
+#      造成的记账错觉），可 plain 不能改、KNOWLEDGE.md 又从 plain 重建 —— 于是每个 agent
+#      每轮必读的那份文件里，死线索和它的讣告相隔三十多行、互不引用。
+#   ② 协议 v7 后 10 张卡按新口径复算过，新数字只能散在探索日志里；下一个 agent 读到的
+#      仍是 §7 的旧数字。
+# 两处都不是「历史被改」的问题，是「现状看不见」的问题。所以补只追加的订正字段。
+
+cmd_supersede() {
+  [ $# -ge 2 ] || die '用法: qr supersede <被作废的ID> --by <证伪它的ID> "<一句话为什么>"'
+  local id="$1"; shift
+  local by="" why=""
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --by) by="$2"; shift 2;;
+      -*) die "未知参数 $1";;
+      *) why="${why}${why:+ }$1"; shift;;
+    esac
+  done
+  [ -n "$by" ] || die "必须写 --by <证伪它的卡ID>：作废一条结论要指出是谁证伪的"
+  [ -n "$why" ] || die "必须写一句话为什么 —— 后来人靠这句话决定要不要相信作废"
+  local file; file="$(hyp_file "$id")"
+  ls "$HYP/$by-"*.md >/dev/null 2>&1 || die "--by $by 没有对应的假设卡"
+  check_plain_language "$why"
+  set_fm "$file" superseded_by "$by"
+  set_fm "$file" superseded_why "$why"
+  set_fm "$file" updated_at "$(now_iso)"
+  printf -- '- `%s` %s：**结论被 %s 作废** —— %s\n' \
+    "$(now_iso)" "$(agent_name "${QR_AGENT:-}")" "$by" "$why" >> "$file"
+  cmd_knowledge >/dev/null
+  cmd_index >/dev/null
+  echo "$id 已标记为被 $by 作废，KNOWLEDGE.md 已重建。"
+  echo "原卡的 §7 §8 与 plain 一字未动 —— 历史保留，现状可见。"
+}
+
+cmd_restate() {
+  [ $# -ge 2 ] || die '用法: qr restate <ID> --protocol <版本> "<新数字摘要或它在哪>"'
+  local id="$1"; shift
+  local ver="" note=""
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --protocol) ver="$2"; shift 2;;
+      -*) die "未知参数 $1";;
+      *) note="${note}${note:+ }$1"; shift;;
+    esac
+  done
+  [ -n "$ver" ] || die "必须写 --protocol <版本>：复算是在哪一版口径下做的"
+  [ -n "$note" ] || die "必须写新数字摘要或它落在哪个文件"
+  local file; file="$(hyp_file "$id")"
+  set_fm "$file" restated_under "$ver"
+  set_fm "$file" updated_at "$(now_iso)"
+  printf -- '- `%s` %s：**按 %s 口径复算** —— %s\n' \
+    "$(now_iso)" "$(agent_name "${QR_AGENT:-}")" "$ver" "$note" >> "$file"
+  cmd_index >/dev/null
+  echo "$id 已记为在 $ver 下复算过。§7 的历史数字保持原样。"
+}
+
 cmd_home() { echo "$HOME_DIR"; }
 
 cmd_protocol() {
@@ -1210,7 +1279,7 @@ def fm(t, k):
     m = re.search(r"^%s:[ \t]*(.*)$" % k, t, re.M)
     return (m.group(1).strip() if m else "")
 
-queue, legacy, current = [], [], 0
+queue, legacy, restated, current = [], [], [], 0
 for f in sorted(glob.glob(os.path.join(hyp, "*.md"))):
     t = open(f, encoding="utf-8").read()
     if fm(t, "status") != "done":
@@ -1228,21 +1297,31 @@ for f in sorted(glob.glob(os.path.join(hyp, "*.md"))):
     reasons = [e for e in versions[fp_index[fp] + 1:]
                if verdict in AFFECTS.get(e["impact"], set())]
     if reasons:
-        queue.append((fm(t, "id"), verdict, versions[fp_index[fp]]["v"],
-                      "→".join(e["v"] for e in reasons), reasons[0]["note"][:60]))
+        row = (fm(t, "id"), verdict, versions[fp_index[fp]]["v"],
+               "→".join(e["v"] for e in reasons), reasons[0]["note"][:60])
+        # 已经在某一版下复算过、且那一版不早于最后一次影响性改动的，不必再排队
+        rs = fm(t, "restated_under")
+        done_idx = next((i for i, e in enumerate(versions) if e["v"] == rs), -1)
+        need_idx = max(fp_index[e["fp"]] for e in reasons)
+        (restated if done_idx >= need_idx else queue).append(row + (rs,))
     else:
         current += 1
 
 print(f"当前协议：{cur}（{cur_v or '未登记 —— 先跑 qr protocol register'}）")
-print(f"已裁决卡：按当前口径仍然成立 {current} 张；待重判 {len(queue)} 张；指纹未登记的历史卡 {len(legacy)} 张")
+print(f"已裁决卡：按当前口径仍然成立 {current} 张；待重判 {len(queue)} 张；已复算 {len(restated)} 张；指纹未登记的历史卡 {len(legacy)} 张")
 if queue:
     print()
-    print("== 待重判（协议在它们判完之后往会翻转结论的方向改过）==")
-    for hid, v, was, path, why in queue:
+    print("== 待重判（协议往会翻转结论的方向改过，且还没在新口径下复算）==")
+    for hid, v, was, path, why, _ in queue:
         print(f"  {hid}  {v}  判于 {was}，之后经过 {path}：{why}")
     print()
-    print("处理方式：重跑它的严格报告再 ./qr verdict 覆盖；或确认这次改动够不着它，")
-    print("在卡片里追加一条说明为什么不受影响。不要因为有待重判就停掉整个编队。")
+    print("处理方式：在新口径下复算 → ./qr restate <ID> --protocol <版本> \"<新数字>\"；")
+    print("结论真的翻了才 ./qr verdict 覆盖。不要因为有待重判就停掉整个编队。")
+if restated:
+    print()
+    print("== 已在新口径下复算，无需再排队 ==")
+    for hid, v, was, path, why, rs in restated:
+        print(f"  {hid}  {v}  判于 {was}，已按 {rs} 复算")
 if legacy:
     print()
     print(f"== 指纹未登记的历史卡 {len(legacy)} 张（判它们的那版协议没有进版本台账，无法自动比较）==")
@@ -1384,6 +1463,9 @@ qr —— 量化探索台账（多 agent 共用，先查重后占坑）
   qr stale [小时]                        找僵尸占坑（默认 6h）
   qr index                               重建 REGISTRY.md
   qr knowledge                           从假设卡重建 KNOWLEDGE.md（唯一写入口，裁决时自动调用）
+  qr supersede <ID> --by <ID> "<为什么>"  标记某张卡的结论已被后来的卡证伪。原卡 §7/§8 与
+                                         plain 一字不动，KNOWLEDGE.md 里就地打 ⛔ 并指向证伪者
+  qr restate <ID> --protocol <版本> "<新数字>"  记录这张卡在新口径下复算过。§7 历史数字保持原样
   qr home                                打印当前台账根目录
 
 并行与协议版本（多 agent 同时跑时的地基）
@@ -1404,7 +1486,7 @@ USAGE
 # 两个 agent 同时收口会互相覆盖。只读命令不加锁，不影响并行盘点。
 SUB="${1:-}"
 case "$SUB" in
-  claim|note|verdict|release|index|knowledge|screen|takeover|blocker) lock_acquire;;
+  claim|note|verdict|release|index|knowledge|screen|takeover|blocker|supersede|restate) lock_acquire;;
 esac
 
 case "$SUB" in
@@ -1421,6 +1503,8 @@ case "$SUB" in
   leads) shift; cmd_leads;;
   scorecard) shift; cmd_scorecard;;
   index)  shift; cmd_index;;
+  supersede) shift; cmd_supersede "$@";;
+  restate) shift; cmd_restate "$@";;
   knowledge) shift; cmd_knowledge;;
   protocol)
     shift
