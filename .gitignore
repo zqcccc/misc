@@ -150,6 +150,7 @@ next-env.d.ts
 !/quant_research/portfolio/
 /quant_research/portfolio/out/
 /cn_index_futures/
+/multi_carry/
 /multi_tsmom/
 /astock_quant/h0*/
 

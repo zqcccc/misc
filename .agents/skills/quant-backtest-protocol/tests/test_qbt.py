@@ -74,6 +74,38 @@ class QbtV2Tests(unittest.TestCase):
                                       capture_output=True, text=True)
                 self.assertEqual(proc.returncode, expected, proc.stderr)
 
+    def test_random_portfolio_requires_explicit_n_short(self):
+        # 纯多策略配多空随机对照会把分位系统性抬高，所以不给静默默认值
+        with self.assertRaises(SystemExit):
+            qbt.require_n_short(None)
+        self.assertEqual(qbt.require_n_short(0), 0)
+        self.assertEqual(qbt.require_n_short(5), 5)
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            idx = pd.date_range("2020-01-01", periods=200, freq="B")
+            rng = np.random.default_rng(3)
+            pd.DataFrame(rng.normal(0, 0.01, (len(idx), 6)),
+                         index=idx, columns=list("abcdef")).to_csv(root / "panel.csv")
+            cmd = [sys.executable, str(SCRIPT), "randomport", "--panel", str(root / "panel.csv"),
+                   "--sharpe", "1.0", "--n-long", "3", "--iters", "20"]
+            miss = subprocess.run(cmd, capture_output=True, text=True)
+            self.assertNotEqual(miss.returncode, 0)
+            self.assertIn("--n-short", miss.stderr)
+            got = subprocess.run(cmd + ["--n-short", "0"], capture_output=True, text=True, check=True)
+            self.assertEqual(json.loads(got.stdout)["n_short"], 0)
+
+    def test_alpha_beta_verdict_requires_significance(self):
+        idx = pd.date_range("2020-01-01", periods=600, freq="B", tz="UTC")
+        rng = np.random.default_rng(11)
+        bench = pd.Series(rng.normal(0.0002, 0.01, len(idx)), index=idx)
+        # 噪音淹没的微弱正 alpha：符号为正但不显著，结论句不许说「策略本身有效」
+        weak = pd.Series(0.00002 + 0.9 * bench.to_numpy() + rng.normal(0, 0.02, len(idx)), index=idx)
+        out = qbt.alpha_beta(weak, bench, 252)
+        self.assertGreater(out["ann_alpha"], 0)
+        self.assertFalse(out["alpha_significant"])
+        self.assertIn("不显著", out["verdict"])
+        self.assertNotIn("策略本身有效", out["verdict"].split("：")[0])
+
     def test_alpha_beta_reports_hac_standard_error(self):
         idx = pd.date_range("2020-01-01", periods=400, freq="B", tz="UTC")
         rng = np.random.default_rng(7)

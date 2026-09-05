@@ -453,7 +453,8 @@ def alpha_beta(r: pd.Series, b: pd.Series, ppy: int, rf_annual: float = 0.0,
     """R_s - Rf = alpha + beta*(R_b - Rf) + eps，逐日盯市回归，HAC 标准误。
 
     读法：alpha 是选股/择时真正创造的部分，beta*R_b 是"大盘白送/白拿"的部分。
-    亏钱但 alpha 为正 = 策略本身有效，输在净敞口撞上行情方向。
+    亏钱但 alpha 为正**且显著** = 策略本身有效，输在净敞口撞上行情方向。
+    不显著的正 alpha 说明不了任何事——结论句必须把这一层说出来，不能只看符号。
     """
     j = pd.concat([r.rename("s"), b.rename("b")], axis=1).dropna()
     if len(j) < 30:
@@ -496,7 +497,11 @@ def alpha_beta(r: pd.Series, b: pd.Series, ppy: int, rf_annual: float = 0.0,
         "note": "total/drag/contribution 为日收益加总口径（与日频夏普一致），非复利净值涨跌幅",
         "beta_drag": round(beta * tot_b, 4),
         "alpha_contribution": round(tot_s - beta * tot_b, 4),
-        "verdict": ("正 alpha：策略本身有效" if a_d > 0 else "负 alpha：选股/择时本身在亏钱"),
+        "verdict": (
+            "正 alpha 且显著：策略本身有效" if a_d > 0 and p < 0.05 else
+            f"正 alpha 但不显著（p={round(p, 4)}）：还看不出策略本身有效" if a_d > 0 else
+            "负 alpha 且显著：选股/择时本身在亏钱" if p < 0.05 else
+            f"负 alpha 但不显著（p={round(p, 4)}）：看不出选股/择时有效或无效"),
     }
 
 
@@ -616,6 +621,21 @@ def pvalue_zero_mean(r: pd.Series, iters: int, block: int, seed: int) -> dict:
     }
 
 
+def require_n_short(n_short):
+    """随机对照的多空结构必须和真策略一致，否则置换分位没有意义。
+
+    这里不给默认值是刻意的：原来 --n-short 默认 5，纯多策略不写它就会被拿去和
+    多空中性的随机组合比（夏普中位≈0），分位被系统性抬高。实测同一个策略
+    75.05% → 99.65%，结论正好相反。宁可报错，不要静默给一个错的零假设。
+    """
+    if n_short is None:
+        raise SystemExit(
+            "qbt: 必须显式写 --n-short —— 纯多策略写 --n-short 0，多空策略写实际做空只数。\n"
+            "随机对照的多空结构要和真策略一致：拿多空中性的随机组合去比纯多策略，"
+            "分位会被系统性抬高，跑出来的显著性是假的。")
+    return n_short
+
+
 def random_portfolio(panel: pd.DataFrame, n_long: int, n_short: int, hold: int,
                      iters: int, seed: int, ppy: int, actual_sharpe: float | None) -> dict:
     """随机组合置换：宇宙、持仓数、换手频率都照抄真策略，只把【选股逻辑】换成随机。
@@ -710,7 +730,8 @@ def main():
     ap.add_argument("--block", type=int, default=10)
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--n-long", type=int, default=5)
-    ap.add_argument("--n-short", type=int, default=5)
+    ap.add_argument("--n-short", type=int, default=None,
+                    help="随机对照的做空只数。必须显式给：纯多策略写 0，多空策略写实际做空只数")
     ap.add_argument("--hold", type=int, default=1, help="随机组合的再平衡间隔（根/日）")
     ap.add_argument("--sharpe", type=float, default=None, help="真策略夏普（randomport 对比用）")
     ap.add_argument("--min-alpha-t", type=float, default=2.0)
@@ -770,7 +791,7 @@ def main():
         if not a.panel:
             sys.exit("[qbt] randomport 需要 --panel")
         pn = pd.read_csv(a.panel, index_col=0, parse_dates=True).sort_index()
-        _emit(random_portfolio(pn, a.n_long, a.n_short, a.hold, min(a.iters, 2000),
+        _emit(random_portfolio(pn, a.n_long, require_n_short(a.n_short), a.hold, min(a.iters, 2000),
                                a.seed, ppy, a.sharpe), a.out)
 
     else:  # report
@@ -833,7 +854,7 @@ def main():
             else:
                 pn = pn.reindex(r.index)
                 rep["random_portfolio"] = random_portfolio(
-                    pn, a.n_long, a.n_short, a.hold, min(a.iters, 2000), a.seed, ppy,
+                    pn, a.n_long, require_n_short(a.n_short), a.hold, min(a.iters, 2000), a.seed, ppy,
                     rep["performance"].get("sharpe_daily_wallet"))
         else:
             rep["random_portfolio"] = load_permutation_result(a.permutation_result)
