@@ -55,6 +55,13 @@ def tradability(panels: dict[str, pd.DataFrame], price: str = "open") -> dict[st
     # 除权日的总收益天然不等于价格涨跌幅，所以哪怕复权做对了，拿复权价去比阈值也一定错。
     # 旧代码用 hfq 价比阈值，实测东风汽车 sh600006 2019-04-12 开盘恰在涨停价 6.85
     # （前收 6.23），hfq 口径只显示 +8.34%，于是 can_buy 被判成 True。见 B0005。
+    missing = [f for f in ("close_raw", "open_raw", "high_raw", "low_raw") if f not in panels]
+    if missing:
+        raise KeyError(
+            f"tradability 需要不复权价面板，缺 {missing}。涨跌停价是拿前一日不复权收盘价"
+            f"乘 1±幅度、四舍五入到分算的，用复权价比阈值一定错（B0005）。"
+            f"解决：panel.load_panels() 不带参数（会自动补齐），或先跑 scripts/build_panel.py "
+            f"重建面板。**不要退回用复权价**——那正是要修的东西。")
     close_r, open_r = panels["close_raw"], panels["open_raw"]
     high, low = panels["high_raw"], panels["low_raw"]
     prev_close = close_r.shift(1)

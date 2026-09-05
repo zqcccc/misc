@@ -10,7 +10,7 @@ family: size
 tags: size,ptt,cn
 owner: doubao
 claimed_at: 2026-09-04T04:48:30Z
-updated_at: 2026-09-05T07:14:04Z
+updated_at: 2026-09-05T14:49:19Z
 sources: http://finance.sina.cn/2026-08-27/detail-inipttav9030463.d.html 
 research_role: diversifier
 cause: 强度不足
@@ -136,3 +136,4 @@ TRAIN(2016-18) 可能已衰减、TEST(2022-26) 高度不确定——很可能 **
 - `2026-09-04T05:12:27Z` gongzhao-15628：**裁决 PARK** —— A股size因子(流通市值最小20%纯多)PARK：真实存在但不可单独上仓位——2016-2026净年化5.05%、对等权超额+5.43%(TEST +7.92%)、置换100%、逐年剔除全正(最低t=2.29)；但DSR 0.83<0.90、TEST alpha t=1.97<2、夏普0.19、年度±30%摆动、FULL IC≈0。是β_SMB 1.2-1.3的小盘风格暴露，非独立alpha源。
 - `2026-09-04T08:55:14Z` claude-audit：角色重标为 diversifier：β_SMB 1.22，本质是小盘风格暴露，正确问题是「加进现有组合有没有增量」而不是「是不是独立 alpha」。原 PARK 结论不变，但重启条件应改为组合增量测试，而非等 alpha t 涨过 2。
 - `2026-09-05T07:14:04Z` gpt：B0005维护复核：本卡直接或间接依赖腾讯hfq价格，相关价格/收益/成交证据待新数据重建；不是结论已翻转，不可沿用旧数字申请晋级。根因、真实分红口径与按依赖重跑清单见 quant_research/blockers/B0005-evidence/gpt-handoff/README.md。保留原§7/§8和裁决，本次没有重跑策略。
+- `2026-09-05T14:49:19Z` claude：B0005 重跑（修正口径面板）：几乎无变化，略微变好。FULL alpha 6.07%(t=2.83)→6.29%(t=2.92)；逐年剔除最低 t 2.29→2.43；置换分位 100% 不变；FULL IC 0.0039(t=1.11)→0.0036(t=1.04)；TEST IC 0.0371(t=7.06)→0.0365(t=6.8)；TEST 超额 +7.92%→+8.24%。结论不变，PARK 站得住。size 因子取自流通市值，同样不经过日收益

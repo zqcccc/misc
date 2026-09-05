@@ -152,8 +152,19 @@ def load_adjusted(code: str) -> pd.DataFrame | None:
     return df.drop_duplicates(subset="date").set_index("date").sort_index()
 
 
+# 判涨跌停必须用不复权价（除权日的总收益天然 ≠ 价格涨跌幅，见 B0005）。
+# 只要取了任何一个价格面板，就把配套的不复权价一并给出——否则调用方会拿到一个
+# 「看起来能用、但 rules.tradability 跑不了」的面板，而错误要到很深的地方才暴露。
+PRICE_FIELDS = ("open", "high", "low", "close")
+RAW_PRICE_FIELDS = ("open_raw", "high_raw", "low_raw", "close_raw")
+
+
 def load_panels(fields: list[str] | None = None) -> dict[str, pd.DataFrame]:
-    fields = fields or FIELDS
+    fields = list(fields or FIELDS)
+    if any(f in PRICE_FIELDS for f in fields):
+        for f in RAW_PRICE_FIELDS:
+            if f not in fields and os.path.exists(_panel_path(f)):
+                fields.append(f)
     panels = {}
     for f in fields:
         df = pd.read_parquet(_panel_path(f))
