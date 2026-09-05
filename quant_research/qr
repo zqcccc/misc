@@ -324,8 +324,12 @@ cmd_claim() {
   [ -z "$srcs" ] || set_fm "$file" sources "$srcs"
   [ -z "$score" ] || set_fm "$file" score "$score"
 
-  printf 'agent=%s\nclaimed_at=%s\nclaimed_epoch=%s\nfile=%s\ntitle=%s\n' \
-    "$agent" "$(now_iso)" "$(now_epoch)" "${file#$HOME_DIR/}" "$title" > "$LOCKS/$id/owner"
+  local my_run=""
+  if explicit_agent || [ -n "${QR_RUN:-}" ]; then
+    my_run="$(resolve_run "$agent" "占坑")"
+  fi
+  printf 'agent=%s\nrun=%s\nclaimed_at=%s\nclaimed_epoch=%s\nfile=%s\ntitle=%s\n' \
+    "$agent" "$my_run" "$(now_iso)" "$(now_epoch)" "${file#$HOME_DIR/}" "$title" > "$LOCKS/$id/owner"
 
   cmd_index >/dev/null
   echo "$id  已占坑 → ${file#$HOME_DIR/}"
@@ -830,25 +834,115 @@ lock_acquire() {
 }
 
 # ---------- 占坑归属：写操作必须是坑主，接管必须 compare-and-swap ----------
+# ---------- 运行身份：名字是给人读的标签，不是身份 ----------
+#
+# `claude` / `gpt` 是人打出来的名字，同一个名字可以对应任意多个并发运行 —— 这很正常。
+# 但归属保护、开工基线、接管 CAS 要保护的都是**这一次运行**，不是这个名字。
+# 把标签当身份的后果已经实测复现：同名 agent 之间零阻力互相覆盖成本闸与裁决；
+# 更严重的是 A 号改了协议后、B 号一开工就把 runs/<名字>.env 覆盖成含改动的状态，
+# A 号的收工自检于是报「协议未变、自检通过」——**审计本身被绕过**。
+#
+# 所以 qr start 铸一个 run token，基线按 token 存、占坑按 token 记。
+# 设计上最要紧的一条：**忘记带 token 时，必须在原本会静默出错的场景下变成硬报错。**
+# 运行基线有保质期：长跑 agent 上下文耗尽后重开是常规操作，不清理会一直堆积，
+# 把「真正的并发」和「昨天那次已经死掉的运行」混在一起，让歧义报错失去意义。
+# 超过 QR_RUN_TTL_H（默认 24h）没动过的基线视为已死，开工时清掉。
+prune_runs() {  # $1=agent
+  local f mt now ttl
+  ttl=$(( ${QR_RUN_TTL_H:-24} * 3600 )); now="$(now_epoch)"
+  for f in "$RUNS/$1"-*.env; do
+    [ -e "$f" ] || continue
+    mt="$(stat -f %m "$f" 2>/dev/null || stat -c %Y "$f" 2>/dev/null || echo "$now")"
+    [ $((now - mt)) -gt "$ttl" ] && rm -f "$f"
+  done
+  return 0
+}
+
+mint_run() {  # $1=agent
+  local t
+  prune_runs "$1"
+  while :; do
+    t="$1-$(now_epoch)-$$"
+    [ -e "$RUNS/$t.env" ] || { echo "$t"; return; }
+    sleep 1
+  done
+}
+
+# 解析当前运行的 token：QR_RUN 优先；没有就看这个名字下有几个运行基线。
+# 恰好一个 → 用它（单 agent 的常见情况，不给人添麻烦）；
+# 多个 → 报错并列出来（这正是原本会静默出错的场景）。
+resolve_run() {  # $1=agent  $2=用途（报错文案用）
+  local agent="$1" what="${2:-操作}" f n=0 hit=""
+  if [ -n "${QR_RUN:-}" ]; then
+    [ -f "$RUNS/$QR_RUN.env" ] || die "QR_RUN=$QR_RUN 没有对应的开工基线，先跑 ./qr start --agent ${agent}"
+    echo "$QR_RUN"; return
+  fi
+  for f in "$RUNS/$agent"-*.env; do
+    [ -e "$f" ] || continue
+    n=$((n+1)); hit="$(basename "${f%.env}")"
+  done
+  if [ "$n" = 1 ]; then echo "$hit"; return; fi
+  if [ "$n" = 0 ]; then
+    # 零个基线 = 没有歧义。token 是用来消歧的，不该在无歧义时挡路：
+    # 手工操作、老流程、只跑一条命令的场景都不必先开工。
+    # 需要基线的地方（selfcheck）自己判空并报错，见下面的 --strict。
+    [ "${3:-}" = "strict" ] && die "没有 ${agent} 的开工基线，先跑 ./qr start --agent ${agent}"
+    echo ""; return
+  fi
+  {
+    echo "qr: ${agent} 名下有 $n 个并发运行，无法确定这次 ${what} 属于哪一个。"
+    echo "同名并发是正常的，但每次运行要带上自己的 token："
+    for f in "$RUNS/$agent"-*.env; do
+      [ -e "$f" ] || continue
+      echo "  export QR_RUN=$(basename "${f%.env}")   # 开工于 $(sed -n 's/^started_at=//p' "$f" | head -1)"
+    done
+    echo "token 由 ./qr start 打印。不确定是哪个就重新 ./qr start 取一个新的。"
+  } >&2
+  exit 1
+}
+
 # 注意 set -o pipefail：文件不存在时 sed 会让整条管道非零，必须先判存在再读
 owner_of() {
   [ -f "$LOCKS/$1/owner" ] || return 0
   sed -n 's/^agent=//p' "$LOCKS/$1/owner" | head -1
 }
 
+owner_run_of() {  # 坑主的 run token；老卡片没有这个字段，返回空
+  [ -f "$LOCKS/$1/owner" ] || return 0
+  sed -n 's/^run=//p' "$LOCKS/$1/owner" | head -1
+}
+
 # 身份没有显式给出时（退化成 whoami-$$）不做归属判定，避免误伤人工操作
 explicit_agent() { [ -n "${QR_AGENT:-}" ] || [ -n "${CLAUDE_AGENT_NAME:-}" ]; }
 
 require_owner() {  # $1=ID $2=动作名
-  local id="$1" act="$2" own me
+  local id="$1" act="$2" own own_run me my_run
   own="$(owner_of "$id")"
   [ -n "$own" ] || return 0                  # 没有活跃占坑（已裁决/已释放）不拦
   explicit_agent || return 0
   me="$(agent_name "")"
+  own_run="$(owner_run_of "$id")"
+
+  # 坑主记了 run token → 按 token 判。名字相同但不是同一次运行的，一样拦。
+  # 同名并发是正常的，所以这里不能只比名字：实测同名 agent 之间零阻力互相覆盖。
+  if [ -n "$own_run" ]; then
+    my_run="$(resolve_run "$me" "$act")"
+    [ "$own_run" != "$my_run" ] || return 0
+    if [ -z "$my_run" ]; then
+      die "${id} 的坑主是 ${own}（运行 ${own_run}），而你没有开工基线 —— 按定义就不是同一次运行，
+不能替他 ${act}。先跑 ./qr start --agent ${me} 取自己的 run token。"
+    fi
+    die "${id} 的坑主是 ${own}（运行 ${own_run}），你是 ${me}（运行 ${my_run}），不能替他 ${act}。
+名字一样不代表是同一次运行 —— 归属按运行走，不按名字走。
+接管僵尸占坑用：./qr takeover ${id} --expect ${own_run} --agent ${me}
+（接管前先 ./qr note ${id} \"接管说明\" 留痕，见 PROMPT.md 阶段 0）"
+  fi
+
+  # 老卡片没有 token，退回比名字（保持向后兼容）
   [ "$own" != "$me" ] || return 0
   die "${id} 的坑主是 ${own}，你是 ${me}，不能替他 ${act}。
-接管僵尸占坑用：./qr takeover $id --expect $own --agent $me
-（接管前先 ./qr note $id \"接管说明\" 留痕，见 PROMPT.md 阶段 0）"
+接管僵尸占坑用：./qr takeover ${id} --expect ${own} --agent ${me}
+（接管前先 ./qr note ${id} \"接管说明\" 留痕，见 PROMPT.md 阶段 0）"
 }
 
 cmd_takeover() {
@@ -1156,15 +1250,16 @@ cmd_start() {
     case "$1" in --agent) agent="$2"; shift 2;; -*) die "未知参数 $1";; *) agent="$1"; shift;; esac
   done
   agent="$(agent_name "$agent")"
-  local pfp cfp tfp head rc=0
+  local pfp cfp tfp head rc=0 run
+  run="$(mint_run "$agent")"
   pfp="$(protocol_digest)"; cfp="$(protected_digest cli)"; tfp="$(protected_digest templates)"
   head="$(git -C "$HOME_DIR" rev-parse --short HEAD 2>/dev/null || echo unknown)"
-  printf 'agent=%s\nstarted_at=%s\nprotocol_fp=%s\ncli_fp=%s\ntemplates_fp=%s\ngit_head=%s\n' \
-    "$agent" "$(now_iso)" "$pfp" "$cfp" "$tfp" "$head" > "$RUNS/$agent.env"
+  printf 'agent=%s\nrun=%s\nstarted_at=%s\nprotocol_fp=%s\ncli_fp=%s\ntemplates_fp=%s\ngit_head=%s\n' \
+    "$agent" "$run" "$(now_iso)" "$pfp" "$cfp" "$tfp" "$head" > "$RUNS/$run.env"
 
-  echo "== 开工基线（agent=${agent}）=="
+  echo "== 开工基线（agent=${agent}，运行 ${run}）=="
   echo "  协议 ${pfp}（$(protocol_version_of "$pfp")）   CLI ${cfp}   模板 ${tfp}   HEAD ${head}"
-  echo "  基线已存 runs/$agent.env —— 自检比对的是「你跑这一趟有没有改动它们」，不是工作区干不干净"
+  echo "  基线已存 runs/${run}.env —— 自检比对的是「你跑这一趟有没有改动它们」，不是工作区干不干净"
   echo
   echo "== 台账体检 =="
   cmd_audit || rc=1
@@ -1188,7 +1283,10 @@ cmd_start() {
     echo "    其余市场照常。挡住的是受影响的研究，不是所有研究。"
     echo
   fi
-  echo "✅ 可以开工。研究期间 export QR_AGENT=${agent}，收工跑 ./qr selfcheck --agent ${agent}"
+  echo "✅ 可以开工。研究期间："
+  echo "     export QR_AGENT=${agent}"
+  echo "     export QR_RUN=${run}      # 同名 agent 可以并发，归属与基线按【这一次运行】走"
+  echo "   收工跑 ./qr selfcheck --agent ${agent}"
 }
 
 cmd_selfcheck() {
@@ -1197,8 +1295,10 @@ cmd_selfcheck() {
     case "$1" in --agent) agent="$2"; shift 2;; -*) die "未知参数 $1";; *) agent="$1"; shift;; esac
   done
   agent="$(agent_name "$agent")"
-  local base="$RUNS/$agent.env"
-  [ -f "$base" ] || die "没有 $agent 的开工基线（runs/$agent.env）——开工时应先跑 ./qr start --agent $agent"
+  local run base
+  run="$(resolve_run "$agent" "自检" strict)"
+  base="$RUNS/$run.env"
+  [ -f "$base" ] || die "没有运行 ${run} 的开工基线，先跑 ./qr start --agent ${agent}"
   local rc=0 bp bc bt np nc nt
   bp="$(sed -n 's/^protocol_fp=//p' "$base" | head -1)"
   bc="$(sed -n 's/^cli_fp=//p' "$base" | head -1)"

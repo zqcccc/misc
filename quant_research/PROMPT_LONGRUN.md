@@ -26,7 +26,8 @@
 ```
 开工一次：  ./qr start --agent <你的名字>     # 退出码非 0 就不要开始，按它列出的问题处理
             #                                   退出码 0 但点名了「被挡的市场」，就避开那些格子
-            export QR_AGENT=<你的名字>        # 之后所有 qr 写操作都带上你的身份
+            export QR_AGENT=<你的名字>        # 人读的标签
+            export QR_RUN=<start 打印的 token> # 这一次运行的身份 —— 照抄它打印的那一行
 
 loop:
   ① 盘点   ./qr leads / ./qr coverage / ./qr scorecard / cat KNOWLEDGE.md
@@ -171,9 +172,15 @@ cd ../misc-<你的名字> && quant_research/qr home    # 应该指回主检出�
 
 规则：
 
-- **`export QR_AGENT=<你的名字>`**。没有身份，`qr` 无法判断谁是坑主，归属保护会自动让路。
+- **名字是标签，`QR_RUN` 才是身份。** 同名并发是正常的（两个 `claude` 同时跑没问题），
+  所以归属和开工基线都按 `qr start` 铸出来的 **run token** 走，不按名字走。
+  照抄 `qr start` 打印的那两行 export 即可。
+  忘了带 `QR_RUN` 时：名下只有一个运行 → 自动认出来，不打扰你；有多个 → **直接报错并列出可选的
+  token**，不猜。歧义必须是错误，不能是默认 —— 实测过：两个同名 agent 并发时，
+  归属保护会完全失效（互相能覆盖成本闸与裁决），更糟的是 A 号改了协议后 B 号一开工就覆盖了
+  基线文件，A 号的收工自检会报「协议未变、自检通过」，**审计本身被绕过**。
 - **只裁决自己占的坑。** 别人的坑你只能 `qr note` 留痕，`qr verdict` / `qr release` 会被拒。
-- **接管僵尸占坑必须 compare-and-swap**：`./qr takeover <ID> --expect <原坑主> --agent <你>`。
+- **接管僵尸占坑必须 compare-and-swap**：`./qr takeover <ID> --expect <原坑主的 run token> --agent <你>`。
   `--expect` 对不上说明有人先接了，重跑 `./qr stale` 再决定；没到僵尸线（默认 6h）不给接。
 - **写台账的命令是串行的**（`qr` 内部有锁），并发调用会排队而不是互相覆盖，不用自己加 sleep。
 - **`REGISTRY.md` 和 `KNOWLEDGE.md` 是派生视图**，由 `qr index` / `qr knowledge` 从假设卡整体重建。

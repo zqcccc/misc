@@ -64,7 +64,10 @@ expect_eq "loosen 把 FAIL 卡拉进待重判" "$("$QRT" rejudge | sed -n 's/.*�
 echo
 echo "== 开工基线与增量自检 =="
 expect_fail "没有基线就自检会被拒" "$QRT" selfcheck --agent bob
-expect_ok   "开工写基线"           "$QRT" start --agent alice
+mkrun() { "$QRT" start --agent "$1" 2>/dev/null | sed -n 's/.*export QR_RUN=\([^ ]*\).*/\1/p' | head -1; }
+RUN_A="$(mkrun alice)"
+if [ -n "$RUN_A" ]; then ok "开工写基线并给出 run token"; else bad "开工没给出 run token"; fi
+export QR_RUN="$RUN_A"
 expect_ok   "没动任何东西 → 自检通过" "$QRT" selfcheck --agent alice
 
 # 关键回归：开工前就存在的改动不算数，只有开工后的改动才算
@@ -72,10 +75,10 @@ printf 'x = 4\n' > "$PROTO/qbt.py"
 expect_fail "开工后改协议 → 自检不通过" "$QRT" selfcheck --agent alice
 # 归因：HEAD 动了说明期间有提交落地，是维护者的改动，不该判成这个 agent 的违规
 # （2026-09-05 实测：我并发改 qr 时，gpt 的收工自检开出了一条假阳性的 HALT/all）
-sed -i '' 's/^git_head=.*/git_head=deadbee/' "$TMP/runs/alice.env" 2>/dev/null || \
-  sed -i 's/^git_head=.*/git_head=deadbee/' "$TMP/runs/alice.env"
+sed -i '' 's/^git_head=.*/git_head=deadbee/' "$TMP/runs/$RUN_A.env" 2>/dev/null || \
+  sed -i 's/^git_head=.*/git_head=deadbee/' "$TMP/runs/$RUN_A.env"
 expect_ok "HEAD 变了 → 判为维护而非违规" "$QRT" selfcheck --agent alice
-expect_ok   "以新状态重新开工"       "$QRT" start --agent alice
+RUN_A="$(mkrun alice)"; export QR_RUN="$RUN_A"
 expect_ok   "同样的脏工作区，重新开工后自检通过（增量为零）" "$QRT" selfcheck --agent alice
 
 # HALT 阻塞挡开工
@@ -83,21 +86,23 @@ expect_ok   "同样的脏工作区，重新开工后自检通过（增量为零�
 expect_fail "有 HALT/all 时开工被挡" "$QRT" start --agent alice
 "$QRT" blocker close B0003 "已处理" >/dev/null 2>&1
 expect_ok   "关掉 HALT 后可以开工" "$QRT" start --agent alice
+RUN_A="$(mkrun alice)"; export QR_RUN="$RUN_A"
 
 echo
 echo "== 占坑归属与接管 =="
-"$QRT" claim "测试假设二" --family other --market multi --agent alice >/dev/null 2>&1
-expect_fail "非坑主不能裁决" env QR_AGENT=bob "$QRT" verdict H0002 FAIL --cause 强度不足 "太弱了不值得做"
-expect_fail "非坑主不能释放" env QR_AGENT=bob "$QRT" release H0002 "抢一个"
-expect_ok   "非坑主可以留痕" env QR_AGENT=bob "$QRT" note H0002 "我打算接管这张卡"
+QR_RUN="$RUN_A" "$QRT" claim "测试假设二" --family other --market multi --agent alice >/dev/null 2>&1
+RUN_B="$(mkrun bob)"
+expect_fail "非坑主不能裁决" env QR_AGENT=bob QR_RUN=$RUN_B "$QRT" verdict H0002 FAIL --cause 强度不足 "太弱了不值得做"
+expect_fail "非坑主不能释放" env QR_AGENT=bob QR_RUN=$RUN_B "$QRT" release H0002 "抢一个"
+expect_ok   "非坑主可以留痕" env QR_AGENT=bob QR_RUN=$RUN_B "$QRT" note H0002 "我打算接管这张卡"
 expect_ok   "留痕标注了非坑主" grep -q "非坑主，坑主是 alice" "$(ls "$TMP"/hypotheses/H0002-*.md)"
-expect_fail "接管必须写 --expect" env QR_AGENT=bob "$QRT" takeover H0002 --agent bob
-expect_fail "expect 对不上就拒绝接管" env QR_AGENT=bob "$QRT" takeover H0002 --expect carol --agent bob
-expect_fail "没到僵尸线不许接管" env QR_AGENT=bob "$QRT" takeover H0002 --expect alice --agent bob
-expect_ok   "--force 可以接管"   env QR_AGENT=bob "$QRT" takeover H0002 --expect alice --agent bob --force
+expect_fail "接管必须写 --expect" env QR_AGENT=bob QR_RUN=$RUN_B "$QRT" takeover H0002 --agent bob
+expect_fail "expect 对不上就拒绝接管" env QR_AGENT=bob QR_RUN=$RUN_B "$QRT" takeover H0002 --expect carol --agent bob
+expect_fail "没到僵尸线不许接管" env QR_AGENT=bob QR_RUN=$RUN_B "$QRT" takeover H0002 --expect alice --agent bob
+expect_ok   "--force 可以接管"   env QR_AGENT=bob QR_RUN=$RUN_B "$QRT" takeover H0002 --expect alice --agent bob --force
 expect_eq   "接管后坑主变了" "$(sed -n 's/^agent=//p' "$TMP/locks/H0002/owner")" "bob"
-expect_fail "原坑主接管后不能再裁决" env QR_AGENT=alice "$QRT" verdict H0002 FAIL --cause 强度不足 "太弱了"
-expect_ok   "新坑主可以裁决" env QR_AGENT=bob "$QRT" verdict H0002 FAIL --cause 强度不足 "太弱了不值得做"
+expect_fail "原坑主接管后不能再裁决" env QR_AGENT=alice QR_RUN=$RUN_A "$QRT" verdict H0002 FAIL --cause 强度不足 "太弱了"
+expect_ok   "新坑主可以裁决" env QR_AGENT=bob QR_RUN=$RUN_B "$QRT" verdict H0002 FAIL --cause 强度不足 "太弱了不值得做"
 
 echo
 echo "== 台账写锁 =="
@@ -114,21 +119,41 @@ echo "== 阻塞作用域：挡受影响的，不挡所有人 =="
 BID="$("$QRT" blocker open "A股复权口径待修" --severity HALT --blocks market:cn_stock --evidence x 2>/dev/null | head -1 | awk '{print $1}')"
 expect_ok   "有作用域的 HALT 不挡 list"        "$QRT" blocker list
 expect_ok   "有作用域的 HALT 不挡开工"          "$QRT" start --agent alice
-expect_fail "被挡的市场不许开新课题"            env QR_AGENT=alice "$QRT" claim "A股某想法" --market cn_stock --family other
-expect_ok   "别的市场照常开课题"                env QR_AGENT=alice "$QRT" claim "币圈某想法" --market crypto_perp --family other
+expect_fail "被挡的市场不许开新课题"            env QR_AGENT=alice QR_RUN=$RUN_A "$QRT" claim "A股某想法" --market cn_stock --family other
+expect_ok   "别的市场照常开课题"                env QR_AGENT=alice QR_RUN=$RUN_A "$QRT" claim "币圈某想法" --market crypto_perp --family other
 expect_ok   "start 会点名被挡的市场"            bash -c '"'"$QRT"'" start --agent alice 2>/dev/null | grep -q "cn_stock"'
 "$QRT" blocker close "$BID" "数据已重建并对账" >/dev/null 2>&1
-expect_ok   "关闭后该市场恢复"                  env QR_AGENT=alice "$QRT" claim "A股另一想法" --market cn_stock --family other
+expect_ok   "关闭后该市场恢复"                  env QR_AGENT=alice QR_RUN=$RUN_A "$QRT" claim "A股另一想法" --market cn_stock --family other
 rm -f runs/alice.env 2>/dev/null || true
+
+echo
+echo "== 同名 agent 并发：归属与基线按【运行】走，不按名字走 =="
+# 2026-09-05 实测：两个都叫 claude 的 agent 并行时，①互相能覆盖成本闸与裁决；
+# ②A 号改协议后 B 号一开工就覆盖 runs/<名字>.env，A 号自检报「协议未变、自检通过」
+#   —— 审计本身被绕过。名字是给人读的标签，同名并发很正常，坏的是拿标签当身份。
+mkrun() { "$QRT" start --agent "$1" 2>/dev/null | sed -n 's/.*export QR_RUN=\([^ ]*\).*/\1/p' | head -1; }
+RA="$(mkrun dup)"; RB="$(mkrun dup)"
+if [ -n "$RA" ] && [ -n "$RB" ] && [ "$RA" != "$RB" ]; then ok "同名两次开工拿到不同 token"; else bad "同名两次开工的 token 不该相同（$RA / $RB）"; fi
+CID="$(QR_AGENT=dup QR_RUN=$RA "$QRT" claim "A 号的课题" --market multi --family other 2>/dev/null | head -1 | awk '{print $1}')"
+expect_eq "占坑记下了 run token" "$(sed -n 's/^run=//p' "$TMP/locks/$CID/owner")" "$RA"
+expect_fail "同名不同运行不能裁决别人的卡" env QR_AGENT=dup QR_RUN=$RB "$QRT" verdict "$CID" FAIL --cause 无机理 "抢卡"
+expect_fail "同名不同运行不能改别人的成本闸" env QR_AGENT=dup QR_RUN=$RB "$QRT" screen "$CID" --report verified/H0002/screen_go.json
+expect_ok   "坑主自己可以裁决" env QR_AGENT=dup QR_RUN=$RA "$QRT" verdict "$CID" FAIL --cause 无机理 "自己的卡自己判"
+# 歧义必须是错误，不能是默认：名下多个运行且没带 QR_RUN 时要报错，不能猜
+expect_fail "有并发运行却不带 QR_RUN → 自检报错" env -u QR_RUN QR_AGENT=dup "$QRT" selfcheck --agent dup
+expect_ok   "带上 QR_RUN 就能自检" env QR_AGENT=dup QR_RUN=$RA "$QRT" selfcheck --agent dup
+# 单个运行时不该给人添麻烦：自动解析
+RS="$(mkrun solo)"
+expect_ok   "只有一个运行时不带 QR_RUN 也能自检" env QR_AGENT=solo "$QRT" selfcheck --agent solo
 
 echo
 echo "== locale 兼容性 =="
 # macOS 的 bash 3.2 在 C.UTF-8 下会把紧跟 $var 的中文字节读进变量名（B0006）。
 # 所有面向 agent 的输出都带中文，必须在任何 locale 下都不炸。
 for L in C C.UTF-8 en_US.UTF-8 zh_CN.UTF-8; do
-  err="$(LC_ALL="$L" "$QRT" start --agent lc 2>&1 >/dev/null || true)"
+  err="$(LC_ALL="$L" "$QRT" start --agent "lc$L" 2>&1 >/dev/null || true)"
   if [ -z "$err" ]; then ok "LC_ALL=$L 下 qr start 无 stderr"; else bad "LC_ALL=$L 下 qr start 报错：$err"; fi
-  err="$(LC_ALL="$L" "$QRT" selfcheck --agent lc 2>&1 >/dev/null || true)"
+  err="$(LC_ALL="$L" "$QRT" selfcheck --agent "lc$L" 2>&1 >/dev/null || true)"
   if [ -z "$err" ]; then ok "LC_ALL=$L 下 qr selfcheck 无 stderr"; else bad "LC_ALL=$L 下 qr selfcheck 报错：$err"; fi
 done
 

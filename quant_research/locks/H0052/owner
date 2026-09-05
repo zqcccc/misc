@@ -1,0 +1,6 @@
+agent=claude
+run=claude-1788622505-51932
+claimed_at=2026-09-05T15:35:35Z
+claimed_epoch=1788622535
+file=hypotheses/H0052-binance-usdt-t-20-t-1-3-5bp-taker-2020-2026-alph.md
+title=Binance 全 USDT 本位永续宇宙（含已下架）上，t 日同时满足大幅下跌+吃单卖出占比极端偏高+成交额相对自身 20 日中位数放量（三条件=强制平仓抛售指纹）的币，t+1 开盘等权买入持有 3 日，在锁死单边 5bp taker 成本与实付资金费下 2020-2026 日频资金曲线对同池等权多头净 alpha>0 且 NW t>=2，且对'只按大幅下跌选币、不看吃单方向'的对照组仍有正增量
