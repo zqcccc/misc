@@ -1,0 +1,84 @@
+{
+  "market": "cn_stock",
+  "periods_per_year": 252,
+  "performance": {
+    "T_days": 2750,
+    "start": "2015-01-05",
+    "end": "2026-08-28",
+    "total_return": 1.5466,
+    "ann_return": 0.1417,
+    "sharpe_daily_wallet": 0.474,
+    "sortino": 0.705,
+    "max_drawdown": 0.4022,
+    "calmar": 0.352,
+    "ann_vol": 0.2991,
+    "positive_days_pct": 0.5
+  },
+  "alpha_beta": {
+    "n_days": 2750,
+    "beta": 1.36,
+    "r_squared": 0.803,
+    "ann_alpha": -0.0051,
+    "alpha_t": -0.13,
+    "alpha_p": 0.8994,
+    "alpha_significant": false,
+    "strategy_total": 1.5466,
+    "benchmark_total": 1.1781,
+    "note": "total/drag/contribution 为日收益加总口径（与日频夏普一致），非复利净值涨跌幅",
+    "beta_drag": 1.6021,
+    "alpha_contribution": -0.0555,
+    "verdict": "负 alpha：选股/择时本身在亏钱"
+  },
+  "benchmark": {
+    "T_days": 2750,
+    "start": "2015-01-05",
+    "end": "2026-08-28",
+    "total_return": 1.6257,
+    "ann_return": 0.0925,
+    "sharpe_daily_wallet": 0.548,
+    "sortino": 0.758,
+    "max_drawdown": 0.3064,
+    "calmar": 0.302,
+    "ann_vol": 0.1971,
+    "positive_days_pct": 0.516
+  },
+  "deflated_sharpe": {
+    "error": "各轮得分方差为 0，无法估计运气基线"
+  },
+  "monte_carlo": {
+    "n": 2750,
+    "iters": 5000,
+    "block": 10,
+    "original_final": 2.8974,
+    "prob_profit": 0.8422,
+    "p5": 0.5052,
+    "p50": 2.8594,
+    "p95": 17.4306,
+    "verdict": "尚可"
+  },
+  "p_value": {
+    "observed_daily_mean": 0.000562,
+    "p_value": 0.154,
+    "significant": false,
+    "verdict": "与 0 无显著差异（噪音）"
+  },
+  "random_portfolio": {
+    "iters": 2000,
+    "n_long": 5,
+    "n_short": 5,
+    "rebalance_bars": 1,
+    "random_sharpe_mean": -0.002,
+    "random_sharpe_p50": -0.004,
+    "random_sharpe_p95": 0.506,
+    "random_sharpe_max": 1.198,
+    "actual_sharpe": 0.474,
+    "percentile_vs_random": 0.9345,
+    "p_value": 0.0655,
+    "verdict": "打不过随机组合 —— 收益来自宇宙/仓位结构，不是你的因子"
+  },
+  "falsification_failures": [
+    "alpha ≤ 0：收益不来自选股/择时",
+    "打不过 95% 随机组合：因子无信息"
+  ],
+  "verdict": "未通过：alpha ≤ 0：收益不来自选股/择时；打不过 95% 随机组合：因子无信息"
+}

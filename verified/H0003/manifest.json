@@ -1,0 +1,69 @@
+{
+ "id": "H0003",
+ "verdict": "PARK",
+ "title_short": "Binance BTC/ETH 资金费 delta 中性收割",
+ "impl_dir": "crypto_perp",
+ "impl_note": "crypto_perp/ 根目录；该目录被多张卡共用——out/、h0025/、h0029/ 属其它卡，本卡产物只有根目录下 ret_V*.csv / bench_cash.csv / trials_h0003.json",
+ "authoritative": {
+  "returns": {
+   "path": "crypto_perp/ret_V0.csv",
+   "sha256": "a18f9e36302058460bafc4014ee10560f6bb3859168e027aead4462cc76da651",
+   "bytes": 109315,
+   "rows": 2551,
+   "start": "2019-09-10",
+   "end": "2026-09-03",
+   "copied_as": "ret_V0.csv"
+  },
+  "bench": {
+   "path": "crypto_perp/bench_cash.csv",
+   "sha256": "0523ec435ecc9be79b7811197a2cadeafd6dd2f688e2aad023cf7cdd909849cf",
+   "bytes": 76539,
+   "rows": 2551,
+   "start": "2019-09-10",
+   "end": "2026-09-03",
+   "copied_as": "bench_cash.csv"
+  },
+  "report": {
+   "path": "crypto_perp/trials_h0003.json",
+   "sha256": "7085a131bdda3708fbb5d77e2ef65c66eb8f004798e6a37612c112b3b4cb0f9a",
+   "bytes": 235,
+   "copied_as": "trials_h0003.json"
+  }
+ },
+ "superseded": [
+  {
+   "path": "crypto_perp/ret_V1.csv",
+   "why": "V1（trailing7d>0 择时）变体；§7 第 4 层置换分位仅 62.7% 未过，卡片主口径是 V0"
+  },
+  {
+   "path": "crypto_perp/oos_equity_V0.csv",
+   "why": "V0 的净值形式，与 ret_V0.csv 同源冗余"
+  },
+  {
+   "path": "crypto_perp/oos_equity_V1.csv",
+   "why": "V1 的净值形式，同上且非主口径"
+  }
+ ],
+ "reproduce": "cd crypto_perp && /opt/homebrew/bin/python3.11 falsify_h0003.py  # 归档时未重跑",
+ "recomputed": {
+  "window": "2019-09-10~2026-09-03, n=2551, ppy=365",
+  "final_equity": 1.5472,
+  "ann_arith": 0.0625,
+  "ann_cagr_252_equiv_365": 0.0644,
+  "vol": 0.006,
+  "sharpe": 10.3329,
+  "mdd": -0.004
+ },
+ "card_says": {
+  "ann": 0.0625,
+  "sharpe": 10.33,
+  "mdd": -0.004
+ },
+ "discrepancies": [
+  "卡片 §7 与重算完全一致（年化 6.25%、夏普 10.33、回撤 −0.40%，365 天年化）。"
+ ],
+ "missing": [
+  "§7 的分段/逐年剔除/PIT 全起点/DSR/自助结果没有落成 json，只在卡片文字里；falsify_h0003.py 的输出未持久化。"
+ ],
+ "notes": []
+}

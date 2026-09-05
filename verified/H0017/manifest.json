@@ -1,0 +1,125 @@
+{
+ "id": "H0017",
+ "verdict": "FAIL",
+ "title_short": "港股通南向持股占比 5 日变化选股",
+ "impl_dir": "hk_southbound",
+ "impl_note": "scripts/fetch_southbound.py → strategy_h0017.py → falsify_h0017.py；out/ 里**不带** h19_ 前缀的那组是本卡的，带前缀的是 H0019 的",
+ "authoritative": {
+  "returns": {
+   "path": "hk_southbound/out/ret_trainvalid.csv",
+   "sha256": "3cddf9d3ba73d099baa7f73f78121fd112fd46473265373d891f44c6d70fcf91",
+   "bytes": 10037,
+   "rows": 309,
+   "start": "2024-09-30",
+   "end": "2025-12-31",
+   "copied_as": "ret_trainvalid.csv",
+   "note": "判读段（只有 309 天）"
+  },
+  "returns_test": {
+   "path": "hk_southbound/out/ret_test.csv",
+   "sha256": "2acb66c346c0dbca719c8ff28958c244a2fbdc4c5e4df8e6a48b5b42213bdee2",
+   "bytes": 5383,
+   "rows": 165,
+   "start": "2026-01-02",
+   "end": "2026-09-03",
+   "copied_as": "ret_test.csv",
+   "note": "165 天"
+  },
+  "bench": {
+   "path": "hk_southbound/out/bench_trainvalid.csv",
+   "sha256": "19a258ad4b271c462309260e094601384a5d27eabc6c6eaf1bbcaf2db2bc20a1",
+   "bytes": 9828,
+   "rows": 309,
+   "start": "2024-09-30",
+   "end": "2025-12-31",
+   "copied_as": "bench_trainvalid.csv",
+   "note": "同池等权"
+  },
+  "bench_test": {
+   "path": "hk_southbound/out/bench_test.csv",
+   "sha256": "129d7a86a71ccb87a6d7dab21a4b0d958e4d4252bb3cd86628eb1795da7f5cbf",
+   "bytes": 5275,
+   "rows": 165,
+   "start": "2026-01-02",
+   "end": "2026-09-03",
+   "copied_as": "bench_test.csv"
+  },
+  "report": {
+   "path": "hk_southbound/out/falsify_trainvalid.json",
+   "sha256": "ac965556a5fe1dc2ec84e87566fd6fa2373ce4b5fe549cba7e533552859d8cb8",
+   "bytes": 6000,
+   "copied_as": "falsify_trainvalid.json"
+  },
+  "report_test": {
+   "path": "hk_southbound/out/falsify_test.json",
+   "sha256": "b7fd4416ab3dfe3a781a59f2e8a588a94c69ecd6908fc15715cff4017c98a872",
+   "bytes": 4826,
+   "copied_as": "falsify_test.json"
+  },
+  "trials": {
+   "path": "hk_southbound/out/trials_trainvalid.json",
+   "sha256": "2917ad7f1368c2f092b7a799cba1389a81f6ffdd179976cd96c58848f9043cbf",
+   "bytes": 1629,
+   "copied_as": "trials_trainvalid.json"
+  },
+  "trials_test": {
+   "path": "hk_southbound/out/trials_test.json",
+   "sha256": "5363ee51b7b58230f6b0b3c6f52baafa58e38b208db42b66e9af7a387f25be24",
+   "bytes": 1638,
+   "copied_as": "trials_test.json"
+  }
+ },
+ "superseded": [],
+ "reproduce": "cd hk_southbound && /opt/homebrew/bin/python3.11 -W ignore scripts/falsify_h0017.py trainvalid && ... test  # 归档时未重跑",
+ "recomputed": {
+  "trainvalid": {
+   "n": 309,
+   "window": "2024-09-30~2025-12-31",
+   "ann_cagr252": 0.2055,
+   "vol": 0.2848,
+   "sharpe": 0.8031,
+   "mdd": -0.2245
+  },
+  "test": {
+   "n": 165,
+   "window": "2026-01-02~2026-09-03",
+   "ann_cagr252": -0.3995,
+   "vol": 0.2542,
+   "sharpe": -1.8766,
+   "mdd": -0.3529
+  },
+  "bench_trainvalid": {
+   "ann_cagr252": 0.3204
+  },
+  "bench_test": {
+   "ann_cagr252": -0.2516
+  }
+ },
+ "card_says": {
+  "trainvalid": {
+   "ann": 0.206,
+   "sharpe": 0.803,
+   "mdd": -0.225
+  },
+  "test": {
+   "ann": -0.4,
+   "sharpe": -1.877,
+   "mdd": -0.353
+  },
+  "bench_trainvalid": {
+   "ann": 0.32
+  },
+  "bench_test": {
+   "ann": -0.252
+  }
+ },
+ "discrepancies": [
+  "完全一致（252 日复利年化 + 算术夏普口径，与同目录的 H0019 相同）：TV +20.55%/0.8031/−22.45%、TEST −39.95%/−1.8766/−35.29%、基准 +32.04% / −25.16%。",
+  "样本极短是本卡最大的物理限制：TRAIN+VALID 只有 309 个交易日、TEST 只有 165 天，年化数字放大得厉害（TEST 的 −40%/年其实只是 8 个月里跌了 28%）。卡片 §7 已如实标注天数。"
+ ],
+ "missing": [],
+ "notes": [
+  "卡片有一节 §6.5『数据修正记录（裁决后回补）』——归档的是修正后的产物。残余幸存者偏差敞口 3.61%（27/729 只取不到行情）写在 §7 抬头。",
+  "第 4 层置换在两段间符号完全翻转（TV 分位 100.0% → TEST 0.0%），这是本卡最该记住的一条：短样本上的置换分位不稳。"
+ ]
+}

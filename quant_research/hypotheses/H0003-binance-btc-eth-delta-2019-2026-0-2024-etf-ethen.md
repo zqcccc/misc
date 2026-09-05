@@ -89,6 +89,8 @@ Binance fapi `/fapi/v1/fundingRate`（无需 key，8h 一条，BTCUSDT 2019-09 �
 - **无参数搜索**：V0 无参数、V1 参数(7d/0)为先验给定，无选择行为 → 不需要三段隔离，
   trials=2 仅为变体对比记录；2024-01 分段点为 ETF 上市制度日期，非数据窥探。
 
+归档：`verified/H0003/manifest.json`（权威产物映射；不改 §7 数字与裁决）
+
 ## 7. 验收结果（quant-backtest-protocol 四层证伪）
 
 | 层      | 指标                    | 结果                                                                                                                       | 判定                |

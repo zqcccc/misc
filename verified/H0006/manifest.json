@@ -1,0 +1,120 @@
+{
+ "id": "H0006",
+ "verdict": "FAIL",
+ "title_short": "天然气 UNG 冬强夏弱日历",
+ "impl_dir": "futures",
+ "impl_note": "fetch_data.py → strategy_h0006.py → falsify_h0006.py；futures/ 被 H0006 / H0013 / H0023 共用，本卡产物是 ret_*.csv + bench_ung_*.csv",
+ "authoritative": {
+  "returns": {
+   "path": "futures/ret_full.csv",
+   "sha256": "a678798e5210e50d7a4fdb06914a2a6144e790dc20d093e88224eb85097fa8b2",
+   "bytes": 107486,
+   "rows": 4876,
+   "start": "2007-04-18",
+   "end": "2026-09-02",
+   "copied_as": "ret_full.csv"
+  },
+  "returns_test": {
+   "path": "futures/ret_test.csv",
+   "sha256": "aebb06d67b8fc17b672f6c00086b4f797e1f284f10dcc72c23941742760f595d",
+   "bytes": 31411,
+   "rows": 1423,
+   "start": "2021-01-04",
+   "end": "2026-09-02",
+   "copied_as": "ret_test.csv"
+  },
+  "bench": {
+   "path": "futures/bench_ung_full.csv",
+   "sha256": "7111807a89e52160c9aa6fdfd9fd77002766a9daa8d305091ada069ace1fff3b",
+   "bytes": 156033,
+   "rows": 4876,
+   "start": "2007-04-18",
+   "end": "2026-09-02",
+   "copied_as": "bench_ung_full.csv",
+   "note": "UNG buy&hold"
+  },
+  "bench_test": {
+   "path": "futures/bench_ung_test.csv",
+   "sha256": "b537426252cfc85df624ce3f971cfc512942fefb554e520e74b0003b65adceb8",
+   "bytes": 45425,
+   "rows": 1423,
+   "start": "2021-01-04",
+   "end": "2026-09-02",
+   "copied_as": "bench_ung_test.csv"
+  },
+  "trials": {
+   "path": "futures/trials_h0006.json",
+   "sha256": "64bcc374db500761a30b08573f941d0c9d3d5d5fe677e7dfe692f83606114975",
+   "bytes": 526,
+   "copied_as": "trials_h0006.json"
+  },
+  "dev_merged": {
+   "path": "futures/dev_merged.csv",
+   "sha256": "a9f279680dda7594a291dd1f9cac2e5b6ac3eb0f8cb7bc3fb667e01cd7afebe3",
+   "bytes": 98146,
+   "copied_as": "dev_merged.csv",
+   "note": "开发段合并表"
+  }
+ },
+ "superseded": [],
+ "reproduce": "cd futures && /opt/homebrew/bin/python3.11 falsify_h0006.py  # 归档时未重跑",
+ "recomputed": {
+  "full": {
+   "n": 4876,
+   "window": "2007-04-18~2026-09-02",
+   "ann_arith": -0.1642,
+   "ann_cagr": -0.2009,
+   "vol": 0.3462,
+   "sharpe": -0.4743,
+   "mdd_compound": -0.9925
+  },
+  "test": {
+   "n": 1423,
+   "window": "2021-01-04~2026-09-02",
+   "ann_arith": -0.1025,
+   "ann_cagr": -0.184,
+   "vol": 0.4476,
+   "sharpe": -0.2291,
+   "mdd_compound": -0.8548
+  },
+  "bench_full": {
+   "ann_arith": -0.2099,
+   "ann_cagr": -0.2815,
+   "sharpe": -0.4273,
+   "mdd_compound": -0.9988
+  },
+  "bench_test": {
+   "ann_arith": -0.0278,
+   "sharpe": -0.0453
+  }
+ },
+ "card_says": {
+  "full": {
+   "ann": -0.1642,
+   "sharpe": -0.47,
+   "mdd": -0.993
+  },
+  "test": {
+   "ann": -0.1025,
+   "sharpe": -0.23
+  },
+  "bench_full": {
+   "ann": -0.2099,
+   "sharpe": -0.43,
+   "mdd": -0.999
+  },
+  "bench_test": {
+   "ann": -0.0278,
+   "sharpe": -0.05
+  }
+ },
+ "discrepancies": [
+  "完全一致（算术年化口径）：全期 −16.42%/−0.47/−99.3% 与 B&H −20.99%/−0.43/−99.9%；TEST −10.25%/−0.23 与 B&H −2.78%/−0.05，逐项相同。"
+ ],
+ "missing": [
+  "falsify_h0006.py 的输出未落盘：DSR(0.121/0.0006)、随机日历窗口置换分位 4.0%、PIT 全起点胜率 21.5%、逐年剔除、以及『19 个冬天平均 −14.2%/冬、7 胜 12 负』都只在卡片文字里。"
+ ],
+ "notes": [
+  "futures/ 下的 cot_*.py 与 data/cot/ 属 H0023，strategy_h0013*.py 与 data/panel13/ 属 H0013，data/ohlc.parquet 是 H0013 的输入面板。"
+ ]
+}

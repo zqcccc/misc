@@ -86,6 +86,8 @@ plain: 2016到2021好用，2022年以后转负，和券商说的这个因子2021
 - 产物：`cn_stock/out/`（quality_score.parquet、equity_primary.csv、bench_ew.csv、split_stats.json、trials.json、falsification.json、causality_data/）。
 - 跑法：`/opt/homebrew/bin/python3.11`（非交互 shell 的 python3 是 3.14 无 pyarrow）；后台长任务用 run_in_background，不用 nohup+sleep。
 
+归档：`verified/H0022/manifest.json`（权威产物映射；不改 §7 数字与裁决）
+
 ## 7. 验收结果（quant-backtest-protocol 四层证伪）
 | 层 | 指标 | 结果 | 判定 |
 |---|---|---|---|

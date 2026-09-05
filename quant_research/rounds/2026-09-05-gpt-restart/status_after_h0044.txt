@@ -1,0 +1,109 @@
+ M .agents/skills/quant-backtest-protocol/scripts/qbt.py
+ M .agents/skills/quant-backtest-protocol/tests/test_qbt.py
+ M quant_research/KNOWLEDGE.md
+ M quant_research/REGISTRY.md
+ M quant_research/hypotheses/H0001-cn-midterm-momentum.md
+ M quant_research/hypotheses/H0002-smallcap-lowvol-reversal.md
+ M quant_research/hypotheses/H0003-binance-btc-eth-delta-2019-2026-0-2024-etf-ethen.md
+ M quant_research/hypotheses/H0004-hyg-ief-spy-buy-hold.md
+ M quant_research/hypotheses/H0005-vix-vix3m-contango-backwardation-spy-2007-2026-b.md
+ M quant_research/hypotheses/H0006-ung-11-3-2007-2026-ung-buy-hold.md
+ M quant_research/hypotheses/H0007-binance-usdt-1-30-alpha-0.md
+ M quant_research/hypotheses/H0008-us-treasury-cp-factor-duration-tilt.md
+ M quant_research/hypotheses/H0009-lead-lag-alpha-0.md
+ M quant_research/hypotheses/H0010-ah-h-a-ah-h-20-ah-alpha-0.md
+ M quant_research/hypotheses/H0011-binance-usdt-15m-k-arxiv-2608-21888-maker-taker-.md
+ M quant_research/hypotheses/H0012-binance-usdt-3-15bp-alpha.md
+ M quant_research/hypotheses/H0013-commodity-overnight-intraday-tug-of-war.md
+ M quant_research/hypotheses/H0014-spy-fomc-fomc-1994-2026-0-95.md
+ M quant_research/hypotheses/H0015-g10-3-vs-usd-2-pit-3-3-2004-2026-2bp-0-95.md
+ M quant_research/hypotheses/H0016-henry-hub-eia-2007-2026-alpha-ung-buy-hold-0-95.md
+ M quant_research/hypotheses/H0017-5-5-20-20bp-alpha.md
+ M quant_research/hypotheses/H0018-g10-fx-momentum-12-1.md
+ M quant_research/hypotheses/H0019-20-pit-z-score-0-2800-2014-2026-2800-buy-hold-al.md
+ M quant_research/hypotheses/H0020-hrp-sector-etf.md
+ M quant_research/hypotheses/H0021-cboe-vix-30-spvxsp-t-bill-2010-2026-alpha-t-bill.md
+ M quant_research/hypotheses/H0022-cn-quality-premium.md
+ M quant_research/hypotheses/H0023-14-etf-cme-cot-legacy-commshort-commlong-oi-hedg.md
+ M quant_research/hypotheses/H0024-a-float-mktcap-pit-20-20-alpha-0-nw-t-2.md
+ M quant_research/hypotheses/H0025-binance-usdt-8h-3-dollar-neutral-3-5bp-taker-202.md
+ M quant_research/hypotheses/H0026-10bp-2015-2026-alpha-0-nw-t-2.md
+ M quant_research/hypotheses/H0027-shy-ief-tlt-2022-2026-alpha-0-nw-t-2-95.md
+ M quant_research/hypotheses/H0028-a-20-1-t-1-20-20-20-alpha-0-nw-t-2-20-rev20-alph.md
+ M quant_research/hypotheses/H0029-binance-usdt-pit-2020-12-10-21-00-23-00-utc-2020.md
+ M quant_research/hypotheses/H0030-park-sleeves-portfolio.md
+ M quant_research/markets/cn_stock.md
+ M quant_research/markets/crypto_perp.md
+ M quant_research/qr
+ M quant_research/rounds/2026-09-04-gpt.md
+?? astock_quant/h0037/
+?? astock_quant/h0040/
+?? astock_quant/h0041/
+?? cn_index_futures/
+?? multi_tsmom/
+?? quant_research/hypotheses/H0031-binance-usdt-21-00-23-00-utc-post-only-maker.md
+?? quant_research/hypotheses/H0032-10-20-30-tlt-5-ief.md
+?? quant_research/hypotheses/H0033-binance-perp-xs-momentum-28d.md
+?? quant_research/hypotheses/H0034-spy-turn-of-month-post-publication.md
+?? quant_research/hypotheses/H0035-cn-small-quality-filter.md
+?? quant_research/hypotheses/H0036-60-40-vol-target.md
+?? quant_research/hypotheses/H0037-cn-pead-earnings-preannouncement.md
+?? quant_research/hypotheses/H0038-cross-asset-tsmom-etf-12m.md
+?? quant_research/hypotheses/H0039-binance-perp-lowvol-60d.md
+?? quant_research/hypotheses/H0040-cn-index-deletion-price-pressure.md
+?? quant_research/hypotheses/H0041-cn-index-demotion-300to500-oos.md
+?? quant_research/hypotheses/H0042-cn-index-futures-overnight-short.md
+?? quant_research/hypotheses/H0043-cn-index-futures-overnight-long.md
+?? quant_research/hypotheses/H0044-cboe-vpn-vix-25-2019-2026-25.md
+?? quant_research/locks/H0031/
+?? quant_research/locks/H0032/
+?? quant_research/locks/H0033/
+?? quant_research/locks/H0034/
+?? quant_research/locks/H0035/
+?? quant_research/locks/H0036/
+?? quant_research/locks/H0037/
+?? quant_research/locks/H0038/
+?? quant_research/locks/H0039/
+?? quant_research/locks/H0040/
+?? quant_research/locks/H0041/
+?? quant_research/locks/H0042/
+?? quant_research/locks/H0043/
+?? quant_research/locks/H0044/
+?? quant_research/markets/cn_index_futures.md
+?? quant_research/rounds/2026-09-04-claude-longrun.md
+?? quant_research/rounds/2026-09-05-claude-longrun.md
+?? quant_research/rounds/2026-09-05-gpt-restart/
+?? quant_research/rounds/2026-09-05-gpt.md
+?? verified/H0001/
+?? verified/H0002/
+?? verified/H0003/
+?? verified/H0004/
+?? verified/H0005/
+?? verified/H0006/
+?? verified/H0007/
+?? verified/H0008/
+?? verified/H0009/
+?? verified/H0010/
+?? verified/H0011/
+?? verified/H0012/
+?? verified/H0013/
+?? verified/H0014/
+?? verified/H0015/
+?? verified/H0016/
+?? verified/H0017/
+?? verified/H0018/
+?? verified/H0019/
+?? verified/H0020/
+?? verified/H0021/
+?? verified/H0022/
+?? verified/H0023/
+?? verified/H0024/
+?? verified/H0025/
+?? verified/H0026/
+?? verified/H0027/
+?? verified/H0028/
+?? verified/H0029/
+?? verified/H0030/load_parks.py
+?? verified/H0030/manifest.json
+?? verified/H0031/
+?? verified/README.md

@@ -1,0 +1,735 @@
+{
+  "meta": {
+    "sample": "2011-01-05 → 2026-09-02"
+  },
+  "trials": {
+    "v0": 0.6829287345708209,
+    "v1": 0.8733175685261158,
+    "v2": 0.5599518715183878,
+    "v3": 0.6472136722496545
+  },
+  "qbt_v0_FULL": {
+    "perf": {
+      "T_days": 3938,
+      "start": "2011-01-05",
+      "end": "2026-09-02",
+      "total_return": 6.8741,
+      "ann_return": 0.4399,
+      "sharpe_daily_wallet": 0.632,
+      "sortino": 0.673,
+      "max_drawdown": 0.7521,
+      "calmar": 0.585,
+      "ann_vol": 0.6955,
+      "positive_days_pct": 0.59
+    },
+    "alpha_beta_vs_bill": {
+      "n_days": 3938,
+      "beta": 1.475,
+      "r_squared": 0.0,
+      "ann_alpha": 0.4169,
+      "alpha_t": 1.81,
+      "alpha_p": 0.0703,
+      "alpha_significant": false,
+      "strategy_total": 6.8741,
+      "benchmark_total": 0.244,
+      "note": "total/drag/contribution 为日收益加总口径（与日频夏普一致），非复利净值涨跌幅",
+      "beta_drag": 0.36,
+      "alpha_contribution": 6.5141,
+      "verdict": "正 alpha：策略本身有效"
+    },
+    "dsr": {
+      "n_trials": 4,
+      "trial_score_var": 0.0175,
+      "observed_sharpe": 0.632,
+      "luck_baseline_sharpe": 0.139,
+      "T_days": 3938,
+      "skew": -1.659,
+      "kurtosis": 12.475,
+      "DSR": 0.9703,
+      "verdict": "显著 (DSR≥0.95)"
+    },
+    "mc": {
+      "n": 3938,
+      "iters": 5000,
+      "block": 10,
+      "original_final": 7.8741,
+      "prob_profit": 0.993,
+      "p5": 3.37,
+      "p50": 7.9039,
+      "p95": 12.1667,
+      "verdict": "尚可"
+    },
+    "pvalue": {
+      "observed_daily_mean": 0.001746,
+      "p_value": 0.0114,
+      "significant": true,
+      "verdict": "显著盈利"
+    }
+  },
+  "qbt_v0_TEST": {
+    "perf": {
+      "T_days": 1423,
+      "start": "2021-01-04",
+      "end": "2026-09-02",
+      "total_return": 3.0065,
+      "ann_return": 0.5324,
+      "sharpe_daily_wallet": 0.759,
+      "sortino": 0.809,
+      "max_drawdown": 0.2839,
+      "calmar": 1.875,
+      "ann_vol": 0.7015,
+      "positive_days_pct": 0.599
+    },
+    "alpha_beta_vs_bill": {
+      "n_days": 1423,
+      "beta": 3.13,
+      "r_squared": 0.0,
+      "ann_alpha": 0.4297,
+      "alpha_t": 0.74,
+      "alpha_p": 0.4599,
+      "alpha_significant": false,
+      "strategy_total": 3.0065,
+      "benchmark_total": 0.1853,
+      "note": "total/drag/contribution 为日收益加总口径（与日频夏普一致），非复利净值涨跌幅",
+      "beta_drag": 0.5801,
+      "alpha_contribution": 2.4264,
+      "verdict": "正 alpha：策略本身有效"
+    },
+    "dsr": {
+      "n_trials": 4,
+      "trial_score_var": 0.0175,
+      "observed_sharpe": 0.759,
+      "luck_baseline_sharpe": 0.139,
+      "T_days": 1423,
+      "skew": -1.603,
+      "kurtosis": 13.63,
+      "DSR": 0.9214,
+      "verdict": "偏弱 (0.90≤DSR<0.95)"
+    },
+    "mc": {
+      "n": 1423,
+      "iters": 5000,
+      "block": 10,
+      "original_final": 4.0065,
+      "prob_profit": 0.978,
+      "p5": 1.5843,
+      "p50": 4.0457,
+      "p95": 6.3635,
+      "verdict": "尚可"
+    },
+    "pvalue": {
+      "observed_daily_mean": 0.002113,
+      "p_value": 0.0388,
+      "significant": true,
+      "verdict": "显著盈利"
+    }
+  },
+  "qbt_v1_FULL": {
+    "perf": {
+      "T_days": 3938,
+      "start": "2011-01-05",
+      "end": "2026-09-02",
+      "total_return": 7.2737,
+      "ann_return": 0.4655,
+      "sharpe_daily_wallet": 0.788,
+      "sortino": 0.859,
+      "max_drawdown": 0.3128,
+      "calmar": 1.488,
+      "ann_vol": 0.5908,
+      "positive_days_pct": 0.597
+    },
+    "alpha_beta_vs_bill": {
+      "n_days": 3938,
+      "beta": -0.297,
+      "r_squared": 0.0,
+      "ann_alpha": 0.4701,
+      "alpha_t": 2.4,
+      "alpha_p": 0.0163,
+      "alpha_significant": true,
+      "strategy_total": 7.2737,
+      "benchmark_total": 0.244,
+      "note": "total/drag/contribution 为日收益加总口径（与日频夏普一致），非复利净值涨跌幅",
+      "beta_drag": -0.0724,
+      "alpha_contribution": 7.3461,
+      "verdict": "正 alpha：策略本身有效"
+    },
+    "dsr": {
+      "n_trials": 4,
+      "trial_score_var": 0.0175,
+      "observed_sharpe": 0.788,
+      "luck_baseline_sharpe": 0.139,
+      "T_days": 3938,
+      "skew": -1.304,
+      "kurtosis": 9.099,
+      "DSR": 0.9934,
+      "verdict": "显著 (DSR≥0.95)"
+    },
+    "mc": {
+      "n": 3938,
+      "iters": 5000,
+      "block": 10,
+      "original_final": 8.2737,
+      "prob_profit": 0.9996,
+      "p5": 4.6413,
+      "p50": 8.2251,
+      "p95": 11.7064,
+      "verdict": "尚可"
+    },
+    "pvalue": {
+      "observed_daily_mean": 0.001847,
+      "p_value": 0.0006,
+      "significant": true,
+      "verdict": "显著盈利"
+    }
+  },
+  "qbt_v1_TEST": {
+    "perf": {
+      "T_days": 1423,
+      "start": "2021-01-04",
+      "end": "2026-09-02",
+      "total_return": 2.7725,
+      "ann_return": 0.491,
+      "sharpe_daily_wallet": 0.792,
+      "sortino": 0.876,
+      "max_drawdown": 0.3354,
+      "calmar": 1.464,
+      "ann_vol": 0.62,
+      "positive_days_pct": 0.596
+    },
+    "alpha_beta_vs_bill": {
+      "n_days": 1423,
+      "beta": 6.251,
+      "r_squared": 0.0,
+      "ann_alpha": 0.2858,
+      "alpha_t": 0.56,
+      "alpha_p": 0.578,
+      "alpha_significant": false,
+      "strategy_total": 2.7725,
+      "benchmark_total": 0.1853,
+      "note": "total/drag/contribution 为日收益加总口径（与日频夏普一致），非复利净值涨跌幅",
+      "beta_drag": 1.1584,
+      "alpha_contribution": 1.6141,
+      "verdict": "正 alpha：策略本身有效"
+    },
+    "dsr": {
+      "n_trials": 4,
+      "trial_score_var": 0.0175,
+      "observed_sharpe": 0.792,
+      "luck_baseline_sharpe": 0.139,
+      "T_days": 1423,
+      "skew": -1.203,
+      "kurtosis": 8.087,
+      "DSR": 0.9336,
+      "verdict": "偏弱 (0.90≤DSR<0.95)"
+    },
+    "mc": {
+      "n": 1423,
+      "iters": 5000,
+      "block": 10,
+      "original_final": 3.7725,
+      "prob_profit": 0.9834,
+      "p5": 1.7131,
+      "p50": 3.7889,
+      "p95": 5.8683,
+      "verdict": "尚可"
+    },
+    "pvalue": {
+      "observed_daily_mean": 0.001948,
+      "p_value": 0.029,
+      "significant": true,
+      "verdict": "显著盈利"
+    }
+  },
+  "qbt_v2_FULL": {
+    "perf": {
+      "T_days": 3938,
+      "start": "2011-01-05",
+      "end": "2026-09-02",
+      "total_return": 1.0506,
+      "ann_return": 0.0672,
+      "sharpe_daily_wallet": 0.565,
+      "sortino": 0.598,
+      "max_drawdown": 0.1508,
+      "calmar": 0.446,
+      "ann_vol": 0.1189,
+      "positive_days_pct": 0.594
+    },
+    "alpha_beta_vs_bill": {
+      "n_days": 3938,
+      "beta": 1.172,
+      "r_squared": 0.0,
+      "ann_alpha": 0.0489,
+      "alpha_t": 1.24,
+      "alpha_p": 0.214,
+      "alpha_significant": false,
+      "strategy_total": 1.0506,
+      "benchmark_total": 0.244,
+      "note": "total/drag/contribution 为日收益加总口径（与日频夏普一致），非复利净值涨跌幅",
+      "beta_drag": 0.286,
+      "alpha_contribution": 0.7645,
+      "verdict": "正 alpha：策略本身有效"
+    },
+    "dsr": {
+      "n_trials": 4,
+      "trial_score_var": 0.0175,
+      "observed_sharpe": 0.565,
+      "luck_baseline_sharpe": 0.139,
+      "T_days": 3938,
+      "skew": -1.744,
+      "kurtosis": 12.247,
+      "DSR": 0.9487,
+      "verdict": "偏弱 (0.90≤DSR<0.95)"
+    },
+    "mc": {
+      "n": 3938,
+      "iters": 5000,
+      "block": 10,
+      "original_final": 2.0506,
+      "prob_profit": 0.986,
+      "p5": 1.2795,
+      "p50": 2.046,
+      "p95": 2.802,
+      "verdict": "尚可"
+    },
+    "pvalue": {
+      "observed_daily_mean": 0.000267,
+      "p_value": 0.0262,
+      "significant": true,
+      "verdict": "显著盈利"
+    }
+  },
+  "qbt_v2_TEST": {
+    "perf": {
+      "T_days": 1423,
+      "start": "2021-01-04",
+      "end": "2026-09-02",
+      "total_return": 0.4779,
+      "ann_return": 0.0846,
+      "sharpe_daily_wallet": 0.711,
+      "sortino": 0.734,
+      "max_drawdown": 0.1443,
+      "calmar": 0.587,
+      "ann_vol": 0.119,
+      "positive_days_pct": 0.606
+    },
+    "alpha_beta_vs_bill": {
+      "n_days": 1423,
+      "beta": 2.746,
+      "r_squared": 0.001,
+      "ann_alpha": -0.0055,
+      "alpha_t": -0.06,
+      "alpha_p": 0.9557,
+      "alpha_significant": false,
+      "strategy_total": 0.4779,
+      "benchmark_total": 0.1853,
+      "note": "total/drag/contribution 为日收益加总口径（与日频夏普一致），非复利净值涨跌幅",
+      "beta_drag": 0.5089,
+      "alpha_contribution": -0.0309,
+      "verdict": "负 alpha：选股/择时本身在亏钱"
+    },
+    "dsr": {
+      "n_trials": 4,
+      "trial_score_var": 0.0175,
+      "observed_sharpe": 0.711,
+      "luck_baseline_sharpe": 0.139,
+      "T_days": 1423,
+      "skew": -2.024,
+      "kurtosis": 14.769,
+      "DSR": 0.9027,
+      "verdict": "偏弱 (0.90≤DSR<0.95)"
+    },
+    "mc": {
+      "n": 1423,
+      "iters": 5000,
+      "block": 10,
+      "original_final": 1.4779,
+      "prob_profit": 0.966,
+      "p5": 1.0464,
+      "p50": 1.4854,
+      "p95": 1.895,
+      "verdict": "尚可"
+    },
+    "pvalue": {
+      "observed_daily_mean": 0.000336,
+      "p_value": 0.064,
+      "significant": false,
+      "verdict": "与 0 无显著差异（噪音）"
+    }
+  },
+  "qbt_v3_FULL": {
+    "perf": {
+      "T_days": 3938,
+      "start": "2011-01-05",
+      "end": "2026-09-02",
+      "total_return": 1.0641,
+      "ann_return": 0.0681,
+      "sharpe_daily_wallet": 0.612,
+      "sortino": 0.628,
+      "max_drawdown": 0.0992,
+      "calmar": 0.686,
+      "ann_vol": 0.1113,
+      "positive_days_pct": 0.604
+    },
+    "alpha_beta_vs_bill": {
+      "n_days": 3938,
+      "beta": 0.969,
+      "r_squared": 0.0,
+      "ann_alpha": 0.053,
+      "alpha_t": 1.44,
+      "alpha_p": 0.1507,
+      "alpha_significant": false,
+      "strategy_total": 1.0641,
+      "benchmark_total": 0.244,
+      "note": "total/drag/contribution 为日收益加总口径（与日频夏普一致），非复利净值涨跌幅",
+      "beta_drag": 0.2365,
+      "alpha_contribution": 0.8276,
+      "verdict": "正 alpha：策略本身有效"
+    },
+    "dsr": {
+      "n_trials": 4,
+      "trial_score_var": 0.0175,
+      "observed_sharpe": 0.612,
+      "luck_baseline_sharpe": 0.139,
+      "T_days": 3938,
+      "skew": -1.838,
+      "kurtosis": 13.777,
+      "DSR": 0.9642,
+      "verdict": "显著 (DSR≥0.95)"
+    },
+    "mc": {
+      "n": 3938,
+      "iters": 5000,
+      "block": 10,
+      "original_final": 2.0641,
+      "prob_profit": 0.9918,
+      "p5": 1.3671,
+      "p50": 2.0528,
+      "p95": 2.747,
+      "verdict": "尚可"
+    },
+    "pvalue": {
+      "observed_daily_mean": 0.00027,
+      "p_value": 0.0142,
+      "significant": true,
+      "verdict": "显著盈利"
+    }
+  },
+  "qbt_v3_TEST": {
+    "perf": {
+      "T_days": 1423,
+      "start": "2021-01-04",
+      "end": "2026-09-02",
+      "total_return": 0.4403,
+      "ann_return": 0.078,
+      "sharpe_daily_wallet": 0.684,
+      "sortino": 0.695,
+      "max_drawdown": 0.1394,
+      "calmar": 0.559,
+      "ann_vol": 0.1139,
+      "positive_days_pct": 0.608
+    },
+    "alpha_beta_vs_bill": {
+      "n_days": 1423,
+      "beta": 3.071,
+      "r_squared": 0.001,
+      "ann_alpha": -0.0228,
+      "alpha_t": -0.24,
+      "alpha_p": 0.8089,
+      "alpha_significant": false,
+      "strategy_total": 0.4403,
+      "benchmark_total": 0.1853,
+      "note": "total/drag/contribution 为日收益加总口径（与日频夏普一致），非复利净值涨跌幅",
+      "beta_drag": 0.5692,
+      "alpha_contribution": -0.1289,
+      "verdict": "负 alpha：选股/择时本身在亏钱"
+    },
+    "dsr": {
+      "n_trials": 4,
+      "trial_score_var": 0.0175,
+      "observed_sharpe": 0.684,
+      "luck_baseline_sharpe": 0.139,
+      "T_days": 1423,
+      "skew": -2.12,
+      "kurtosis": 16.404,
+      "DSR": 0.8918,
+      "verdict": "不显著 —— 大概率是搜出来的运气"
+    },
+    "mc": {
+      "n": 1423,
+      "iters": 5000,
+      "block": 10,
+      "original_final": 1.4403,
+      "prob_profit": 0.9646,
+      "p5": 1.043,
+      "p50": 1.4469,
+      "p95": 1.8366,
+      "verdict": "尚可"
+    },
+    "pvalue": {
+      "observed_daily_mean": 0.000309,
+      "p_value": 0.0712,
+      "significant": false,
+      "verdict": "与 0 无显著差异（噪音）"
+    }
+  },
+  "nw": {
+    "v0": {
+      "FULL": {
+        "alpha_ann": 0.42427228575912673,
+        "nw_t": 2.481292405218111
+      },
+      "TRAIN": {
+        "alpha_ann": 0.4427343532578123,
+        "nw_t": 1.5642453599432984
+      },
+      "VALID": {
+        "alpha_ann": 0.3207173457075324,
+        "nw_t": 0.9430884994426877
+      },
+      "TEST": {
+        "alpha_ann": 0.4995971717370663,
+        "nw_t": 1.8790671072967555
+      }
+    },
+    "v1": {
+      "FULL": {
+        "alpha_ann": 0.4498384425249435,
+        "nw_t": 3.2145846620629452
+      },
+      "TRAIN": {
+        "alpha_ann": 0.4948423224538755,
+        "nw_t": 2.0871242556479292
+      },
+      "VALID": {
+        "alpha_ann": 0.3955354092713044,
+        "nw_t": 1.5502129493905819
+      },
+      "TEST": {
+        "alpha_ann": 0.4581607515028725,
+        "nw_t": 1.9538211651679802
+      }
+    },
+    "v2": {
+      "FULL": {
+        "alpha_ann": 0.051610852965115424,
+        "nw_t": 1.7372573183430813
+      },
+      "TRAIN": {
+        "alpha_ann": 0.0631456615783341,
+        "nw_t": 1.2372286044250314
+      },
+      "VALID": {
+        "alpha_ann": 0.039866451373402806,
+        "nw_t": 0.6870657989742047
+      },
+      "TEST": {
+        "alpha_ann": 0.05182060840135125,
+        "nw_t": 1.1330828148874648
+      }
+    },
+    "v3": {
+      "FULL": {
+        "alpha_ann": 0.052476961199836934,
+        "nw_t": 1.913177538995361
+      },
+      "TRAIN": {
+        "alpha_ann": 0.0676589788937888,
+        "nw_t": 1.4519378055287133
+      },
+      "VALID": {
+        "alpha_ann": 0.0456116658298501,
+        "nw_t": 0.8619690386741069
+      },
+      "TEST": {
+        "alpha_ann": 0.04515074380504413,
+        "nw_t": 1.042566109536449
+      }
+    },
+    "long": {
+      "FULL": {
+        "alpha_ann": -0.4675618743827923,
+        "nw_t": -2.734422980400683
+      },
+      "TRAIN": {
+        "alpha_ann": -0.4860318054871113,
+        "nw_t": -1.7169469165586073
+      },
+      "VALID": {
+        "alpha_ann": -0.36388303276074896,
+        "nw_t": -1.070106400621535
+      },
+      "TEST": {
+        "alpha_ann": -0.5429894415894878,
+        "nw_t": -2.0422367742408882
+      }
+    }
+  },
+  "beta_spx": {
+    "v0": 3.194,
+    "v1": 2.129,
+    "v2": 0.47,
+    "v3": 0.363
+  },
+  "year_removal": {
+    "v0": {
+      "t_by_year_removed": {
+        "2011": 2.68,
+        "2012": 2.07,
+        "2013": 2.17,
+        "2014": 2.5,
+        "2015": 2.51,
+        "2016": 2.2,
+        "2017": 2.07,
+        "2018": 2.94,
+        "2019": 2.17,
+        "2020": 3.01,
+        "2021": 2.17,
+        "2022": 2.53,
+        "2023": 2.09,
+        "2024": 2.58,
+        "2025": 2.45,
+        "2026": 2.39
+      },
+      "min_t": 2.07,
+      "min_when_remove": 2012,
+      "alpha_after_removal": 0.3676
+    },
+    "v1": {
+      "t_by_year_removed": {
+        "2011": 3.18,
+        "2012": 2.8,
+        "2013": 3.06,
+        "2014": 3.29,
+        "2015": 3.07,
+        "2016": 3.05,
+        "2017": 2.75,
+        "2018": 3.58,
+        "2019": 3.13,
+        "2020": 3.22,
+        "2021": 2.93,
+        "2022": 3.38,
+        "2023": 2.77,
+        "2024": 3.34,
+        "2025": 3.02,
+        "2026": 3.25
+      },
+      "min_t": 2.75,
+      "min_when_remove": 2017,
+      "alpha_after_removal": 0.4028
+    },
+    "v2": {
+      "t_by_year_removed": {
+        "2011": 1.88,
+        "2012": 1.35,
+        "2013": 1.57,
+        "2014": 1.71,
+        "2015": 1.75,
+        "2016": 1.53,
+        "2017": 1.3,
+        "2018": 2.28,
+        "2019": 1.49,
+        "2020": 2.01,
+        "2021": 1.72,
+        "2022": 1.66,
+        "2023": 1.37,
+        "2024": 1.94,
+        "2025": 1.73,
+        "2026": 1.65
+      },
+      "min_t": 1.3,
+      "min_when_remove": 2017,
+      "alpha_after_removal": 0.0398
+    },
+    "v3": {
+      "t_by_year_removed": {
+        "2011": 1.86,
+        "2012": 1.55,
+        "2013": 1.91,
+        "2014": 1.94,
+        "2015": 1.79,
+        "2016": 1.8,
+        "2017": 1.47,
+        "2018": 2.32,
+        "2019": 1.83,
+        "2020": 1.98,
+        "2021": 1.92,
+        "2022": 1.86,
+        "2023": 1.53,
+        "2024": 2.12,
+        "2025": 1.84,
+        "2026": 1.92
+      },
+      "min_t": 1.47,
+      "min_when_remove": 2017,
+      "alpha_after_removal": 0.0413
+    }
+  },
+  "pit_starts": {
+    "v0": {
+      "n_starts": 100,
+      "mean_ann": 0.3984728224781009,
+      "p5_ann": 0.27074372828021187,
+      "win_rate": 1.0
+    },
+    "v1": {
+      "n_starts": 100,
+      "mean_ann": 0.4081894918605319,
+      "p5_ann": 0.3026109402093471,
+      "win_rate": 1.0
+    },
+    "v2": {
+      "n_starts": 100,
+      "mean_ann": 0.04247288651253227,
+      "p5_ann": 0.016808167979758606,
+      "win_rate": 0.99
+    },
+    "v3": {
+      "n_starts": 100,
+      "mean_ann": 0.04091080517792075,
+      "p5_ann": 0.014091034109728017,
+      "win_rate": 0.96
+    }
+  },
+  "perm_shift": {
+    "v1": {
+      "true_alpha_ann": 0.4498384425249435,
+      "perm_mean": 0.37682322594398315,
+      "perm_p95": 0.4598843374119574,
+      "percentile": 92.80000000000001
+    },
+    "v2": {
+      "true_alpha_ann": 0.051610852965115424,
+      "perm_mean": 0.07834392363750478,
+      "perm_p95": 0.10225235016057348,
+      "percentile": 3.45
+    },
+    "v3": {
+      "true_alpha_ann": 0.052476961199836934,
+      "perm_mean": 0.07230272066456717,
+      "perm_p95": 0.10036515133742423,
+      "percentile": 11.799999999999999
+    }
+  },
+  "is_oos_rank": {
+    "variants": [
+      "v0",
+      "v1",
+      "v2",
+      "v3"
+    ],
+    "train_sharpe": [
+      0.6829287345708209,
+      0.8733175685261158,
+      0.5599518715183878,
+      0.6472136722496545
+    ],
+    "test_sharpe": [
+      0.758980694239835,
+      0.7919503647231566,
+      0.7112110881849567,
+      0.6843739955572072
+    ],
+    "spearman": 0.7999999999999999
+  },
+  "vix_intraday_spike_days": []
+}

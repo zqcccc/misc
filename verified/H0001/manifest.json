@@ -1,0 +1,44 @@
+{
+ "id": "H0001",
+ "verdict": "FAIL",
+ "title_short": "A股中期动量（60/120日、52周新高）",
+ "impl_dir": "astock_quant",
+ "impl_note": "aq/factors.py 的 mom60/mom120/high52w；IC 检验在 scripts/run_research.py。本卡是纯 IC 检验，没有组合回测，因此没有收益序列。",
+ "authoritative": {
+  "returns": null,
+  "bench": null,
+  "report": {
+   "path": "astock_quant/reports/research.json",
+   "sha256": "80e9d79a00297608dcb7658633dbf9ba194ca9dcf60bd147584e25220d8f515f",
+   "bytes": 181866,
+   "copied_as": "research.json",
+   "note": "含『样本内因子表』/『样本外因子表』；high52w 的 OOS ICIR20=-0.252 (t=-2.08) 在这里"
+  }
+ },
+ "superseded": [],
+ "reproduce": "cd astock_quant && /opt/homebrew/bin/python3.11 scripts/run_research.py  # 归档时未重跑",
+ "recomputed": {
+  "high52w_oos": {
+   "IC20均值": -0.0456,
+   "ICIR20": -0.252,
+   "t20": -2.08
+  }
+ },
+ "card_says": {
+  "mom60_oos_ICIR": -0.2,
+  "mom120_oos_ICIR": -0.2,
+  "high52w_oos_ICIR": -0.24,
+  "high52w_t": -2.0
+ },
+ "discrepancies": [
+  "high52w 对得上方向和量级，但数值略有出入：research.json 的『样本外因子表』给 ICIR20=−0.252 / t=−2.08，卡片写 −0.24 / t=−2.0。",
+  "mom60 / mom120 在 research.json 的『样本外因子表』里查不到（该表只收录进入加权集合的因子），卡片报的 OOS ICIR −0.20 / −0.20 无对应产物。"
+ ],
+ "missing": [
+  "本卡没有收益序列，只有 IC 统计——结论无法用净值复现，只能重跑 run_research.py。",
+  "mom60 / mom120 的样本外 ICIR 没有持久化。"
+ ],
+ "notes": [
+  "这是台账的第一张卡，从 astock_quant 既有结论回填，未按后来的四层证伪协议跑过。"
+ ]
+}

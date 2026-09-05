@@ -54,6 +54,8 @@ plain: 机器学习每月挑一只债券ETF，结果不如三只平均分配，�
 - 运行：`/opt/homebrew/bin/python3.11 fetch_data.py`；模型依赖位于临时目录，`PYTHONPATH=/tmp/quant_research_h0027_pydeps /opt/homebrew/bin/python3.11 research.py dev`。原版工具报告在 `out/qbt_valid_report.json`。
 - TEST 三文件保持 `0444` 且从未传给 `research.py reveal`；下载后 SHA-256：拍卖 `3198ef8f…`、曲线 `335a1192…`、ETF `e5eaf5fb…`。
 
+归档：`verified/H0027/manifest.json`（权威产物映射；不改 §7 数字与裁决）
+
 ## 7. 验收结果（quant-backtest-protocol 四层证伪）
 | 层 | 指标 | 结果 | 判定 |
 |---|---|---|---|

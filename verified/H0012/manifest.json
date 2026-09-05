@@ -1,0 +1,122 @@
+{
+ "id": "H0012",
+ "verdict": "FAIL",
+ "title_short": "Binance 现货 3 日横截面反转",
+ "impl_dir": "crypto_spot",
+ "impl_note": "scripts/fetch_spot.py → strategy_h0012.py → falsify_h0012.py；产物在 out/",
+ "authoritative": {
+  "returns": {
+   "path": "crypto_spot/out/ret_trainvalid.csv",
+   "sha256": "27691ca547276c39e4754850f564326dfeab3fb0e44c4a76ece8abfce8eb59d4",
+   "bytes": 70540,
+   "rows": 2203,
+   "start": "2017-12-20",
+   "end": "2023-12-31",
+   "copied_as": "ret_trainvalid.csv",
+   "note": "365 天年化；判读段"
+  },
+  "returns_test": {
+   "path": "crypto_spot/out/ret_test.csv",
+   "sha256": "e55ae47b1581d72fd48c0c3b756bfab434c1bf22d058725b1ea7515cb9c229bf",
+   "bytes": 30265,
+   "rows": 943,
+   "start": "2024-01-01",
+   "end": "2026-07-31",
+   "copied_as": "ret_test.csv"
+  },
+  "bench": {
+   "path": "crypto_spot/out/bench_trainvalid.csv",
+   "sha256": "6fb968903faef7fa1fd4a0222ee77c58319271dd1d5e6b73c69e2a0e239fe15b",
+   "bytes": 70530,
+   "rows": 2203,
+   "start": "2017-12-20",
+   "end": "2023-12-31",
+   "copied_as": "bench_trainvalid.csv",
+   "note": "同池等权"
+  },
+  "bench_test": {
+   "path": "crypto_spot/out/bench_test.csv",
+   "sha256": "d6a2df51b4a35522ce5bee537c4e76c55d9e7e060dc0cd0aa06b9b8c4df91bd1",
+   "bytes": 30302,
+   "rows": 943,
+   "start": "2024-01-01",
+   "end": "2026-07-31",
+   "copied_as": "bench_test.csv"
+  },
+  "report": {
+   "path": "crypto_spot/out/falsify_trainvalid.json",
+   "sha256": "a00039416f8288fde30dd2373284ae13683180009743d3bcc16bc6aa06e12499",
+   "bytes": 5888,
+   "copied_as": "falsify_trainvalid.json"
+  },
+  "report_test": {
+   "path": "crypto_spot/out/falsify_test.json",
+   "sha256": "486bcace9ceea5c563cf7df5242c46c164bf35c1963887895a8e8f14e1d859db",
+   "bytes": 4254,
+   "copied_as": "falsify_test.json"
+  },
+  "trials": {
+   "path": "crypto_spot/out/trials_trainvalid.json",
+   "sha256": "9e949d697868f321c2e4436789a3e133eb5ad7bf42ebcd7e28ac58e352b67cdb",
+   "bytes": 1327,
+   "copied_as": "trials_trainvalid.json"
+  },
+  "trials_test": {
+   "path": "crypto_spot/out/trials_test.json",
+   "sha256": "1af91bb418d21dcde3fc7702e5b59c3690ba544ac2d0ef7a56370c6b2f154d7d",
+   "bytes": 1311,
+   "copied_as": "trials_test.json"
+  }
+ },
+ "superseded": [],
+ "reproduce": "cd crypto_spot && /opt/homebrew/bin/python3.11 -W ignore scripts/falsify_h0012.py trainvalid && ... test  # 归档时未重跑",
+ "recomputed": {
+  "trainvalid": {
+   "n": 2203,
+   "window": "2017-12-20~2023-12-31",
+   "ann_cagr": -0.456,
+   "vol": 1.0211,
+   "sharpe": -0.0617,
+   "mdd": -0.9916
+  },
+  "test": {
+   "n": 943,
+   "window": "2024-01-01~2026-07-31",
+   "ann_cagr": -0.7831,
+   "vol": 0.799,
+   "sharpe": -1.4986,
+   "mdd": -0.989
+  },
+  "bench_trainvalid": {
+   "ann_cagr": 0.0901
+  },
+  "bench_test": {
+   "ann_cagr": -0.5139
+  }
+ },
+ "card_says": {
+  "trainvalid": {
+   "ann": -0.456,
+   "sharpe": -0.062,
+   "mdd": -0.992
+  },
+  "test": {
+   "ann": -0.782,
+   "sharpe": -1.499,
+   "mdd": -0.989
+  },
+  "bench_trainvalid": {
+   "ann": 0.09
+  },
+  "bench_test": {
+   "ann": -0.513
+  }
+ },
+ "discrepancies": [
+  "完全一致：TV −45.60%/−0.0617/−99.16%、TEST −78.31%/−1.4986/−98.90%、基准 +9.01% / −51.39%，与 falsify_*.json 及重算逐项相同。"
+ ],
+ "missing": [],
+ "notes": [
+  "本卡最值得复用的结论在 falsify_*.json 里：毛 alpha（零成本）也是 −34.2%(t=−3.06) / −44.7%(t=−2.29)，换手匹配随机选币置换分位 0.0%——即信号方向本身是反的，不是成本问题。"
+ ]
+}

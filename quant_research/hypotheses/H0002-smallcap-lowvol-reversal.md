@@ -41,6 +41,8 @@ plain: 确实跑赢了同类股票，但超额有一大半来自2024这一年，
 ## 6. 实现
 `astock_quant/aq/strategy.py` + `scripts/run_rigorous_ashare_research.py`。
 
+归档：`verified/H0002/manifest.json`（权威产物映射；不改 §7 数字与裁决）
+
 ## 7. 验收结果（四层证伪）
 | 层 | 结果 | 判定 |
 |---|---|---|

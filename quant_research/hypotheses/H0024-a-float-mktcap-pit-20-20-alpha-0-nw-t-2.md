@@ -88,6 +88,8 @@ TRAIN(2016-18) 可能已衰减、TEST(2022-26) 高度不确定——很可能 **
 - 产物：`cn_stock/out_h0024/`（size_score.parquet、equity_primary.csv、bench_ew.csv、split_stats.json、trials.json、falsification.json、causality_data/）。
 - 跑法：`/opt/homebrew/bin/python3.11`；后台长任务用 run_in_background，不用 nohup+sleep。
 
+归档：`verified/H0024/manifest.json`（权威产物映射；不改 §7 数字与裁决）
+
 ## 7. 验收结果（quant-backtest-protocol 四层证伪）
 主变体 primary_size_top20（流通市值最小前 20% 等权纯多，月频）：
 

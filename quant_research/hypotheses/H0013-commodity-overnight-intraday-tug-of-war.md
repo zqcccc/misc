@@ -10,7 +10,7 @@ family: microstructure
 tags: overnight,intraday,tug-of-war,commodity,decomposition
 owner: workbuddy
 claimed_at: 2026-09-04T00:46:41Z
-updated_at: 2026-09-04T02:25:26Z
+updated_at: 2026-09-04T14:09:20Z
 sources: https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2807074 
 cause: 无机理
 plain: 商品期货几乎全天在交易，白天晚上不是两拨人，这个反转根本不存在；但顺手发现白银黄金在亚欧时段单独看涨得很凶，值得另开一张卡
@@ -106,6 +106,8 @@ Lou-Polk-Skouras (JFE 2019) 的框架：不同投资者偏好在一天的不同�
   - `run_h0013.py`、`falsify_h0013.py`
 - 跑法（后台长任务用绝对路径解释器）：`/opt/homebrew/bin/python3.11 futures/fetch.py` 等
 
+归档：`verified/H0013/manifest.json`（权威产物映射；不改 §7 数字与裁决）
+
 ## 7. 验收结果（quant-backtest-protocol 四层证伪）
 
 ### 7a. 第一轮（2026-09-04 上午）：数据不可检验 → PARK
@@ -178,3 +180,4 @@ held(t)=designated(t−1) 的无污染分解法，可移植到任何 yfinance �
 - `2026-09-04T01:39:38Z` gongzhao-76530：**裁决 PARK** —— yfinance 连续合约隔夜收益被换月污染：清洗 2.4% 坏点后隔夜漂移仍 +9.69%/年且随 contango/backwardation 变号(NG/KC 验证)，中位数≈0、正收益日仅45%——是 roll 收益+stale open，不是客户群效应。LPS 隔夜→日内反转无法在该数据上诚实验证。复活条件：自建 back-adjusted 连续序列或接入单合约历史。
 - `2026-09-04T02:25:24Z` gongzhao-91857：复活实验完成。数据：发现 yfinance 在市单合约保留真实历史(97 个，GC 2020-12/CL 2017-11/NG 2014-11 起)，跨合约价差符合期限结构、与连续合约日收益差从首日起显著(回填占比 0%)。口径修订：宇宙缩为 6 主力(GC SI HG CL NG ZC)，held(t)=designated(t-1) 使 O/I/r 全在单合约内计算，换月跳空构造上不可能污染。关键发现：干净数据上隔夜漂移真实存在(GC +25.2%/年 SI +42.9% ZC -13.1%, stale open≈0)——Yahoo 期货 open=前日 17:00 CT Globex 开盘，O 段≈亚欧时段，GC/SI 全年涨幅几乎 100% 落在亚欧时段。策略(_lb=20 主规格 TRAIN 2023-01~2025-03/TEST 2025-04~2026-09)：净 -8.62%/年 夏普-0.095 回撤-62%；鲁棒族 lb∈{10,20,60} 1/3 正=噪声；NW t=-0.36；DSR(N=3) 0.267；置换分位 54.4%(90 组合全枚举)。信号主体是品种固定效应。
 - `2026-09-04T02:25:26Z` gongzhao-92299：**裁决 FAIL** —— 复活实验证伪机理：CME 近 23 小时连续交易制度下客户群不分离，横截面隔夜→日内反转不存在(净收益为负、置换分位 54%、信号退化为品种固定效应)，与 SHFE 夜盘制度化后隔夜效应消失的证据互为印证。LPS 股票横截面证据不受影响——制度不同。高价值线索留给后人：分合约数据显示亚欧时段隔夜漂移巨大且品种特异(SI +43%/年 GC +25%)，属静态 carry/风险溢价候选，应另立假设卡(带期限结构控制)。数据管线 fetch_contracts.py+build_panel13.py 可复用。
+- `2026-09-04T14:09:20Z` gongzhao-85381：2026-09-04 gpt 复核字段语义：CME Gold 官方时段为 17:00 CT 开、16:00 CT 收、每日维护 1h；Yahoo GC=F 日线 open 与前一日 18:00 ET 小时线 open 一致。因此卡内 O=open_t/close_{t-1}-1 是休市缺口，不是亚欧交易时段；§9 的‘亚欧漂移’线索不可直接接力，须用小时线重新定义真实亚欧窗口。未改原 §7/§8/§9。

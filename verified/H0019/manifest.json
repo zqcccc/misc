@@ -1,0 +1,180 @@
+{
+ "id": "H0019",
+ "verdict": "PARK",
+ "title_short": "港股通南向净买入 20 日 z-score 择时 2800",
+ "impl_dir": "hk_southbound",
+ "impl_note": "scripts/fetch_h0019.py → strategy_h0019.py → falsify_h0019.py；out/ 里带 h19_ 前缀的才是本卡产物，不带前缀的是 H0017 的",
+ "authoritative": {
+  "returns_trainvalid": {
+   "path": "hk_southbound/out/h19_ret_trainvalid.csv",
+   "sha256": "3f0ff9111c025d7b2dbef25899e602cf8502f9fec7016b6350b84fa1e9fb9f68",
+   "bytes": 52569,
+   "rows": 1807,
+   "start": "2016-01-21",
+   "end": "2023-12-29",
+   "copied_as": "h19_ret_trainvalid.csv"
+  },
+  "returns_test": {
+   "path": "hk_southbound/out/h19_ret_test.csv",
+   "sha256": "fd10c6adc9bcf8f0cebfb530485862a8687bb3158551248d6156d329f57ea78d",
+   "bytes": 19356,
+   "rows": 627,
+   "start": "2024-01-02",
+   "end": "2026-09-02",
+   "copied_as": "h19_ret_test.csv"
+  },
+  "bench_trainvalid": {
+   "path": "hk_southbound/out/h19_bench_trainvalid.csv",
+   "sha256": "554894ee6b4c945a75ae1f8f5d31f9f2e52c0d944c6d09cee02ea787a0884c78",
+   "bytes": 56836,
+   "rows": 1807,
+   "start": "2016-01-21",
+   "end": "2023-12-29",
+   "copied_as": "h19_bench_trainvalid.csv"
+  },
+  "bench_test": {
+   "path": "hk_southbound/out/h19_bench_test.csv",
+   "sha256": "f8fe40abbda905c4e9e4c146adfb9686fcdaa964553fbe4fbf3ddec7d6ade396",
+   "bytes": 20083,
+   "rows": 627,
+   "start": "2024-01-02",
+   "end": "2026-09-02",
+   "copied_as": "h19_bench_test.csv"
+  },
+  "control_trainvalid": {
+   "path": "hk_southbound/out/h19_ctl_trainvalid.csv",
+   "sha256": "5c955cd90ab41ee32cd5723b41601212f3e9835c3b9b20b8f5969e20a5684a2e",
+   "bytes": 52729,
+   "rows": 1806,
+   "start": "2016-01-22",
+   "end": "2023-12-29",
+   "copied_as": "h19_ctl_trainvalid.csv",
+   "note": "§5 锁死的价格动量对照组"
+  },
+  "control_test": {
+   "path": "hk_southbound/out/h19_ctl_test.csv",
+   "sha256": "a9eb76f67240c31fadc45f7708600018e29fcba5c4f2928abdc7f02838189c94",
+   "bytes": 19583,
+   "rows": 627,
+   "start": "2024-01-02",
+   "end": "2026-09-02",
+   "copied_as": "h19_ctl_test.csv"
+  },
+  "report": {
+   "path": "hk_southbound/out/h19_falsify_trainvalid.json",
+   "sha256": "8bc6df9bc974a55f08a724f8aa9b5d716d5a7af6e4c35b2d1279c8aed7e67f19",
+   "bytes": 7334,
+   "copied_as": "h19_falsify_trainvalid.json"
+  },
+  "report_test": {
+   "path": "hk_southbound/out/h19_falsify_test.json",
+   "sha256": "f8a3f001d515af7f75761959d08640b0c96e0a38e35389b0260c90230dd7f229",
+   "bytes": 5226,
+   "copied_as": "h19_falsify_test.json"
+  },
+  "trials": {
+   "path": "hk_southbound/out/h19_trials_trainvalid.json",
+   "sha256": "ed52ee6fa7254ad45eb1d8b994d0586e4a6d0a0deebda4564f5e914199b1580a",
+   "bytes": 1298,
+   "copied_as": "h19_trials_trainvalid.json"
+  },
+  "trials_test": {
+   "path": "hk_southbound/out/h19_trials_test.json",
+   "sha256": "55925824cb2ca2d8a94bb18fac8037df8f325c2dd08d0e70936ff4ab9b9bea36",
+   "bytes": 1302,
+   "copied_as": "h19_trials_test.json"
+  }
+ },
+ "superseded": [],
+ "reproduce": "cd hk_southbound && /opt/homebrew/bin/python3.11 -W ignore scripts/falsify_h0019.py trainvalid && ... test  # TEST 只跑一次，归档时未重跑",
+ "recomputed": {
+  "convention": "年化 = 252 日复利 CAGR；夏普 = 算术年化 / 年化波动（与卡片口径一致）",
+  "trainvalid": {
+   "n": 1807,
+   "window": "2016-01-21~2023-12-29",
+   "ann_cagr252": 0.0853,
+   "sharpe": 0.5932,
+   "mdd": -0.2466
+  },
+  "test": {
+   "n": 627,
+   "window": "2024-01-02~2026-09-02",
+   "ann_cagr252": 0.0792,
+   "sharpe": 0.5197,
+   "mdd": -0.201
+  },
+  "bench_2800_trainvalid": {
+   "ann_cagr252": 0.0232,
+   "sharpe": 0.2141,
+   "mdd": -0.4867
+  },
+  "bench_2800_test": {
+   "ann_cagr252": 0.2147,
+   "sharpe": 0.9697,
+   "mdd": -0.201
+  },
+  "full_concat": {
+   "n": 2434,
+   "window": "2016-01-21~2026-09-02",
+   "ann_cagr252": 0.0837,
+   "sharpe": 0.5723,
+   "mdd": -0.2466
+  },
+  "bench_full": {
+   "ann_cagr252": 0.0695,
+   "sharpe": 0.4176,
+   "mdd": -0.4867
+  },
+  "control_full": {
+   "ann_cagr252": -0.0056,
+   "sharpe": 0.0288,
+   "mdd": -0.4102
+  },
+  "control_trainvalid": {
+   "ann_cagr252": -0.0221
+  }
+ },
+ "card_says": {
+  "trainvalid": {
+   "ann": 0.0853,
+   "sharpe": 0.593,
+   "mdd": -0.247,
+   "excess": 0.0621
+  },
+  "test": {
+   "ann": 0.0792,
+   "sharpe": 0.52,
+   "mdd": -0.201,
+   "excess": -0.1356
+  },
+  "full": {
+   "ann": 0.0839,
+   "sharpe": 0.573,
+   "mdd": -0.247
+  },
+  "bench_full": {
+   "ann": 0.0695,
+   "sharpe": 0.418,
+   "mdd": -0.487
+  },
+  "control_full": {
+   "ann": -0.0054,
+   "sharpe": 0.03,
+   "mdd": -0.409
+  },
+  "control_trainvalid": {
+   "ann": -0.0221
+  }
+ },
+ "discrepancies": [
+  "全部对得上，本卡是 30 张里复现度最高的一张：TRAIN+VALID 8.53%/0.593/−24.66%、TEST 7.92%/0.520/−20.10%、2800 B&H 2.32%/0.214/−48.67% 与 21.47%/0.970/−20.10%，逐项与卡片 §7 相同。",
+  "超额也对得上：TV +6.21%（8.53−2.32）、TEST −13.55%（7.92−21.47，卡片 −13.56%）。",
+  "全期（TV+TEST 拼接，2434 天）8.37%/0.572/−24.66% vs 卡片 8.39%/0.573/−24.7%；价格动量对照组全期 −0.56%/0.029/−41.02% vs 卡片 −0.54%/0.030/−40.9%（对照组序列比主序列少 1 天，差异来自此）。",
+  "口径确认：卡片『年化』= 252 日复利 CAGR，『夏普』= 算术年化 / 年化波动，两者不同源但卡片内部一致。"
+ ],
+ "missing": [],
+ "notes": [
+  "out/ 下 ret_test.csv / ret_trainvalid.csv / bench_*.csv / falsify_*.json / trials_*.json（无 h19_ 前缀）是 H0017 的产物，与本卡同目录但不同课题，勿误取。",
+  "load_parks.py 把 h19_ret_trainvalid.csv + h19_ret_test.csv 拼成全期，与本 manifest 的 full_concat 一致。"
+ ]
+}

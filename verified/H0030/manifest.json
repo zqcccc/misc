@@ -1,0 +1,96 @@
+{
+ "id": "H0030",
+ "verdict": "FAIL",
+ "title_short": "8 张 PARK 风险平价合成组合",
+ "impl_dir": "quant_research/portfolio",
+ "impl_note": "load_parks.py（取数与单腿核对）→ eval_overlap.py（相关矩阵/两种权重/分段）→ eval_weightings.py（封顶/聚类/有效赌注数）；产物在 portfolio/out/，本次归档前已存在 verified/H0030/",
+ "authoritative": {
+  "returns": null,
+  "bench": null,
+  "report": {
+   "path": "quant_research/portfolio/out/weightings.txt",
+   "sha256": "1224ebdb5a34b60bc2b11ff38201525d7905f6cc0f59f0369f98aed44382314e",
+   "bytes": 1293,
+   "copied_as": "weightings.txt",
+   "note": "B 层：各权重方案的年化/波动/夏普/回撤 + 有效持仓数"
+  },
+  "report_overlap": {
+   "path": "quant_research/portfolio/out/overlap.txt",
+   "sha256": "31530b0e99d92e0a8b9bad651d430d040d37343b3f99a0623aaedb93f2e125d1",
+   "bytes": 3987,
+   "copied_as": "overlap.txt",
+   "note": "A 层：8×8 相关矩阵、各腿可用天数占比、分段"
+  },
+  "legs_source": {
+   "path": "quant_research/portfolio/load_parks.py",
+   "sha256": "384a63b3963c3010edf92c90870867c1a4c99e2b9733985034bf91153310e47e",
+   "bytes": 2092,
+   "copied_as": "load_parks.py",
+   "note": "**八条腿的收益序列路径写死在这里**；现已被 verified/H0002,H0003,H0010,H0014,H0019,H0021,H0022,H0024 的 manifest.json 取代为权威映射，两者一致"
+  }
+ },
+ "superseded": [],
+ "reproduce": "cd quant_research/portfolio && /opt/homebrew/bin/python3.11 load_parks.py && eval_overlap.py && eval_weightings.py  # 归档时未重跑",
+ "recomputed": {
+  "note": "本卡是组合层研究，没有单一收益序列产物；下列数字直接引自 out/weightings.txt",
+  "risk_parity_uncapped": {
+   "ann": 0.039,
+   "vol": 0.0136,
+   "sharpe": 2.86,
+   "mdd": -0.016
+  },
+  "risk_parity_cap50": {
+   "ann": 0.0413,
+   "vol": 0.0337,
+   "sharpe": 1.23,
+   "mdd": -0.05
+  },
+  "equal_weight_8": {
+   "ann": 0.0917,
+   "vol": 0.1318,
+   "sharpe": 0.7,
+   "mdd": -0.262
+  },
+  "best_single_leg_H0003": {
+   "ann": 0.0625,
+   "vol": 0.006,
+   "sharpe": 10.33,
+   "mdd": -0.004
+  },
+  "effective_bets": 5.07,
+  "effective_positions": 1.47,
+  "H0003_weight": 0.819
+ },
+ "card_says": {
+  "risk_parity_uncapped": {
+   "ann": 0.039,
+   "vol": 0.0136,
+   "sharpe": 2.86,
+   "mdd": -0.016
+  },
+  "risk_parity_cap50": {
+   "ann": 0.0413,
+   "vol": 0.0337,
+   "sharpe": 1.23,
+   "mdd": -0.05
+  },
+  "best_single_leg_H0003": {
+   "ann": 0.0625,
+   "sharpe": 10.33,
+   "mdd": -0.004
+  },
+  "effective_bets": 5.07,
+  "effective_positions": 1.47
+ },
+ "discrepancies": [
+  "与 out/weightings.txt 逐项一致。本卡的判死点在 A 层：8 条腿里五条（H0002/H0022/H0024/H0010/H0019）两两相关 60~92%，本质是同一个『做多中国/香港股票再加倾斜』的赌注，有效独立赌注数只有 5.07/8、风险平价的有效持仓数只有 1.47（H0003 拿走 81.9%）。"
+ ],
+ "missing": [
+  "没有落盘组合层的收益序列（风险平价/等权/聚类各方案的日收益 csv），只有汇总表 weightings.txt。要复用组合曲线必须重跑 eval_weightings.py。",
+  "load_parks.py 会把八条腿 pickle 到 /tmp/parks.pkl，那是易失的。"
+ ],
+ "notes": [
+  "**这张卡是本次归档的起因**：做它时光认全八条腿就花了几轮试错，且发现其中 4 张卡的可用序列窗口与卡片声明不一致（overlap.txt 的『各腿可用天数占比』：H0002 66.3%、H0010 64.2%、H0014 68.8%，只有 H0003 是 100%）。现在这八条腿各自有 verified/Hxxxx/manifest.json 作权威映射。",
+  "verified/H0030/ 在本次归档前就存在（只有 overlap.txt / weightings.txt 两个文件），现补上 manifest.json 与 load_parks.py 副本。"
+ ]
+}

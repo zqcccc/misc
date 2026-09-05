@@ -82,6 +82,8 @@ plain: 信号是真的，但每根K线都要换仓、一年交易二十多万次
 - 入口：`crypto_perp/reversal_h0011/fetch_data.py`（binance.vision 拉 15m + funding）→ `strategy_h0011.py`（符号反转信号与组合）→ `falsify_h0011.py`（四层证伪）。
 - 跑法：后台长任务用 `/opt/homebrew/bin/python3.11`，`run_in_background`。
 
+归档：`verified/H0011/manifest.json`（权威产物映射；不改 §7 数字与裁决）
+
 ## 7. 验收结果（quant-backtest-protocol 四层证伪）
 | 层 | 指标 | 结果 | 判定 |
 |---|---|---|---|

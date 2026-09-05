@@ -1,0 +1,117 @@
+{
+ "id": "H0020",
+ "verdict": "FAIL",
+ "title_short": "9 只 Select Sector SPDR 的 HRP",
+ "impl_dir": "quant_research/us_stock/hrp_h0020",
+ "impl_note": "fetch_data.py（TEST 物理移到工作区外只读）→ strategy.py → falsify.py dev / reveal；产物在 artifacts/",
+ "authoritative": {
+  "returns": {
+   "path": "quant_research/us_stock/hrp_h0020/artifacts/test_returns.csv",
+   "sha256": "c8fba28c27bcff84e34695f522f660ee4c2c5b0de20ddbe1662ab2d51d40695c",
+   "bytes": 46600,
+   "rows": 1423,
+   "start": "2021-01-04",
+   "end": "2026-09-02",
+   "copied_as": "test_returns.csv",
+   "note": "TEST 揭盲一次的 HRP 净收益"
+  },
+  "bench": {
+   "path": "quant_research/us_stock/hrp_h0020/artifacts/test_benchmark_equal_weight.csv",
+   "sha256": "63dfa6ccc581fa842365e53d6f4caddb4d026dd85c9215203f7d93735d319367",
+   "bytes": 46551,
+   "rows": 1423,
+   "start": "2021-01-04",
+   "end": "2026-09-02",
+   "copied_as": "test_benchmark_equal_weight.csv",
+   "note": "同池等权，判读基准"
+  },
+  "bench_spy": {
+   "path": "quant_research/us_stock/hrp_h0020/artifacts/test_spy.csv",
+   "sha256": "ba730fc2bfc32597f6518838f860fbb75bf26b4f9fca88c792422f4ce7241724",
+   "bytes": 46470,
+   "rows": 1423,
+   "start": "2021-01-04",
+   "end": "2026-09-02",
+   "copied_as": "test_spy.csv"
+  },
+  "report": {
+   "path": "quant_research/us_stock/hrp_h0020/artifacts/reveal_summary.json",
+   "sha256": "be7273c5076f8ab71f338416b73bcc966ac9be27d146865f95c88f89e4149a5e",
+   "bytes": 3398,
+   "copied_as": "reveal_summary.json"
+  },
+  "report_qbt": {
+   "path": "quant_research/us_stock/hrp_h0020/artifacts/qbt_report.json",
+   "sha256": "b1961e729307142dc3ae46d9837f55954f8c1e07f9baaa3a34d9bef19b326a05",
+   "bytes": 1913,
+   "copied_as": "qbt_report.json"
+  },
+  "report_dev": {
+   "path": "quant_research/us_stock/hrp_h0020/artifacts/dev_summary.json",
+   "sha256": "43d8a089306029621d49d68fe1323c8cb6e299764b4b9fc1beb2594c5040c2eb",
+   "bytes": 1804,
+   "copied_as": "dev_summary.json",
+   "note": "TRAIN/VALID 段，三窗口"
+  },
+  "trials": {
+   "path": "quant_research/us_stock/hrp_h0020/artifacts/trials.json",
+   "sha256": "4e4ac925d6229ff2b733e5175a4e827f650af410ccd3ce711f5e737988ee85b4",
+   "bytes": 1966,
+   "copied_as": "trials.json",
+   "note": "N=3 先验窗口"
+  },
+  "panel": {
+   "path": "quant_research/us_stock/hrp_h0020/artifacts/test_panel_returns.csv",
+   "sha256": "e2cd787435b517e28f0b9062b41bbdf70acf39d7f0d40f103a48de51bc9cf346",
+   "bytes": 290751,
+   "copied_as": "test_panel_returns.csv",
+   "note": "9 只 ETF 的 TEST 段日收益"
+  }
+ },
+ "superseded": [],
+ "reproduce": "cd quant_research/us_stock/hrp_h0020 && /opt/homebrew/bin/python3.11 falsify.py dev  # reveal 需要工作区外的只读 TEST 路径；归档时未重跑",
+ "recomputed": {
+  "test_hrp": {
+   "n": 1423,
+   "window": "2021-01-04~2026-09-02",
+   "ann_cagr252": 0.1156,
+   "vol": 0.1331,
+   "sharpe": 0.8886,
+   "mdd": -0.1654
+  },
+  "test_bench_ew": {
+   "ann_cagr252": 0.1422,
+   "vol": 0.1433,
+   "sharpe": 0.9997,
+   "mdd": -0.1701
+  },
+  "test_spy": {
+   "ann_cagr252": 0.1502,
+   "sharpe": 0.9207,
+   "mdd": -0.245
+  }
+ },
+ "card_says": {
+  "test_hrp": {
+   "ann": 0.1156,
+   "sharpe": 0.889,
+   "mdd": -0.1654
+  },
+  "test_bench_ew": {
+   "ann": 0.1422,
+   "sharpe": 1.0,
+   "mdd": -0.1701
+  },
+  "alpha": -0.011,
+  "alpha_t": -0.81,
+  "beta": 0.902
+ },
+ "discrepancies": [
+  "完全一致（252 日复利年化）：HRP 11.56%/0.8886/−16.54%、等权 14.22%/0.9997/−17.01%、每年少赚 2.66pct、夏普低 0.111，逐项相同。"
+ ],
+ "missing": [],
+ "notes": [
+  "TEST 数据在 /tmp/quant_research_h0020_test_20260904_gpt/（已随重启清空），artifacts/ 里的 test_*.csv 是揭盲后落回工作区的副本，是现存唯一可用的 TEST 产物。",
+  "第 4 层置换（固定标签排列 5000 次，alpha-t 24.7 分位 / 夏普 7.1 分位）在 reveal_summary.json 里。"
+ ]
+}

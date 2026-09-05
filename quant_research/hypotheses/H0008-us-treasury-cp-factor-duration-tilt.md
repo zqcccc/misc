@@ -100,6 +100,8 @@ R² 0.32~0.44。经济含义：债券风险溢价是一个共同的、随时间�
 - 跑法（后台长任务，用绝对路径解释器）：
   `/opt/homebrew/bin/python3.11 rates/fetch_curve.py` 等
 
+归档：`verified/H0008/manifest.json`（权威产物映射；不改 §7 数字与裁决）
+
 ## 7. 验收结果（quant-backtest-protocol 四层证伪）
 
 样本：2007-12 ~ 2026-08（230 次调仓，换手 1.30×/年，年化成本 ≈ 8bp）。

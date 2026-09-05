@@ -1,0 +1,16 @@
+{
+  "trials": [
+    {
+      "model": "rf",
+      "valid_sharpe": -0.19909421928004853
+    },
+    {
+      "model": "logistic",
+      "valid_sharpe": 0.6981425432663915
+    },
+    {
+      "model": "extra_trees",
+      "valid_sharpe": -0.12129857965538847
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+agent=gpt
+claimed_at=2026-09-05T02:41:54Z
+claimed_epoch=1788576114
+file=hypotheses/H0045-gdx-overnight-0931-cost-screen.md
+title=GDX每日收盘买入并于下一交易日09:31卖出，使用可成交分钟价格后的隔夜漂移在单边3bp的乐观成本下仍值得进一步回测

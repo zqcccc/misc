@@ -1,0 +1,19 @@
+{
+ "n_epochs": 2,
+ "trials": [
+  {
+   "epoch": 1,
+   "params": {
+    "variant": "V0 always-on"
+   },
+   "valid_sharpe": 10.33
+  },
+  {
+   "epoch": 2,
+   "params": {
+    "variant": "V1 trailing7d>0"
+   },
+   "valid_sharpe": 8.6
+  }
+ ]
+}

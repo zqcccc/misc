@@ -1,0 +1,11 @@
+{
+  "n_trials": 7,
+  "trial_score_var": 0.8153,
+  "observed_sharpe": -0.929,
+  "luck_baseline_sharpe": 1.252,
+  "T_days": 608,
+  "skew": -1.571,
+  "kurtosis": 19.123,
+  "DSR": 0.0018,
+  "verdict": "不显著 —— 大概率是搜出来的运气"
+}

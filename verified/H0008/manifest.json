@@ -1,0 +1,178 @@
+{
+ "id": "H0008",
+ "verdict": "FAIL",
+ "title_short": "Cochrane-Piazzesi 因子久期倾斜",
+ "impl_dir": "rates",
+ "impl_note": "fetch_curve.py / fetch_etf.py → strategy_h0008.py → run_h0008.py → falsify_h0008.py；产物散在 rates/data/ 与 rates/verified/",
+ "authoritative": {
+  "returns": {
+   "path": "rates/data/h0008_main_ret.csv",
+   "sha256": "4cc7771a0cbe4c89d0055427b77dbbb63f0c42a357c6fb7b9f1e4ee753b9801c",
+   "bytes": 159858,
+   "rows": 4823,
+   "start": "2007-07-03",
+   "end": "2026-09-02",
+   "copied_as": "h0008_main_ret.csv",
+   "note": "主口径 V1（卡片锁死，不取 VALID argmax——V1/V3/V5 夏普并列 0.8046）"
+  },
+  "bench": {
+   "path": "rates/data/h0008_main_bench.csv",
+   "sha256": "3b98201b6f8e6731406fee328ec214b7e6383a0ee7b373b6cd9b8f0ab85fb9cc",
+   "bytes": 158920,
+   "rows": 4823,
+   "start": "2007-07-03",
+   "end": "2026-09-02",
+   "copied_as": "h0008_main_bench.csv",
+   "note": "同池等权债券组合"
+  },
+  "returns_test": {
+   "path": "rates/data/t_ret.csv",
+   "sha256": "c8a7bfbf31763fcd1940a302d36047cea37bb365fad3ef109ba9bf337b0a1acb",
+   "bytes": 38669,
+   "rows": 1171,
+   "start": "2022-01-03",
+   "end": "2026-09-02",
+   "copied_as": "t_ret.csv",
+   "note": "TEST 2022-01~2026-08 段"
+  },
+  "bench_test": {
+   "path": "rates/data/t_bench.csv",
+   "sha256": "90029b9d9d13fceaaa14b33d96b7968dc51df88d0fd92ad58f3a52434ef65dad",
+   "bytes": 38558,
+   "rows": 1171,
+   "start": "2022-01-03",
+   "end": "2026-09-02",
+   "copied_as": "t_bench.csv"
+  },
+  "report": {
+   "path": "rates/verified/h0008_falsify.json",
+   "sha256": "9e16bd32617f019c2b6b8265e0739037b9aa593f083bb88cc45781f6ea938058",
+   "bytes": 5615,
+   "copied_as": "h0008_falsify.json"
+  },
+  "trials": {
+   "path": "rates/data/trials.json",
+   "sha256": "970904c48081f5d97302b4a5c7ec90dca6af51dbf0cdffe239c7c47f7da7c5b2",
+   "bytes": 621,
+   "copied_as": "trials.json"
+  },
+  "dsr": {
+   "path": "rates/data/dsr.json",
+   "sha256": "bd77bfeabd0045244b5654166b7f9cf44ad901af76431c9ad42a76f53c288b17",
+   "bytes": 247,
+   "copied_as": "dsr.json"
+  },
+  "variants": {
+   "path": "rates/data/h0008_variants.csv",
+   "sha256": "2d047e7ecd6a503a5dacea95baacd350f69f24eacfe15eb630e63c06e0827a42",
+   "bytes": 4296,
+   "copied_as": "h0008_variants.csv",
+   "note": "V1~V6 六个变体的分段绩效表"
+  },
+  "selected": {
+   "path": "rates/data/h0008_selected.json",
+   "sha256": "36471fe549508c21a61e1301302a211e3ee2d3ac20ab48e84ede4fb90bfcecdf",
+   "bytes": 448,
+   "copied_as": "h0008_selected.json"
+  },
+  "pit_starts": {
+   "path": "rates/data/pit_starts.csv",
+   "sha256": "61e50d4442fda6af6de86b0f6d3304985dcdd157df9e75ce37eaff2792523e34",
+   "bytes": 21845,
+   "copied_as": "pit_starts.csv",
+   "note": "175 个 PIT 起点"
+  }
+ },
+ "superseded": [
+  {
+   "path": "rates/data/f_ret.csv",
+   "why": "与 h0008_main_ret.csv 逐点相同（同一条 V1 全期序列的另一个文件名），冗余"
+  },
+  {
+   "path": "rates/data/f_bench.csv",
+   "why": "与 h0008_main_bench.csv 相同，冗余"
+  },
+  {
+   "path": "rates/data/h0008_ret_V2.csv",
+   "why": "V2 变体，非卡片锁死的主口径"
+  },
+  {
+   "path": "rates/data/h0008_ret_V3.csv",
+   "why": "V3 变体（VALID 夏普与 V1 并列，但卡片按协议取先锁死的 V1）"
+  },
+  {
+   "path": "rates/data/h0008_ret_V4.csv",
+   "why": "V4 变体"
+  },
+  {
+   "path": "rates/data/h0008_ret_V5.csv",
+   "why": "V5 变体（同 V3 情形）"
+  },
+  {
+   "path": "rates/data/h0008_ret_V6.csv",
+   "why": "V6 变体"
+  }
+ ],
+ "reproduce": "cd rates && /opt/homebrew/bin/python3.11 run_h0008.py && /opt/homebrew/bin/python3.11 falsify_h0008.py  # 归档时未重跑",
+ "recomputed": {
+  "full": {
+   "n": 4823,
+   "window": "2007-07-03~2026-09-02",
+   "ann_cagr": 0.0306,
+   "ann_arith": 0.0318,
+   "vol": 0.0558,
+   "sharpe_cagr": 0.5484,
+   "sharpe_arith": 0.5689,
+   "mdd_compound": -0.1748
+  },
+  "test": {
+   "n": 1171,
+   "window": "2022-01-03~2026-09-02",
+   "ann_cagr": -0.0047,
+   "sharpe_cagr": -0.0668,
+   "sharpe_arith": -0.0317,
+   "mdd_compound": -0.1477
+  },
+  "bench_full": {
+   "ann_cagr": 0.0283,
+   "sharpe_arith": 0.407,
+   "mdd_compound": -0.27
+  },
+  "bench_test": {
+   "ann_cagr": -0.0262,
+   "sharpe_arith": -0.2843
+  }
+ },
+ "card_says": {
+  "full": {
+   "cagr": 0.0266,
+   "sharpe": 0.499,
+   "mdd": -0.175
+  },
+  "test": {
+   "cagr": -0.0048,
+   "sharpe": -0.032,
+   "mdd": -0.148
+  },
+  "bench_full": {
+   "cagr": 0.0243,
+   "sharpe": 0.353
+  },
+  "bench_test": {
+   "cagr": -0.0263,
+   "sharpe": -0.284
+  }
+ },
+ "discrepancies": [
+  "TEST 完全一致：CAGR −0.48% vs 重算 −0.47%、回撤 −14.8% vs −14.77%、基准 −2.63%/−0.284 vs −2.62%/−0.2843。",
+  "FULL 的 CAGR 与夏普对不上：卡片 2.66% / 0.499，重算日历 CAGR 3.06% / 0.548（算术年化 3.18% / 0.569）。卡片的 FULL 段是 2007-12~2026-08（§7 抬头写明 230 次调仓），而 h0008_main_ret.csv 从 2007-07-03 起——**文件比卡片声明的窗口早了约 5 个月**，多出的这段抬高了年化。TEST 段没有这个问题，所以只有 FULL 行偏。",
+  "基准 FULL 同理：卡片 2.43%/0.353，重算 2.83%/0.407。",
+  "结论不受影响：死因是第 4 层循环移位置换（80.7% / 75.0%）与 alpha t<2，且卡片自己给出的决定性对照（恒定短久期 W_LOW 夏普 0.524 > CP 择时 0.499）与窗口无关。"
+ ],
+ "missing": [
+  "h0008_falsify.json 覆盖了归因/DSR/自助/置换；『决定性对照』那张五行表（W_LOW / V1 / 静态平均权重 / 等权 / W_HIGH）在 h0008_variants.csv 里可查到对应变体，但表本身没有单独落盘。"
+ ],
+ "notes": [
+  "rates/ 只有 H0008；H0027 在 quant_research/rates/auction_ml_h0027/，是另一个目录。"
+ ]
+}

@@ -102,6 +102,8 @@ HYG/IEF 相对强弱 ≈ 市场为承担企业信用风险索要的补偿的**�
   /opt/homebrew/bin/python3.11 falsify_h0004.py test           # 只跑一次
   ```
 
+归档：`verified/H0004/manifest.json`（权威产物映射；不改 §7 数字与裁决）
+
 ## 7. 验收结果（quant-backtest-protocol 四层证伪）
 
 **判读以 TRAIN+VALID（2007-08~2019-12）为准；TEST（2020-01~2026-09）在裁决锁死后只跑了一次，仅作确认。**

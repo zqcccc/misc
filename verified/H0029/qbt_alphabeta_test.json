@@ -1,0 +1,15 @@
+{
+  "n_days": 608,
+  "beta": 0.104,
+  "r_squared": 0.121,
+  "ann_alpha": -0.1599,
+  "alpha_t": -1.13,
+  "alpha_p": 0.2592,
+  "alpha_significant": false,
+  "strategy_total": -0.3015,
+  "benchmark_total": -0.3403,
+  "note": "total/drag/contribution 为日收益加总口径（与日频夏普一致），非复利净值涨跌幅",
+  "beta_drag": -0.0352,
+  "alpha_contribution": -0.2663,
+  "verdict": "负 alpha：选股/择时本身在亏钱"
+}

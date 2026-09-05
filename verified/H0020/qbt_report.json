@@ -1,0 +1,77 @@
+{
+  "market": "us_stock",
+  "periods_per_year": 252,
+  "performance": {
+    "T_days": 1423,
+    "start": "2021-01-04",
+    "end": "2026-09-02",
+    "total_return": 0.8551,
+    "ann_return": 0.1156,
+    "sharpe_daily_wallet": 0.889,
+    "sortino": 1.234,
+    "max_drawdown": 0.1654,
+    "calmar": 0.699,
+    "ann_vol": 0.1331,
+    "positive_days_pct": 0.545
+  },
+  "alpha_beta": {
+    "n_days": 1423,
+    "beta": 0.902,
+    "r_squared": 0.943,
+    "ann_alpha": -0.011,
+    "alpha_t": -0.82,
+    "alpha_p": 0.4114,
+    "alpha_significant": false,
+    "strategy_total": 0.6681,
+    "benchmark_total": 0.8092,
+    "note": "total/drag/contribution 为日收益加总口径（与日频夏普一致），非复利净值涨跌幅",
+    "beta_drag": 0.73,
+    "alpha_contribution": -0.0619,
+    "verdict": "负 alpha：选股/择时本身在亏钱"
+  },
+  "benchmark": {
+    "T_days": 1423,
+    "start": "2021-01-04",
+    "end": "2026-09-02",
+    "total_return": 1.1192,
+    "ann_return": 0.1422,
+    "sharpe_daily_wallet": 1.0,
+    "sortino": 1.369,
+    "max_drawdown": 0.1701,
+    "calmar": 0.836,
+    "ann_vol": 0.1433,
+    "positive_days_pct": 0.549
+  },
+  "deflated_sharpe": {
+    "n_trials": 3,
+    "trial_score_var": 0.0002,
+    "observed_sharpe": 0.889,
+    "luck_baseline_sharpe": 0.012,
+    "T_days": 1423,
+    "skew": -0.063,
+    "kurtosis": 9.16,
+    "DSR": 0.9808,
+    "verdict": "显著 (DSR≥0.95)"
+  },
+  "monte_carlo": {
+    "n": 1423,
+    "iters": 5000,
+    "block": 20,
+    "original_final": 1.6681,
+    "prob_profit": 0.9916,
+    "p5": 1.2009,
+    "p50": 1.6742,
+    "p95": 2.1239,
+    "verdict": "尚可"
+  },
+  "p_value": {
+    "observed_daily_mean": 0.000469,
+    "p_value": 0.0164,
+    "significant": true,
+    "verdict": "显著盈利"
+  },
+  "falsification_failures": [
+    "alpha ≤ 0：收益不来自选股/择时"
+  ],
+  "verdict": "未通过：alpha ≤ 0：收益不来自选股/择时"
+}

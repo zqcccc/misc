@@ -1,0 +1,162 @@
+{
+ "id": "H0028",
+ "verdict": "FAIL",
+ "title_short": "A股 20 日累计隔夜收益反转",
+ "impl_dir": "quant_research/cn_stock",
+ "impl_note": "build_h0028.py → diag_h0028.py / diag2_h0028.py → falsify_h0028.py → causality_fn_h0028.py；产物在 out_h0028/",
+ "authoritative": {
+  "returns": {
+   "path": "quant_research/cn_stock/out_h0028/equity_primary.csv",
+   "sha256": "33d45e87959f9ce6f529ac388416b2f8c1bd670ecd07ddfaba7fb50673ab0c43",
+   "bytes": 83881,
+   "rows": 2591,
+   "start": "2016-01-04",
+   "end": "2026-09-01",
+   "copied_as": "equity_primary.csv",
+   "note": "ovn20_top20 主口径；TRAIN/VALID/TEST 都是它的子窗口"
+  },
+  "bench": {
+   "path": "quant_research/cn_stock/out_h0028/bench_ew.csv",
+   "sha256": "82514767299e3f386355abc34340cb6c62e2c3a5a89dc57b8875a063977aa6e7",
+   "bytes": 65183,
+   "rows": 2836,
+   "start": "2015-01-05",
+   "end": "2026-09-02",
+   "copied_as": "bench_ew.csv",
+   "note": "同池等权；覆盖 2015-01-05 起，比策略序列长 245 天，须 reindex 对齐"
+  },
+  "bench_hs300": {
+   "path": "quant_research/cn_stock/out_h0028/bench_hs300.csv",
+   "sha256": "556ad6b25bab71b2bf8823e3663f3fa038bcb4819a180033d950a6a3be600aa4",
+   "bytes": 92484,
+   "copied_as": "bench_hs300.csv"
+  },
+  "bench_zz500": {
+   "path": "quant_research/cn_stock/out_h0028/bench_zz500.csv",
+   "sha256": "a592aec0badadfa6c41239524c4e79335be1e1bd88dce59ba9a736a702e9fd2d",
+   "bytes": 92215,
+   "copied_as": "bench_zz500.csv"
+  },
+  "control_rev20": {
+   "path": "quant_research/cn_stock/out_h0028/ctrl_rev20.csv",
+   "sha256": "9cc30256bddec50e54c40c228e827a8e5926ae590831de8d07c5cfc6d5de6b70",
+   "bytes": 83922,
+   "rows": 2591,
+   "start": "2016-01-04",
+   "end": "2026-09-01",
+   "copied_as": "ctrl_rev20.csv",
+   "note": "§5 锁死的 rev20 对照组"
+  },
+  "control_intra20": {
+   "path": "quant_research/cn_stock/out_h0028/ctrl_intra20.csv",
+   "sha256": "1cdd6a4e70607291a3820c32ab4c57cee8f46106c245c2e9b81ea860c640dead",
+   "bytes": 83888,
+   "rows": 2591,
+   "start": "2016-01-04",
+   "end": "2026-09-01",
+   "copied_as": "ctrl_intra20.csv",
+   "note": "intra20 对照组"
+  },
+  "report": {
+   "path": "quant_research/cn_stock/out_h0028/falsification.json",
+   "sha256": "a69cf665736a9d940c9b83c0d2302eedd9d663575f5bbd7310e2c76672f54b73",
+   "bytes": 11939,
+   "copied_as": "falsification.json"
+  },
+  "split_stats": {
+   "path": "quant_research/cn_stock/out_h0028/split_stats.json",
+   "sha256": "14a2cb7a77776f25c358c3a3d9c0fa39278f5ef020610f3e16aed4acd36feb40",
+   "bytes": 1498,
+   "copied_as": "split_stats.json"
+  },
+  "diagnostics": {
+   "path": "quant_research/cn_stock/out_h0028/diagnostics.json",
+   "sha256": "38114d270511eb0a1e4c12bc2441ca0e3e5317cfa6715a6508bcec5dc9328771",
+   "bytes": 746,
+   "copied_as": "diagnostics.json"
+  },
+  "diagnostics2": {
+   "path": "quant_research/cn_stock/out_h0028/diagnostics2.json",
+   "sha256": "a53e230a6771390fb619686f5718fd2536af643fd7e925e3204dbe1bfded7e9d",
+   "bytes": 451,
+   "copied_as": "diagnostics2.json"
+  },
+  "trials": {
+   "path": "quant_research/cn_stock/out_h0028/trials.json",
+   "sha256": "d35ff4d4acd3a5492343d22ce830ad8d8e8702e65555bd1dd175596c3d27635d",
+   "bytes": 3691,
+   "copied_as": "trials.json",
+   "note": "9 组网格 + 2 对照"
+  },
+  "turnover": {
+   "path": "quant_research/cn_stock/out_h0028/turnover.csv",
+   "sha256": "3c95063bdeee87c4be7aa7e9a77b6b7238827d130b3b0417ccbe724886d1df50",
+   "bytes": 54305,
+   "copied_as": "turnover.csv"
+  },
+  "meta": {
+   "path": "quant_research/cn_stock/out_h0028/meta.json",
+   "sha256": "773d9626960360f99ce919fb8ff11bcdde58a8ff7bcba2a26f2c64070f4ba276",
+   "bytes": 216,
+   "copied_as": "meta.json"
+  },
+  "score_panel": {
+   "path": "quant_research/cn_stock/out_h0028/score_primary.parquet",
+   "sha256": "ed53b646e124dc728725c3c7de0b66bcc7a53f3a25167c5bfed412e7c0a8cdc7",
+   "bytes": 61859116,
+   "copied_as": null,
+   "note": "ovn20 打分面板，未复制"
+  }
+ },
+ "superseded": [],
+ "reproduce": "cd quant_research/cn_stock && /opt/homebrew/bin/python3.11 -u build_h0028.py && falsify_h0028.py  # 归档时未重跑",
+ "recomputed": {
+  "convention": "与 H0022/H0024 同：年化 = 日历年 CAGR，夏普 = 该 CAGR / 年化波动，超额 = 逐日超额序列复利年化",
+  "full": {
+   "n": 2591,
+   "window": "2016-01-04~2026-09-01",
+   "final_equity": 0.4236,
+   "ann_cagr_calendar": -0.0774,
+   "ann_arith": -0.0487,
+   "vol": 0.2631,
+   "sharpe_cagr": -0.2943,
+   "sharpe_arith": -0.185,
+   "mdd": -0.771
+  },
+  "control_rev20": {
+   "ann_cagr_calendar": 0.0142,
+   "sharpe_arith": 0.1872,
+   "mdd": -0.5382
+  },
+  "control_intra20": {
+   "ann_cagr_calendar": 0.0365,
+   "sharpe_arith": 0.2741,
+   "mdd": -0.4986
+  }
+ },
+ "card_says": {
+  "full": {
+   "ann": -0.0777,
+   "sharpe": -0.3,
+   "excess": -0.0774,
+   "mdd": -0.771
+  },
+  "train": -0.0515,
+  "valid": -0.1052,
+  "test": -0.0822,
+  "alpha_full": -0.0795,
+  "alpha_t_full": -4.44,
+  "dsr_full": 0.1089,
+  "ic_full": -0.0303
+ },
+ "discrepancies": [
+  "一致：FULL −7.74% vs 卡片 −7.77%、夏普 −0.2943 vs −0.30、回撤 −77.10% 精确一致、累计净值 0.4236 精确一致；三段超额 −5.15%/−10.52%/−8.22% 与 split_stats.json 逐项相同。",
+  "卡片 §7 的 DSR 行里写『实际夏普 −0.182』，那是**算术**夏普（重算 −0.185），与第 1 行的 −0.30（复利夏普）不是一回事——同一张表里两个夏普口径，引用时要看清是哪一行。",
+  "bench_ew.csv 与 H0022/H0024 的同名文件完全相同（sha 一致），同样比策略序列长 245 天。"
+ ],
+ "missing": [],
+ "notes": [
+  "这张卡的证伪做得最狠也最完整：对照组增量 alpha、换手匹配置换（rho=0.2906、换手匹配度 89%）、毛/净拆解（毛超额就已经 −5.01%）全部落盘在 falsification.json / diagnostics*.json 里。",
+  "cn_stock/ 三个 out 目录：out/ = H0022、out_h0024/ = H0024、out_h0028/ = 本卡。"
+ ]
+}

@@ -1,0 +1,37 @@
+{
+  "hypothesis_id": "H0031",
+  "audited_at": "2026-09-04T14:08:00Z",
+  "source": "https://data.binance.vision/",
+  "findings": {
+    "bookTicker_common_history": {
+      "start": "2023-05-16",
+      "end": "2024-03-30",
+      "2025-08-31_http": 404,
+      "2026-08-31_http": 404,
+      "contains_required_best_quote": true,
+      "daily_file_size_example_bytes": 87758829
+    },
+    "aggTrades": {
+      "2023-05-16_http": 200,
+      "2024-03-30_http": 200,
+      "2025-08-31_http": 200,
+      "2026-08-31_http": 200
+    },
+    "bookDepth": {
+      "2023-05-16_http": 200,
+      "2024-03-30_http": 200,
+      "2025-08-31_http": 200,
+      "2026-08-31_http": 200,
+      "sample_header": "timestamp,percentage,depth,notional",
+      "usable_for_top_of_book_queue": false,
+      "reason": "Only aggregated depth at percentage bands; no best bid/ask or queue-ahead at the order price."
+    }
+  },
+  "independence": {
+    "parent_price_history_seen_through": "2026-08-31",
+    "current_date": "2026-09-04",
+    "new_days_available": 4,
+    "sufficient_forward_events": false
+  },
+  "restart_condition": "Record at least 60 forward 21:00-23:00 UTC events with submitted/cancelled/filled post-only orders, visible quote and queue, and taker fallback prices."
+}

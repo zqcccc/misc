@@ -1,0 +1,15 @@
+{
+  "n_epochs": 1,
+  "trials": [
+    {
+      "epoch": 1,
+      "params": {
+        "rule": "regular_eia_thursday",
+        "cost_per_side": 0.0015
+      },
+      "train_sharpe": -1.312352,
+      "valid_sharpe": -1.53025
+    }
+  ],
+  "selection": "No parameter search; the sole prior rule was frozen before TEST reveal."
+}

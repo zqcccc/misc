@@ -1,0 +1,28 @@
+{
+  "trials": [
+    {
+      "epoch": 0,
+      "params": {
+        "selected_bucket": "BIG_LO"
+      },
+      "valid_sharpe": 0.2627328600541647,
+      "pre_registered_main": false
+    },
+    {
+      "epoch": 1,
+      "params": {
+        "selected_bucket": "BIG_MED"
+      },
+      "valid_sharpe": 0.3936901417603883,
+      "pre_registered_main": false
+    },
+    {
+      "epoch": 2,
+      "params": {
+        "selected_bucket": "BIG_HI"
+      },
+      "valid_sharpe": 0.39536201114824837,
+      "pre_registered_main": true
+    }
+  ]
+}

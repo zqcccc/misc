@@ -1,0 +1,115 @@
+{
+ "id": "H0005",
+ "verdict": "FAIL",
+ "title_short": "VIX/VIX3M 期限结构择时 SPY",
+ "impl_dir": "us_stock",
+ "impl_note": "fetch_data.py → strategy_h0005.py → dev_h0005.py → reveal_h0005.py；us_stock/ 被 H0005 与 H0014 共用，本卡产物是不带 w1/w2 后缀的那组",
+ "authoritative": {
+  "returns": {
+   "path": "us_stock/ret_full.csv",
+   "sha256": "a913a637da74cb52693e352a14e59f780aa3690221aed709f8bbc56f398068fa",
+   "bytes": 155333,
+   "rows": 5032,
+   "start": "2006-07-17",
+   "end": "2026-07-17",
+   "copied_as": "ret_full.csv",
+   "note": "lag2 锁定口径；样本终点 2026-07-17（^VIX3M 源数据洞）"
+  },
+  "returns_test": {
+   "path": "us_stock/ret_test.csv",
+   "sha256": "8de0524da1cbfa0c4fdbc067160b1f1ddc99541adcc5469369ef6c79b2b200c9",
+   "bytes": 44356,
+   "rows": 1390,
+   "start": "2021-01-04",
+   "end": "2026-07-17",
+   "copied_as": "ret_test.csv"
+  },
+  "bench": {
+   "path": "us_stock/bench_spy_full.csv",
+   "sha256": "b1eb504434f9ceb1492daadb017e4f2545cc5540dc552e41cd3a450e8afe05d0",
+   "bytes": 164163,
+   "rows": 5032,
+   "start": "2006-07-17",
+   "end": "2026-07-17",
+   "copied_as": "bench_spy_full.csv"
+  },
+  "bench_test": {
+   "path": "us_stock/bench_spy_test.csv",
+   "sha256": "5fc17c5a1012f31fccd24157c52da5f46d88a3633cb289a0587e5d08d4013ad5",
+   "bytes": 45373,
+   "rows": 1390,
+   "start": "2021-01-04",
+   "end": "2026-07-17",
+   "copied_as": "bench_spy_test.csv"
+  },
+  "trials": {
+   "path": "us_stock/trials_h0005.json",
+   "sha256": "1c5ee7133de5343e11bd7e96e3939bcb0ca5b0159aaa1970a0037599cfae8b31",
+   "bytes": 868,
+   "copied_as": "trials_h0005.json",
+   "note": "7 点网格全记"
+  }
+ },
+ "superseded": [],
+ "reproduce": "cd us_stock && /opt/homebrew/bin/python3.11 dev_h0005.py && /opt/homebrew/bin/python3.11 reveal_h0005.py  # 归档时未重跑",
+ "recomputed": {
+  "full": {
+   "n": 5032,
+   "window": "2006-07-17~2026-07-17",
+   "ann_cagr": 0.0782,
+   "vol": 0.1397,
+   "sharpe": 0.6102,
+   "mdd": -0.3809
+  },
+  "test": {
+   "n": 1390,
+   "window": "2021-01-04~2026-07-17",
+   "ann_cagr": 0.0912,
+   "vol": 0.1503,
+   "sharpe": 0.6577,
+   "mdd": -0.345
+  },
+  "bench_full": {
+   "ann_cagr": 0.1143,
+   "sharpe": 0.6551,
+   "mdd": -0.5519
+  },
+  "bench_test": {
+   "ann_cagr": 0.1476,
+   "sharpe": 0.9045,
+   "mdd": -0.245
+  }
+ },
+ "card_says": {
+  "full": {
+   "ann": 0.0852,
+   "sharpe": 0.61,
+   "mdd": -0.381
+  },
+  "test": {
+   "ann": 0.0989,
+   "sharpe": 0.66,
+   "mdd": -0.345
+  },
+  "bench_full": {
+   "ann": 0.1273,
+   "sharpe": 0.66,
+   "mdd": -0.552
+  },
+  "bench_test": {
+   "ann": 0.1522,
+   "sharpe": 0.9,
+   "mdd": -0.245
+  }
+ },
+ "discrepancies": [
+  "一致，口径是**算术年化**：全期 8.52%/0.610/−38.1% 与重算 ann_arith 8.52%/0.6102/−38.09% 相同；TEST 9.89%/0.66/−34.5% 对 9.89%/0.6577/−34.50%；B&H 12.73%/0.66/−55.2% 与 15.22%/0.90/−24.5% 也逐项相同。",
+  "复利口径的数字更低（全期 7.82%、TEST 9.12%），卡片用的不是这一套，引用时注意。"
+ ],
+ "missing": [
+  "reveal_h0005.py / dev_h0005.py 的输出没有落盘：§7 的 DSR(0.836/0.951)、置换分位 88.1%、PIT 全起点胜率 3.2%、逐年剔除、以及那张关键的执行滞后敏感性表（lag0 夏普 2.11 = 未来函数 / lag1 0.713 / lag2 0.610）都只在卡片文字里。lag0 那一行是本卡最有复用价值的结论，却没有产物。"
+ ],
+ "notes": [
+  "同目录的 ret_w1.csv / ret_w2.csv / bench_spy.csv / trials_h0014.json 是 H0014 的产物。"
+ ]
+}

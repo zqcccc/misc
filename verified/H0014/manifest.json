@@ -1,0 +1,91 @@
+{
+ "id": "H0014",
+ "verdict": "PARK",
+ "title_short": "SPY FOMC 公告日溢价",
+ "impl_dir": "us_stock",
+ "impl_note": "fetch_fomc.py / strategy_h0014.py / falsify_h0014.py；us_stock/ 被 H0005 与 H0014 共用",
+ "authoritative": {
+  "returns": {
+   "path": "us_stock/ret_w1.csv",
+   "sha256": "19c5d665339eaa589181a15c2b43c4c11e1aaad78972e1ad0188c8fb26352bd3",
+   "bytes": 131498,
+   "rows": 8222,
+   "start": "1994-01-03",
+   "end": "2026-09-02",
+   "copied_as": "ret_w1.csv"
+  },
+  "bench": {
+   "path": "us_stock/bench_spy.csv",
+   "sha256": "9f94b6038516ec9495f512d7c155f545dc46d744efde3e6f27772075b698c92c",
+   "bytes": 267556,
+   "rows": 8222,
+   "start": "1994-01-03",
+   "end": "2026-09-02",
+   "copied_as": "bench_spy.csv"
+  },
+  "report": {
+   "path": "us_stock/trials_h0014.json",
+   "sha256": "2f0e6615cdc115f98c135abe2d44dc8426daf6bad22e8287adb1a08dca531130",
+   "bytes": 232,
+   "copied_as": "trials_h0014.json"
+  },
+  "events": {
+   "path": "us_stock/data/fomc_meetings.csv",
+   "sha256": "f1d68ea76fcd803cb99d78f8b6a75165956d77ff4db6fecf44b92b9c16864cf1",
+   "bytes": 5731,
+   "copied_as": "fomc_meetings.csv"
+  }
+ },
+ "superseded": [
+  {
+   "path": "us_stock/ret_w2.csv",
+   "why": "W2（t−2 收盘→t 收盘）窗口变体，trials_h0014.json 里记为 epoch2；卡片 §7 主口径是 W1"
+  }
+ ],
+ "reproduce": "cd us_stock && /opt/homebrew/bin/python3.11 falsify_h0014.py  # 归档时未重跑",
+ "recomputed": {
+  "window": "1994-01-03~2026-09-02, n=8222",
+  "w1": {
+   "final_equity": 1.5619,
+   "ann_cagr_252": 0.0138,
+   "ann_arith": 0.0142,
+   "vol": 0.0332,
+   "sharpe": 0.4282,
+   "mdd": -0.0996
+  },
+  "w2": {
+   "ann_arith": 0.0253,
+   "vol": 0.0492,
+   "sharpe": 0.5137,
+   "mdd": -0.1291
+  },
+  "bench_spy": {
+   "ann_arith": 0.1211,
+   "vol": 0.1874,
+   "sharpe": 0.6461,
+   "mdd": -0.5519
+  }
+ },
+ "card_says": {
+  "w1": {
+   "ann": 0.0143,
+   "sharpe": 0.43,
+   "mdd": -0.1
+  },
+  "bench": {
+   "ann": 0.121,
+   "sharpe": 0.65,
+   "mdd": -0.552
+  }
+ },
+ "discrepancies": [
+  "完全一致：W1 1.42% vs 卡片 1.43%、0.428 vs 0.43、−9.96% vs −10.0%；B&H 12.11%/0.646/−55.19% vs 卡片 12.1%/0.65/−55.2%（算术年化口径）。"
+ ],
+ "missing": [
+  "falsify_h0014.py 的输出没有落盘：§7 的 DSR 0.991、分块自助 99.4%、同星期几置换分位 99.5%/p=0.005、逐年剔除、以及那张预注册分段表（1994-2010 +32.1bp → 2011-2018 +8.4bp → 2019-2026 +3.5bp）都没有持久化产物，只存在于卡片文字里。要复核必须重跑脚本。",
+  "事件研究口径的 FOMC 日 +23.8bp vs 非 FOMC +4.2bp 同样无产物。"
+ ],
+ "notes": [
+  "同目录下的 ret_full.csv / ret_test.csv / bench_spy_full.csv / bench_spy_test.csv / trials_h0005.json 是 H0005（VIX 期限结构择时）的产物，不是本卡的，勿误取。"
+ ]
+}

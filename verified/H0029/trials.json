@@ -1,0 +1,82 @@
+{
+ "n_epochs": 7,
+ "trials": [
+  {
+   "epoch": 0,
+   "params": {
+    "start_hour": 21,
+    "len_h": 2,
+    "name": "21-02(主,Padysak)"
+   },
+   "train_sharpe": -0.479,
+   "valid_sharpe": 0.7076,
+   "test_sharpe": -0.9291
+  },
+  {
+   "epoch": 1,
+   "params": {
+    "start_hour": 20,
+    "len_h": 2,
+    "name": "20-22"
+   },
+   "train_sharpe": -0.1757,
+   "valid_sharpe": -0.6258,
+   "test_sharpe": -1.316
+  },
+  {
+   "epoch": 2,
+   "params": {
+    "start_hour": 22,
+    "len_h": 2,
+    "name": "22-24"
+   },
+   "train_sharpe": -1.1545,
+   "valid_sharpe": -0.105,
+   "test_sharpe": -2.7295
+  },
+  {
+   "epoch": 3,
+   "params": {
+    "start_hour": 23,
+    "len_h": 2,
+    "name": "23-01"
+   },
+   "train_sharpe": -0.8122,
+   "valid_sharpe": -1.7489,
+   "test_sharpe": -3.2853
+  },
+  {
+   "epoch": 4,
+   "params": {
+    "start_hour": 15,
+    "len_h": 6,
+    "name": "15-21(Padysak NYSE近似)"
+   },
+   "train_sharpe": -0.0677,
+   "valid_sharpe": -0.6809,
+   "test_sharpe": -0.8681
+  },
+  {
+   "epoch": 5,
+   "params": {
+    "start_hour": 0,
+    "len_h": 8,
+    "name": "00-08(Velo APAC)"
+   },
+   "train_sharpe": -0.3097,
+   "valid_sharpe": -0.0825,
+   "test_sharpe": -1.6327
+  },
+  {
+   "epoch": 6,
+   "params": {
+    "start_hour": 16,
+    "len_h": 8,
+    "name": "16-24(Velo US)"
+   },
+   "train_sharpe": 0.0028,
+   "valid_sharpe": 0.9138,
+   "test_sharpe": -1.0901
+  }
+ ]
+}

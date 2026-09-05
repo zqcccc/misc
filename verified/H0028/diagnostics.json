@@ -1,0 +1,37 @@
+{
+  "primary_net": {
+    "FULL": -0.0774,
+    "TRAIN": -0.0515,
+    "VALID": -0.1052,
+    "TEST": -0.0822,
+    "ann": -0.0777
+  },
+  "primary_gross": {
+    "FULL": -0.0501,
+    "TRAIN": -0.0229,
+    "VALID": -0.0765,
+    "TEST": -0.0575,
+    "ann": -0.0505
+  },
+  "reverse_high_ovn": {
+    "FULL": 0.0003,
+    "TRAIN": 0.0175,
+    "VALID": 0.0048,
+    "TEST": -0.0218,
+    "ann": 0.0038,
+    "turnover": 18.95
+  },
+  "quintiles_fwd20_pct": {
+    "Q1(低→高隔夜)": -0.084,
+    "Q2(低→高隔夜)": 0.543,
+    "Q3(低→高隔夜)": 0.713,
+    "Q4(低→高隔夜)": 0.782,
+    "Q5(低→高隔夜)": 0.442
+  },
+  "quintiles_n_periods": 128,
+  "holdings_profile": {
+    "amount_pct": 0.547,
+    "vol_pct": 0.663,
+    "delist_1y": 0.099
+  }
+}

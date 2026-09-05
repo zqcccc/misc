@@ -63,6 +63,8 @@ plain: 汇率动量2003年以后就没了，四种回看长度全是负的，和
 - 因果闸：`causality_check.py --mode panel --fn fx/strategy_h0018.py:panel_signal --data-dir fx/data/panel_h0018`。
 - 跑法：`/opt/homebrew/bin/python3.11 fx/falsify_h0018.py`（前台，<2min）。
 
+归档：`verified/H0018/manifest.json`（权威产物映射；不改 §7 数字与裁决）
+
 ## 7. 验收结果（quant-backtest-protocol 四层证伪）
 | 层 | 指标 | 结果 | 判定 |
 |---|---|---|---|

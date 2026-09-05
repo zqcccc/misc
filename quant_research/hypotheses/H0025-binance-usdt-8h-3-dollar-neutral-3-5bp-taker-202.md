@@ -151,6 +151,8 @@ cd crypto_perp/h0025
 /opt/homebrew/bin/python3.11 perm.py 2000           # 后台跑，约 20 分钟
 ```
 
+归档：`verified/H0025/manifest.json`（权威产物映射；不改 §7 数字与裁决）
+
 ## 7. 验收结果（quant-backtest-protocol 四层证伪）
 
 **主口径 = 卡上锁死的 lookback 3 日 / 五分位 / 3 日调仓 / 单边 5bp / dollar-neutral。**

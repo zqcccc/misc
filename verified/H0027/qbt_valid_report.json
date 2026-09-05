@@ -1,0 +1,78 @@
+{
+  "market": "us_stock",
+  "periods_per_year": 252,
+  "performance": {
+    "T_days": 757,
+    "start": "2019-01-02",
+    "end": "2021-12-31",
+    "total_return": -0.0504,
+    "ann_return": -0.0171,
+    "sharpe_daily_wallet": -0.199,
+    "sortino": -0.227,
+    "max_drawdown": 0.1346,
+    "calmar": -0.127,
+    "ann_vol": 0.073,
+    "positive_days_pct": 0.498
+  },
+  "alpha_beta": {
+    "n_days": 757,
+    "beta": 0.557,
+    "r_squared": 0.335,
+    "ann_alpha": -0.0439,
+    "alpha_t": -1.28,
+    "alpha_p": 0.202,
+    "alpha_significant": false,
+    "strategy_total": -0.0437,
+    "benchmark_total": 0.1584,
+    "note": "total/drag/contribution 为日收益加总口径（与日频夏普一致），非复利净值涨跌幅",
+    "beta_drag": 0.0883,
+    "alpha_contribution": -0.1319,
+    "verdict": "负 alpha：选股/择时本身在亏钱"
+  },
+  "benchmark": {
+    "T_days": 757,
+    "start": "2019-01-02",
+    "end": "2021-12-31",
+    "total_return": 0.1615,
+    "ann_return": 0.0511,
+    "sharpe_daily_wallet": 0.696,
+    "sortino": 1.02,
+    "max_drawdown": 0.1006,
+    "calmar": 0.508,
+    "ann_vol": 0.0758,
+    "positive_days_pct": 0.519
+  },
+  "deflated_sharpe": {
+    "n_trials": 3,
+    "trial_score_var": 0.2471,
+    "observed_sharpe": -0.199,
+    "luck_baseline_sharpe": 0.424,
+    "T_days": 757,
+    "skew": -0.131,
+    "kurtosis": 8.634,
+    "DSR": 0.1401,
+    "verdict": "不显著 —— 大概率是搜出来的运气"
+  },
+  "monte_carlo": {
+    "n": 757,
+    "iters": 5000,
+    "block": 10,
+    "original_final": 0.9563,
+    "prob_profit": 0.354,
+    "p5": 0.7883,
+    "p50": 0.9646,
+    "p95": 1.1272,
+    "verdict": "尚可"
+  },
+  "p_value": {
+    "observed_daily_mean": -5.8e-05,
+    "p_value": 0.6668,
+    "significant": false,
+    "verdict": "与 0 无显著差异（噪音）"
+  },
+  "falsification_failures": [
+    "alpha ≤ 0：收益不来自选股/择时",
+    "DSR 0.1401 < 0.90：夏普大概率是搜出来的"
+  ],
+  "verdict": "未通过：alpha ≤ 0：收益不来自选股/择时；DSR 0.1401 < 0.90：夏普大概率是搜出来的"
+}

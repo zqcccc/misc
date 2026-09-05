@@ -92,6 +92,8 @@ plain: 论文里的公告日溢价，换到真正买得到的天然气ETF上是�
   --trials trials_h0016.json --market futures --iters 5000 --block 10 --compound`，结果在
   `verified/qbt_test.json`（全期对应 `verified/qbt_full.json`）。
 
+归档：`verified/H0016/manifest.json`（权威产物映射；不改 §7 数字与裁决）
+
 ## 7. 验收结果（quant-backtest-protocol 四层证伪）
 | 层 | 指标 | 结果 | 判定 |
 |---|---|---|---|

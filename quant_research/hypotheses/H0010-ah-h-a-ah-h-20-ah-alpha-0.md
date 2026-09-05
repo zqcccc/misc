@@ -76,6 +76,8 @@ plain: 折价最深的H股后面确实略微多涨一点，但这点差距连交
 - 入口：`hk_stock/fetch_data.py`（AKShare 拉 AH 溢价 + 个股 H 股日线）→ `hk_stock/strategy_h0010.py`（排序分组与组合）→ `hk_stock/falsify_h0010.py`（四层证伪）。
 - 跑法：后台长任务用 `/opt/homebrew/bin/python3.11`，`run_in_background`。
 
+归档：`verified/H0010/manifest.json`（权威产物映射；不改 §7 数字与裁决）
+
 ## 7. 验收结果（quant-backtest-protocol 四层证伪）
 | 层 | 指标 | 结果 | 判定 |
 |---|---|---|---|

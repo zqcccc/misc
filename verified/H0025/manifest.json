@@ -1,0 +1,208 @@
+{
+ "id": "H0025",
+ "verdict": "FAIL",
+ "title_short": "Binance 永续资金费率横截面多空",
+ "impl_dir": "crypto_perp/h0025",
+ "impl_note": "build_panel.py → strategy.py → causal.py / diag.py / perm.py / yeardrop.py / pitstarts.py；产物在 h0025/out/",
+ "authoritative": {
+  "returns_test": {
+   "path": "crypto_perp/h0025/out/strat_TEST.csv",
+   "sha256": "167aa48ccbfc14ceacc194697cde76c11a56f3eb61d87b5e83c0ff3caf8f5a71",
+   "bytes": 35953,
+   "rows": 792,
+   "start": "2024-07-01",
+   "end": "2026-08-31",
+   "copied_as": "strat_TEST.csv",
+   "note": "判读段 TEST 2024H2-2026；365 天年化"
+  },
+  "returns": {
+   "path": "crypto_perp/h0025/out/strat_full.csv",
+   "sha256": "de8e3e0a9257b55e547a11efd162bfd528371a81540b17dacce0c5d586fc59ae",
+   "bytes": 109701,
+   "rows": 2434,
+   "start": "2020-01-02",
+   "end": "2026-08-31",
+   "copied_as": "strat_full.csv",
+   "note": "FULL 2020-01~2026-08"
+  },
+  "returns_train": {
+   "path": "crypto_perp/h0025/out/strat_TRAIN.csv",
+   "sha256": "bca2df393096772ccdcab67cf101c099e515cdd6c86c9686acab895b6cbdc44f",
+   "bytes": 48927,
+   "rows": 1095,
+   "start": "2020-01-02",
+   "end": "2022-12-31",
+   "copied_as": "strat_TRAIN.csv"
+  },
+  "returns_valid": {
+   "path": "crypto_perp/h0025/out/strat_VALID.csv",
+   "sha256": "65ca5c422a256b88728cb2817b22499c49782f6153f2e6efbfc77f8fdf78fc08",
+   "bytes": 24839,
+   "rows": 547,
+   "start": "2023-01-01",
+   "end": "2024-06-30",
+   "copied_as": "strat_VALID.csv"
+  },
+  "bench_test": {
+   "path": "crypto_perp/h0025/out/bench_TEST.csv",
+   "sha256": "69a9cd445f4872f6b71462c349933aace8e050bbc7595d1ea14020bab73a1032",
+   "bytes": 35972,
+   "rows": 792,
+   "start": "2024-07-01",
+   "end": "2026-08-31",
+   "copied_as": "bench_TEST.csv",
+   "note": "同池等权多头"
+  },
+  "bench": {
+   "path": "crypto_perp/h0025/out/bench_full.csv",
+   "sha256": "06dcefba987eb6d69f29a71ab2591655f08aa79e5b61e9e5251f337aabff7118",
+   "bytes": 109636,
+   "rows": 2434,
+   "start": "2020-01-02",
+   "end": "2026-08-31",
+   "copied_as": "bench_full.csv"
+  },
+  "report": {
+   "path": "crypto_perp/h0025/out/summary.json",
+   "sha256": "08629af6912ca27733f1894191b65e2edd6e73895f694dacba100cd5e756a2a1",
+   "bytes": 1734,
+   "copied_as": "summary.json",
+   "note": "FULL/TRAIN/VALID/TEST 四段绩效 + 换手 + 成本"
+  },
+  "permutation": {
+   "path": "crypto_perp/h0025/out/perm.json",
+   "sha256": "7e185f503f29fa84c5e9d5bd36de827e8dbff80c3552605fe50c71d446efef3b",
+   "bytes": 1073,
+   "copied_as": "perm.json",
+   "note": "换手匹配随机选币 2000 次"
+  },
+  "decomposition": {
+   "path": "crypto_perp/h0025/out/decomp.csv",
+   "sha256": "f729c2a99184bb4e025dc462825d3f99117ab201b476136ec203057eb9541138",
+   "bytes": 399830,
+   "copied_as": "decomp.csv",
+   "note": "价格腿/资金费腿/多空腿/成本逐年拆解"
+  },
+  "grid": {
+   "path": "crypto_perp/h0025/out/grid.csv",
+   "sha256": "f7e0f2108bef0df7264e48b85bbf505d7a192e2a708150d0b6af3e827ba0a401",
+   "bytes": 3807,
+   "copied_as": "grid.csv",
+   "note": "18 组敏感性"
+  },
+  "trials_test": {
+   "path": "crypto_perp/h0025/out/trials_test.json",
+   "sha256": "e311522880538f7a9287f4184fedbda1aee093b9dcfa65e70dfbb6486baae17b",
+   "bytes": 586,
+   "copied_as": "trials_test.json"
+  },
+  "trials_valid": {
+   "path": "crypto_perp/h0025/out/trials_valid.json",
+   "sha256": "1ddfb30655410c95a730315f0dbced590826cd6534907bfce3597a75b293c81e",
+   "bytes": 584,
+   "copied_as": "trials_valid.json"
+  },
+  "picks": {
+   "path": "crypto_perp/h0025/out/picks.csv",
+   "sha256": "ed38f895567cb7f6665a7d58b0ad351c5c005a955c0d4a10e5162f4657ad0cb3",
+   "bytes": 61407,
+   "copied_as": "picks.csv",
+   "note": "逐期选币名单"
+  },
+  "panel_close": {
+   "path": "crypto_perp/h0025/out/panel_close.parquet",
+   "sha256": "d8d47b1a58fad99acf6be17f7c83f4b2362985d4fc00aaac645daea97fc393f2",
+   "bytes": 5025975,
+   "copied_as": null,
+   "note": "864 标的收盘宽表，未复制"
+  },
+  "panel_fund": {
+   "path": "crypto_perp/h0025/out/panel_fund.parquet",
+   "sha256": "f3a223b1fb1d456d3fcc20605715f8fdd146fa91377373b565fbe3ef11f77476",
+   "bytes": 4163343,
+   "copied_as": null,
+   "note": "按 UTC 自然日求和的资金费宽表，未复制"
+  },
+  "panel_qvol": {
+   "path": "crypto_perp/h0025/out/panel_qvol.parquet",
+   "sha256": "e7d30eece0023d9339f235232ee154f9ba7b30be00ae7f426b1e6632581b9d7f",
+   "bytes": 6064426,
+   "copied_as": null,
+   "note": "成交额宽表，未复制"
+  }
+ },
+ "superseded": [
+  {
+   "path": "crypto_perp/h0025/out/bench_TRAIN.csv",
+   "why": "分段基准，判读用 bench_TEST/bench_full"
+  },
+  {
+   "path": "crypto_perp/h0025/out/bench_VALID.csv",
+   "why": "同上"
+  },
+  {
+   "path": "crypto_perp/h0025/out/daily.csv",
+   "why": "逐日中间量明细，非结果序列"
+  }
+ ],
+ "reproduce": "cd crypto_perp/h0025 && /opt/homebrew/bin/python3.11 strategy.py && perm.py && yeardrop.py && pitstarts.py  # 归档时未重跑",
+ "recomputed": {
+  "test": {
+   "n": 792,
+   "window": "2024-07-01~2026-08-31",
+   "ann_arith": -0.0901,
+   "vol": 0.2171,
+   "sharpe": -0.4152,
+   "mdd": -0.4856
+  },
+  "full": {
+   "n": 2434,
+   "window": "2020-01-02~2026-08-31",
+   "ann_arith": 0.2372,
+   "vol": 0.2038,
+   "sharpe": 1.1637,
+   "mdd": -0.4856,
+   "final_equity": 4.2353
+  },
+  "bench_test": {
+   "ann_arith": -0.1562,
+   "sharpe": -0.2013
+  },
+  "bench_full": {
+   "ann_arith": 0.3301,
+   "sharpe": 0.3868
+  }
+ },
+ "card_says": {
+  "test": {
+   "ann": -0.09,
+   "sharpe": -0.42,
+   "mdd": -0.486
+  },
+  "train": {
+   "ann": 0.572,
+   "sharpe": 2.53,
+   "mdd": -0.153
+  },
+  "valid": {
+   "ann": 0.04,
+   "sharpe": 0.35,
+   "mdd": -0.097
+  },
+  "bench_test": {
+   "ann": -0.156
+  },
+  "dsr_test": 0.0515,
+  "dsr_full": 0.9067,
+  "perm_test_pct": 0.536
+ },
+ "discrepancies": [
+  "完全一致（算术年化口径）：TEST −9.01%/−0.4152/−48.56%、TRAIN +57.25%/2.5285/−15.32%、VALID +3.99%/0.3503/−9.70%、基准 TEST −15.62%，与 summary.json 逐项相同。",
+  "FULL 段夏普 1.1637 也与卡片 DSR 行里的『观测夏普 1.164』一致。"
+ ],
+ "missing": [],
+ "notes": [
+  "产物是 30 张卡里最齐的之一：分段绩效、置换、逐年拆解、18 组网格、逐期选币名单全部落盘。",
+  "本卡与 H0003 都在 crypto_perp/ 下但完全独立：H0003 是 BTC/ETH 两腿 delta 中性吃资金费（PARK），本卡是全宇宙横截面资金费排序多空（FAIL）。"
+ ]
+}

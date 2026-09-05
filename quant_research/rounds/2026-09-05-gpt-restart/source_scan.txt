@@ -1,0 +1,76 @@
+
+=== quantocracy (6) ===
+- 2026-09-04 Recent Quant Links from Quantocracy as of 09/03/2026
+  https://quantocracy.com/recent-quant-links-from-quantocracy-as-of-09032026/
+- 2026-09-03 Recent Quant Links from Quantocracy as of 09/02/2026
+  https://quantocracy.com/recent-quant-links-from-quantocracy-as-of-09022026/
+- 2026-09-01 Recent Quant Links from Quantocracy as of 08/31/2026
+  https://quantocracy.com/recent-quant-links-from-quantocracy-as-of-08312026/
+- 2026-08-28 Recent Quant Links from Quantocracy as of 08/27/2026
+  https://quantocracy.com/recent-quant-links-from-quantocracy-as-of-08272026/
+- 2026-08-26 Recent Quant Links from Quantocracy as of 08/25/2026
+  https://quantocracy.com/recent-quant-links-from-quantocracy-as-of-08252026/
+- 2026-08-24 Recent Quant Links from Quantocracy as of 08/23/2026
+  https://quantocracy.com/recent-quant-links-from-quantocracy-as-of-08232026/
+
+=== hf (20) ===
+- 2026-09-02 [▲23] DRACO: Fine-Grained Credit Assignment with Dynamic Rubrics for Long-Horizon Agent Training
+  https://huggingface.co/papers/2609.04094
+- 2026-09-02 [▲22] Last Translation Benchmark
+  https://huggingface.co/papers/2609.04173
+- 2026-09-02 [▲15] Select, Compress, Reinvest: A Controlled Study of Visual-Token Allocation in Long-Video MLLMs
+  https://huggingface.co/papers/2609.03820
+- 2026-09-02 [▲42] Scal3R: Learning Efficient Multi-Relative Pose Query for Scalable Online 3D Reconstruction
+  https://huggingface.co/papers/2609.04201
+- 2026-09-02 [▲265] Compile by Training: Turning Natural-Language Specifications into Local Neural Functions
+  https://huggingface.co/papers/2609.04199
+- 2026-09-02 [▲22] PACE: Towards Surfacing Hidden Conflicts in User Requests
+  https://huggingface.co/papers/2609.03293
+- 2026-09-02 [▲65] Puffin-World: Scaling a Unified Multimodal Model with Native 3D World States
+  https://huggingface.co/papers/2609.04196
+- 2026-09-02 [▲29] Beyond Retrieval: Progressive Latent Memory Evolution for Streaming Video Understanding
+  https://huggingface.co/papers/2609.04131
+- 2026-09-02 [▲18] FlashRender: Few-Step Generative Rendering via Camera-Controlled Video MeanFlow
+  https://huggingface.co/papers/2609.03563
+- 2026-09-02 [▲21] WorldReward: Reward Modeling for Camera-Conditioned World Models
+  https://huggingface.co/papers/2609.03952
+- 2026-09-02 [▲134] Random Attention: Rethinking KV Cache Eviction for Efficient Reasoning
+  https://huggingface.co/papers/2609.03430
+- 2026-09-02 [▲72] Rethinking On-Policy Distillation of Large Language Models II: One Training Example
+  https://huggingface.co/papers/2609.04172
+- 2026-09-02 [▲24] CORE: Improving Compositional Reasoning in MLLM Embedding via Reranker Distillation
+  https://huggingface.co/papers/2609.04083
+- 2026-09-02 [▲38] Editable Visual Design
+  https://huggingface.co/papers/2609.04034
+- 2026-09-02 [▲16] Environment Evolution for Terminal Agents
+  https://huggingface.co/papers/2609.04128
+- 2026-09-02 [▲16] Principia: Relational Physics Tests for Video Models
+  https://huggingface.co/papers/2609.04200
+- 2026-09-02 [▲219] Terminal-Universe: Turning Agent Trajectories into Scalable Terminal Environments
+  https://huggingface.co/papers/2609.04148
+- 2026-09-02 [▲203] LLaDA-Image: Building Strong Image Generators with Fully Open Training Recipes
+  https://huggingface.co/papers/2609.03796
+- 2026-09-02 [▲72] Why Gated DeltaNet Survives 4-Bit Quantization: NVFP4 W4A4 for the Recurrent Half of a Hybrid 27B LLM
+  https://huggingface.co/papers/2609.04098
+- 2026-09-01 [▲10] RoboTok: An Internet-Scale Data Engine for Human Demonstration Retrieval and Dexterous Manipulation Learning
+  https://huggingface.co/papers/2609.03199
+
+=== alphaarchitect (3) ===
+- 2026-09-04 What Daily Stock Returns Tell Us About the Economy
+  https://alphaarchitect.com/daily-stock-returns-2/
+- 2026-08-31 Can ChatGPT Forecast Stock Price Movements?
+  https://alphaarchitect.com/chatgpt-forecast-stock-price/
+- 2026-08-24 Good Idea or Bad Idea: Private equity for pension plans?
+  https://alphaarchitect.com/good-idea-or-bad-idea-private-equity-for-pension-plans/
+
+=== mlquant (0) ===
+
+=== quantitativo (1) ===
+- 2026-09-01 Incubation
+  https://www.quantitativo.com/p/incubation
+
+共 30 条。
+
+失败的源：
+  ! arxiv: HTTP Error 429: Unknown Error
+  ! reddit: HTTP Error 403: Blocked

@@ -1,0 +1,63 @@
+{
+ "id": "H0015",
+ "verdict": "FAIL",
+ "title_short": "G10 利差 carry 多空",
+ "impl_dir": "fx",
+ "impl_note": "strategy_h0015.py → falsify_h0015.py；fx/ 被 H0015 与 H0018 共用，本卡产物是 ret_main.csv / bench_zero.csv / trials_h0015.json",
+ "authoritative": {
+  "returns": {
+   "path": "fx/ret_main.csv",
+   "sha256": "6be4c19cc4d292b1f3d62e9038544db1a5bed28d9f1a98791345bf7c38b8f85e",
+   "bytes": 189233,
+   "rows": 5789,
+   "start": "2004-01-01",
+   "end": "2026-03-31",
+   "copied_as": "ret_main.csv"
+  },
+  "bench": {
+   "path": "fx/bench_zero.csv",
+   "sha256": "6221be26731eafb03dc97b45a41bd162694875ca5b76c159695d47d3c5b8014e",
+   "bytes": 86844,
+   "rows": 5789,
+   "start": "2004-01-01",
+   "end": "2026-03-31",
+   "copied_as": "bench_zero.csv",
+   "note": "零投资组合，基准恒为 0"
+  },
+  "trials": {
+   "path": "fx/trials_h0015.json",
+   "sha256": "6d3427f8b969b11c930c937b14fea592cb8b1e478cfa967b232fcae9b3a1f77f",
+   "bytes": 334,
+   "copied_as": "trials_h0015.json",
+   "note": "N=4 变体"
+  }
+ },
+ "superseded": [],
+ "reproduce": "cd fx && /opt/homebrew/bin/python3.11 falsify_h0015.py  # 归档时未重跑",
+ "recomputed": {
+  "n": 5789,
+  "window": "2004-01-01~2026-03-31",
+  "ann_arith": 0.0097,
+  "ann_cagr": 0.0092,
+  "vol": 0.0411,
+  "sharpe": 0.2356,
+  "mdd": -0.1603
+ },
+ "card_says": {
+  "ann": 0.0097,
+  "sharpe": 0.24,
+  "mdd": -0.16
+ },
+ "discrepancies": [
+  "一致（算术年化口径）：+0.97% / 0.2356 / −16.03%，与卡片 +0.97% / 0.24 / −16.0% 相同。",
+  "序列终点是 2026-03-31，比同期其它卡（多数到 2026-09）早半年；卡片 §7 没写窗口，引用时要注意这个终点。"
+ ],
+ "missing": [
+  "falsify_h0015.py 只落了 trials_h0015.json 与两条 csv。§7 的收益分解（利差 +1.42% / 即期 −0.44% / 成本 0.01%）、DSR 0.832、随机篮子置换 99.2 分位、四段分段表（2004-07 +2.82% 独强）、崩盘披露都没有落盘。",
+  "**分解那一行是本卡最有价值的结论**（说明 carry 收益全来自利差端、即期端按 UIP 部分抵消），却只在文字里。"
+ ],
+ "notes": [
+  "fx/ 下没有 H0018 的收益序列——H0018 只留了 verified/h0018_falsify.json。",
+  "fx/data/ 里的 fx_*.csv 已做过 V 型坏点清洗（8 个点线性插值），CHF 2015-01-15 的真实位移保留；直接换一份原始 Yahoo 数据重跑不会得到同样的结果。"
+ ]
+}

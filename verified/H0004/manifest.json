@@ -1,0 +1,136 @@
+{
+ "id": "H0004",
+ "verdict": "FAIL",
+ "title_short": "HYG/IEF 信用风险偏好择时 SPY",
+ "impl_dir": "us_equity_timing",
+ "impl_note": "fetch.py → strategy_h0004.py → falsify_h0004.py；产物在 out/",
+ "authoritative": {
+  "returns": {
+   "path": "us_equity_timing/out/ret_trainvalid.csv",
+   "sha256": "b7d022a32f394583f7ebf16f28c0c8b4dec2bf1231b82fd94c5d2938840da39b",
+   "bytes": 93945,
+   "rows": 3106,
+   "start": "2007-08-30",
+   "end": "2019-12-31",
+   "copied_as": "ret_trainvalid.csv",
+   "note": "判读段"
+  },
+  "returns_test": {
+   "path": "us_equity_timing/out/ret_test.csv",
+   "sha256": "11eb5c5b5fb7e42ecff9f0fad73f9ba10af45a72bbaa34fbb9c8b50978e2cca3",
+   "bytes": 52771,
+   "rows": 1676,
+   "start": "2020-01-02",
+   "end": "2026-09-02",
+   "copied_as": "ret_test.csv",
+   "note": "裁决锁死后只跑一次"
+  },
+  "bench": {
+   "path": "us_equity_timing/out/bench_trainvalid.csv",
+   "sha256": "ed5321fa00f49da8461d0d03cab5264a14b87becdce7f48ad30b73164c31ba49",
+   "bytes": 101373,
+   "rows": 3106,
+   "start": "2007-08-30",
+   "end": "2019-12-31",
+   "copied_as": "bench_trainvalid.csv",
+   "note": "SPY buy&hold"
+  },
+  "bench_test": {
+   "path": "us_equity_timing/out/bench_test.csv",
+   "sha256": "2ec5a15f9fff0bc1484a783ae9cfe67e4a72edd66a51316af638ce59d6590ed9",
+   "bytes": 54634,
+   "rows": 1676,
+   "start": "2020-01-02",
+   "end": "2026-09-02",
+   "copied_as": "bench_test.csv"
+  },
+  "report": {
+   "path": "us_equity_timing/out/falsify_trainvalid.json",
+   "sha256": "70d7de200a42e16bfa5f9324f9ca3376b679072c532318d30996c6a3b3fcecf4",
+   "bytes": 5897,
+   "copied_as": "falsify_trainvalid.json"
+  },
+  "report_test": {
+   "path": "us_equity_timing/out/falsify_test.json",
+   "sha256": "1649347429ebc47dd29cdf6708574d3b4ced27720a55a96cc855c39e5c3dff67",
+   "bytes": 4085,
+   "copied_as": "falsify_test.json"
+  },
+  "trials": {
+   "path": "us_equity_timing/out/trials_trainvalid.json",
+   "sha256": "fc43b030c876c75c9f53a1d51747f18cc9227733831b8538aa82f9081aa4abd3",
+   "bytes": 650,
+   "copied_as": "trials_trainvalid.json"
+  },
+  "trials_test": {
+   "path": "us_equity_timing/out/trials_test.json",
+   "sha256": "3c1e366f1483f39edd77108bf165f04fead4c2267e898f7325732138404edf95",
+   "bytes": 645,
+   "copied_as": "trials_test.json"
+  }
+ },
+ "superseded": [],
+ "reproduce": "cd us_equity_timing && /opt/homebrew/bin/python3.11 falsify_h0004.py trainvalid && ... test  # 归档时未重跑",
+ "recomputed": {
+  "trainvalid": {
+   "n": 3106,
+   "window": "2007-08-30~2019-12-31",
+   "ann_cagr": 0.0475,
+   "ann_arith": 0.0522,
+   "vol": 0.1074,
+   "sharpe": 0.4863,
+   "mdd_compound": -0.2837,
+   "mdd_wallet": -0.3227
+  },
+  "test": {
+   "n": 1676,
+   "window": "2020-01-02~2026-09-02",
+   "ann_cagr": 0.0603,
+   "ann_arith": 0.0676,
+   "vol": 0.1341,
+   "sharpe": 0.5043,
+   "mdd_compound": -0.3972
+  },
+  "bench_trainvalid": {
+   "ann_cagr": 0.0883,
+   "sharpe": 0.5313,
+   "mdd_compound": -0.5519
+  },
+  "bench_test": {
+   "ann_cagr": 0.155,
+   "sharpe": 0.8172,
+   "mdd_compound": -0.3372
+  }
+ },
+ "card_says": {
+  "trainvalid": {
+   "ann": 0.0522,
+   "sharpe": 0.486,
+   "mdd": -0.323,
+   "excess": -0.0408
+  },
+  "test": {
+   "ann": 0.0603,
+   "sharpe": 0.504,
+   "mdd": -0.397,
+   "excess": -0.0947
+  },
+  "bench_trainvalid": {
+   "ann": 0.0883,
+   "sharpe": 0.531,
+   "mdd": -0.552
+  },
+  "bench_test": {
+   "ann": 0.155,
+   "sharpe": 0.817,
+   "mdd": -0.337
+  }
+ },
+ "discrepancies": [
+  "TEST 行、两条基准行、以及全部超额/alpha/置换数字与 falsify_*.json 逐项一致（TEST 6.03%/0.504/−39.7%、超额 −9.47%、alpha_t −0.12、置换分位 5.2%）。",
+  "TRAIN+VALID 行的『年化』与『回撤』与本卡自己的 falsify_trainvalid.json 对不上：json 给 ann=4.75%、mdd=−28.37%，卡片写 5.22% / −32.3%。重算表明 5.22% 是**算术年化**、−32.3% 是**日收益加总钱包回撤**，而同一行的 TEST 用的是复利年化 + 复利回撤。也就是说卡片 §7 第 1 行的 TV 列与 TEST 列不是同一口径，不能横向比。夏普 0.486 与超额 −4.08% 两段都取自 json，没有问题。",
+  "结论不受影响：死因是第 4 层置换（TV 分位 47.9%、TEST 5.2%）与 PIT 全起点胜率 0%，与年化口径无关。"
+ ],
+ "missing": [],
+ "notes": []
+}

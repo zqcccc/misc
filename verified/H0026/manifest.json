@@ -1,0 +1,124 @@
+{
+ "id": "H0026",
+ "verdict": "FAIL",
+ "title_short": "发达市场（非美）经营盈利能力最高组",
+ "impl_dir": "quant_research/multi/profitability_h0026",
+ "impl_note": "fetch_data.py（TEST 物理隔离到工作区外）→ strategy.py → falsify.py dev / reveal；产物在 artifacts/",
+ "authoritative": {
+  "returns": {
+   "path": "quant_research/multi/profitability_h0026/artifacts/test_returns.csv",
+   "sha256": "a8dcb34575201f426f914b30511460369f873ea543f6ea10f64ae8c27eb2627e",
+   "bytes": 58618,
+   "rows": 3022,
+   "start": "2015-01-01",
+   "end": "2026-07-31",
+   "copied_as": "test_returns.csv",
+   "note": "高盈利组净收益，TEST 2015-01~2026-07 揭盲一次"
+  },
+  "bench": {
+   "path": "quant_research/multi/profitability_h0026/artifacts/test_benchmark.csv",
+   "sha256": "45f9ba85fe129a773c74c3371212319fa2b7a87f9b83526c455c9818974aae02",
+   "bytes": 92230,
+   "rows": 3022,
+   "start": "2015-01-01",
+   "end": "2026-07-31",
+   "copied_as": "test_benchmark.csv",
+   "note": "同规模三组等权，判读基准"
+  },
+  "bench_market": {
+   "path": "quant_research/multi/profitability_h0026/artifacts/test_market.csv",
+   "sha256": "5f1be436e33dfeb2b59caf16ca37fde923872c3d88f6308e9807aa8934b2cb62",
+   "bytes": 65264,
+   "rows": 3022,
+   "start": "2015-01-01",
+   "end": "2026-07-31",
+   "copied_as": "test_market.csv"
+  },
+  "report": {
+   "path": "quant_research/multi/profitability_h0026/artifacts/reveal_summary.json",
+   "sha256": "c4e6e6181ab1381b44baae136988148f67fb51b89dc8cb1acb6cc61ffefce443",
+   "bytes": 6043,
+   "copied_as": "reveal_summary.json"
+  },
+  "report_qbt": {
+   "path": "quant_research/multi/profitability_h0026/artifacts/qbt_report.json",
+   "sha256": "de68497d57d74dc422f5fa504ab11e1aede89ce886fde232cfcfd4b32e0f1e8d",
+   "bytes": 2459,
+   "copied_as": "qbt_report.json"
+  },
+  "report_dev": {
+   "path": "quant_research/multi/profitability_h0026/artifacts/dev_summary.json",
+   "sha256": "bac9b066a606bbfc5b610f89b451b20c2d5434bff2e5fe6a424c8d013064a2ea",
+   "bytes": 1895,
+   "copied_as": "dev_summary.json"
+  },
+  "trials": {
+   "path": "quant_research/multi/profitability_h0026/artifacts/trials.json",
+   "sha256": "5876b7d9bec6a90d5d2dbeea05fb3babfdcc7d2f431970f3bd8e5e18f9c3bfb4",
+   "bytes": 534,
+   "copied_as": "trials.json",
+   "note": "N=3"
+  },
+  "trades": {
+   "path": "quant_research/multi/profitability_h0026/artifacts/test_trades_daily.csv",
+   "sha256": "48362c9bc1b9fc0358057704aa64418c73a39df1dbdf8bf1cc64132e7912d863",
+   "bytes": 58627,
+   "copied_as": "test_trades_daily.csv"
+  },
+  "panel": {
+   "path": "quant_research/multi/profitability_h0026/artifacts/test_panel_net.csv",
+   "sha256": "2fc188fcdbe46987051339f595e0355f185cac5148489a9e6cc30df842afb337",
+   "bytes": 109091,
+   "copied_as": "test_panel_net.csv"
+  }
+ },
+ "superseded": [],
+ "reproduce": "cd quant_research/multi/profitability_h0026 && /opt/homebrew/bin/python3.11 falsify.py dev  # reveal 需工作区外只读 TEST 路径；归档时未重跑",
+ "recomputed": {
+  "test": {
+   "n": 3022,
+   "window": "2015-01-01~2026-07-31",
+   "ann_cagr252": 0.0721,
+   "vol": 0.1403,
+   "sharpe": 0.5664,
+   "mdd": -0.3239
+  },
+  "bench": {
+   "ann_cagr252": 0.0796,
+   "vol": 0.141,
+   "sharpe": 0.614,
+   "mdd": -0.3398
+  },
+  "bench_market": {
+   "ann_cagr252": 0.0809,
+   "sharpe": 0.633,
+   "mdd": -0.3402
+  },
+  "excess_ann": -0.0075
+ },
+ "card_says": {
+  "test": {
+   "ann": 0.0721,
+   "sharpe": 0.566,
+   "mdd": -0.3239
+  },
+  "bench": {
+   "ann": 0.0796,
+   "sharpe": 0.614,
+   "mdd": -0.3398
+  },
+  "excess": -0.0075,
+  "alpha": -0.0048,
+  "alpha_t": -0.52,
+  "beta": 0.974,
+  "dsr": 0.9573
+ },
+ "discrepancies": [
+  "完全一致（252 日复利年化）：7.21%/0.5664/−32.39% 与基准 7.96%/0.6140/−33.98%、收益差 −0.75pct，逐项相同。"
+ ],
+ "missing": [],
+ "notes": [
+  "TEST 数据原在 /tmp/quant_research_h0026_test_gpt_20260904/（已清空），artifacts/ 里的 test_*.csv 是揭盲后落回的副本。",
+  "卡片 §7 第 0 层注明『底层公告日无法独审』、第 4 层注明『成交阻塞不可观测』——这两条限制随产物一起归档，复用时别当成已验收。"
+ ]
+}

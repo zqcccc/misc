@@ -1,0 +1,146 @@
+{
+ "id": "H0016",
+ "verdict": "FAIL",
+ "title_short": "Henry Hub EIA 库存公告日溢价",
+ "impl_dir": "quant_research/commodity/event_h0016",
+ "impl_note": "prepare_data.py → strategy_h0016.py → develop_h0016.py → verify_h0016.py；证伪报告在 event_h0016/verified/",
+ "authoritative": {
+  "returns_test": {
+   "path": "quant_research/commodity/event_h0016/returns_test.csv",
+   "sha256": "e6a2490509e2c186a4662f4345aa38f5678e445e59fe6b2eb445938ca03eaf35",
+   "bytes": 26899,
+   "rows": 1423,
+   "start": "2021-01-04",
+   "end": "2026-09-02",
+   "copied_as": "returns_test.csv",
+   "note": "判读段（TEST 揭盲一次）"
+  },
+  "returns": {
+   "path": "quant_research/commodity/event_h0016/returns_full.csv",
+   "sha256": "a66698e9d6d326136bfbdaf8052450ed76fc84687bff68eb2678f68ac0df2350",
+   "bytes": 92388,
+   "rows": 4876,
+   "start": "2007-04-18",
+   "end": "2026-09-02",
+   "copied_as": "returns_full.csv",
+   "note": "全期"
+  },
+  "bench_test": {
+   "path": "quant_research/commodity/event_h0016/benchmark_test.csv",
+   "sha256": "95a6a39d28a65edd98a141a6c457e6dd4b0ff472331dedb397d93e159081bf07",
+   "bytes": 45423,
+   "rows": 1423,
+   "start": "2021-01-04",
+   "end": "2026-09-02",
+   "copied_as": "benchmark_test.csv",
+   "note": "UNG buy&hold"
+  },
+  "bench": {
+   "path": "quant_research/commodity/event_h0016/benchmark_full.csv",
+   "sha256": "563f200f1ea3b9d3d33f7997f362aa01e53195c70b30703a9577e4497446458f",
+   "bytes": 156030,
+   "rows": 4876,
+   "start": "2007-04-18",
+   "end": "2026-09-02",
+   "copied_as": "benchmark_full.csv"
+  },
+  "report_test": {
+   "path": "quant_research/commodity/event_h0016/verified/qbt_test.json",
+   "sha256": "1278c04fbc0a2f794c07ff7a1c43184f2b9d2b898555a52340b1474fcb956a6d",
+   "bytes": 1919,
+   "copied_as": "qbt_test.json"
+  },
+  "report": {
+   "path": "quant_research/commodity/event_h0016/verified/qbt_full.json",
+   "sha256": "bfad583b9ec3c8329cd1008920d45431e15368b1768f56bd3221afb01a8e7758",
+   "bytes": 1909,
+   "copied_as": "qbt_full.json"
+  },
+  "robustness": {
+   "path": "quant_research/commodity/event_h0016/verified/robustness_h0016.json",
+   "sha256": "87b3a69ee4653ac078355a117ba08038c1ed88bcafa148c598b3ccfe4772ffc5",
+   "bytes": 7566,
+   "copied_as": "robustness_h0016.json",
+   "note": "NW 归因 / N=1 DSR-PSR / 同星期四置换 / 逐年剔除 / PIT 全起点"
+  },
+  "trials": {
+   "path": "quant_research/commodity/event_h0016/trials_h0016.json",
+   "sha256": "f5658839d8481da1c3b68adad436bd71ffed3c860945b85066e0c6b11f3940c1",
+   "bytes": 321,
+   "copied_as": "trials_h0016.json",
+   "note": "唯一预注册规则，N=1"
+  },
+  "events": {
+   "path": "quant_research/commodity/event_h0016/events_full.csv",
+   "sha256": "97a956266191a0f2cb1c7e66d08cc987145a7efb56bebcaf534767ba83f17cf1",
+   "bytes": 63399,
+   "copied_as": "events_full.csv",
+   "note": "EIA 公告日历"
+  }
+ },
+ "superseded": [
+  {
+   "path": "quant_research/commodity/event_h0016/dev_returns.csv",
+   "why": "TRAIN+VALID 开发段序列，规则冻结前用；判读以 returns_test.csv 为准"
+  },
+  {
+   "path": "quant_research/commodity/event_h0016/dev_benchmark.csv",
+   "why": "同上"
+  }
+ ],
+ "reproduce": "cd quant_research/commodity/event_h0016 && /opt/homebrew/bin/python3.11 verify_h0016.py  # 归档时未重跑",
+ "recomputed": {
+  "test": {
+   "n": 1423,
+   "window": "2021-01-04~2026-09-02",
+   "ann_cagr": -0.2226,
+   "sharpe": -0.983,
+   "mdd": -0.7681,
+   "final_equity": 0.2406
+  },
+  "full": {
+   "n": 4876,
+   "window": "2007-04-18~2026-09-02",
+   "ann_cagr": -0.2401,
+   "sharpe": -1.2296,
+   "mdd": -0.9952
+  },
+  "bench_test": {
+   "ann_cagr": -0.1956,
+   "sharpe": -0.0457,
+   "mdd": -0.9288
+  },
+  "bench_full": {
+   "ann_cagr": -0.2816
+  }
+ },
+ "card_says": {
+  "test": {
+   "ann": -0.223,
+   "sharpe": -0.983,
+   "mdd": -0.7681,
+   "total": -0.7594
+  },
+  "full": {
+   "ann": -0.2404,
+   "sharpe": -1.23,
+   "mdd": -0.9952
+  },
+  "bench_test": {
+   "ann": -0.196,
+   "sharpe": -0.046,
+   "mdd": -0.9288
+  },
+  "bench_full": {
+   "ann": -0.2819
+  }
+ },
+ "discrepancies": [
+  "完全一致（复利年化口径，卡片明写『复利年化』）：TEST −22.26% vs −22.30%、−0.9830 vs −0.983、−76.81% 精确一致、TEST 总收益 −75.94%；全期 −24.01%/−1.2296/−99.52%；基准 −19.56%/−0.0457/−92.88% 与 −28.16%。差异只在小数第四位。"
+ ],
+ "missing": [],
+ "notes": [
+  "卡片 §7 末尾的『揭盲后日历审计』（2018-12-06 漏持有 −2.67%、2025-01-08 改期多记 +0.65%）是已知但**故意未修**的偏差，因为 TEST 只能揭盲一次；引用 returns_test.csv 时要知道它含这两处已识别的日历错误，且修正只会更差。",
+  "基准与 H0006 是同一条 UNG buy&hold（benchmark_full.csv 与 futures/bench_ung_full.csv 数值几乎相同，但不是同一文件、sha 不同）。"
+ ]
+}

@@ -1,0 +1,137 @@
+{
+ "id": "H0024",
+ "verdict": "PARK",
+ "title_short": "A股流通市值最小 20% 纯多",
+ "impl_dir": "quant_research/cn_stock",
+ "impl_note": "build_h0024.py → falsify_h0024.py → causality_fn_h0024.py；产物在 cn_stock/out_h0024/",
+ "authoritative": {
+  "returns": {
+   "path": "quant_research/cn_stock/out_h0024/equity_primary.csv",
+   "sha256": "e90530a2b9bc6196823afcabc39405d89764e3a41c57dba016286e42e0193e1c",
+   "bytes": 83797,
+   "rows": 2591,
+   "start": "2016-01-04",
+   "end": "2026-09-01",
+   "copied_as": "equity_primary.csv",
+   "note": "primary_size_top20 净收益日序列；TEST 是其 2022-01-04 起的 1130 天子窗口"
+  },
+  "bench": {
+   "path": "quant_research/cn_stock/out_h0024/bench_ew.csv",
+   "sha256": "26a8caa7abe822e4ba17b86eca9b022a929ef843ad9f29bac539c9a477af2319",
+   "bytes": 65129,
+   "rows": 2836,
+   "start": "2015-01-05",
+   "end": "2026-09-02",
+   "copied_as": "bench_ew.csv",
+   "note": "覆盖 2015-01-05~2026-09-02(2836 天)，比策略长 245 天，须 reindex 对齐"
+  },
+  "bench_hs300": {
+   "path": "quant_research/cn_stock/out_h0024/bench_hs300.csv",
+   "sha256": "556ad6b25bab71b2bf8823e3663f3fa038bcb4819a180033d950a6a3be600aa4",
+   "bytes": 92484,
+   "rows": 2836,
+   "start": "2015-01-05",
+   "end": "2026-09-02",
+   "copied_as": "bench_hs300.csv"
+  },
+  "report": {
+   "path": "quant_research/cn_stock/out_h0024/falsification.json",
+   "sha256": "5e40b8facf13cfa1abed72f16ab7bc6c24a4b8607e0607e8cf49300f94364eaa",
+   "bytes": 4982,
+   "copied_as": "falsification.json"
+  },
+  "split_stats": {
+   "path": "quant_research/cn_stock/out_h0024/split_stats.json",
+   "sha256": "84d7b35cf40f42d95d765fa869f797a477a70e0d9a42f510edc0c1ea73ff4a8f",
+   "bytes": 1222,
+   "copied_as": "split_stats.json"
+  },
+  "trials": {
+   "path": "quant_research/cn_stock/out_h0024/trials.json",
+   "sha256": "24cbfda7912e96a4172fd1fbf437f1cc57c757991e62824b0cb668aed59a45db",
+   "bytes": 1650,
+   "copied_as": "trials.json"
+  },
+  "turnover": {
+   "path": "quant_research/cn_stock/out_h0024/turnover.csv",
+   "sha256": "ef3297685bddc3eaa2fb78b4cc3ba0c94fd3841388db1f2ff4001bc53f0f54cd",
+   "bytes": 52725,
+   "rows": 2591,
+   "start": "2016-01-04",
+   "end": "2026-09-01",
+   "copied_as": "turnover.csv"
+  },
+  "score_panel": {
+   "path": "quant_research/cn_stock/out_h0024/size_score.parquet",
+   "sha256": "457c3fe517656985e3a2d75c8f0d36a0d451eeb1ad7e4c14b6c68df19ab36445",
+   "bytes": 60701787,
+   "copied_as": null,
+   "note": "60MB PIT 流通市值打分面板，未复制，只记指纹"
+  }
+ },
+ "superseded": [
+  {
+   "path": "quant_research/cn_stock/out_h0024/equity_level.csv",
+   "why": "净值(level)形式，非日收益；直接读会得到 inf。用 equity_primary.csv"
+  }
+ ],
+ "reproduce": "cd quant_research/cn_stock && /opt/homebrew/bin/python3.11 build_h0024.py && /opt/homebrew/bin/python3.11 falsify_h0024.py  # 归档时未重跑",
+ "recomputed": {
+  "convention": "卡片 §7 口径：『年化收益』= 日历年复利 CAGR；『夏普』= 该 CAGR / 年化波动；『超额vs等权』= 逐日超额 (策略−等权) 复利后的日历年 CAGR（不是两个 CAGR 相减）。",
+  "full": {
+   "n": 2591,
+   "window": "2016-01-04~2026-09-01",
+   "final_equity": 1.6871,
+   "ann_cagr_calendar": 0.0503,
+   "ann_cagr252": 0.0522,
+   "ann_arith": 0.0892,
+   "vol": 0.2755,
+   "sharpe": 0.1826,
+   "mdd": -0.5913,
+   "excess_vs_ew_compound": 0.0541
+  },
+  "test": {
+   "n": 1130,
+   "window": "2022-01-04~2026-09-01",
+   "final_equity": 1.4819,
+   "ann_cagr_calendar": 0.0881,
+   "sharpe": 0.2988,
+   "mdd": -0.4311,
+   "excess_vs_ew_compound": 0.0788
+  },
+  "bench_ew_aligned": {
+   "n": 2591,
+   "ann_cagr_calendar": -0.0001,
+   "vol": 0.2489,
+   "mdd": -0.5541
+  }
+ },
+ "card_says": {
+  "full": {
+   "ann": 0.0505,
+   "sharpe": 0.19,
+   "excess": 0.0543,
+   "mdd": -0.5913
+  },
+  "test": {
+   "ann": 0.0886,
+   "sharpe": 0.31,
+   "excess": 0.0792
+  },
+  "alpha_full": 0.0607,
+  "alpha_t_full": 2.83,
+  "alpha_t_test": 1.97,
+  "dsr_full": 0.831,
+  "dsr_test": 0.812
+ },
+ "discrepancies": [
+  "一致。FULL 5.03% vs 卡片 5.05%、夏普 0.183 vs 0.19（同样是 vol ddof 差）、回撤 −59.13% 精确一致、超额 +5.41% vs +5.43%；TEST 8.81%/0.299/超额 +7.88% vs 卡片 8.86%/0.31/+7.92%。",
+  "超额同 H0022：逐日超额序列复利年化。按两条 CAGR 相减会得到 +5.04%（FULL）/ +7.16%（TEST），与卡片差 0.4~0.8 个百分点。",
+  "bench_ew.csv 窗口比策略序列长 245 天，须对齐；不对齐算出的基准年化是 −0.09%，对齐后 −0.01%。",
+  "卡片 §7 的 alpha 6.07%(t=2.83)、TEST alpha 6.64%(t=1.97)、DSR 0.831/0.812、置换分位 100%(p=0.0025)、逐年剔除最低 t=2.29@2016、IC FULL 0.0039(t=1.11)/TEST 0.0371(t=7.06) 与 falsification.json 逐项一致。"
+ ],
+ "missing": [],
+ "notes": [
+  "与 H0022 同市场目录但产物完全分开；out/ 是 H0022、out_h0024/ 是本卡、out_h0028/ 是 H0028。"
+ ]
+}

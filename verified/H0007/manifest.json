@@ -1,0 +1,125 @@
+{
+ "id": "H0007",
+ "verdict": "FAIL",
+ "title_short": "Binance 永续新上市负漂移做空",
+ "impl_dir": "crypto_perp",
+ "impl_note": "scripts/fetch_binance.py → scripts/strategy_h0007.py → scripts/falsify_h0007.py；产物在 crypto_perp/out/（crypto_perp 根目录的 ret_V*.csv 是 H0003 的，h0025/ 与 h0029/ 是另两张卡的）",
+ "authoritative": {
+  "returns": {
+   "path": "crypto_perp/out/ret_trainvalid.csv",
+   "sha256": "e6367daaaa1a550912b3560c19e505c3ac11471959d714608226ca42985c0275",
+   "bytes": 56231,
+   "rows": 1850,
+   "start": "2020-01-08",
+   "end": "2025-01-30",
+   "copied_as": "ret_trainvalid.csv",
+   "note": "365 天年化；判读段（上市日 ≤2024-12）"
+  },
+  "returns_test": {
+   "path": "crypto_perp/out/ret_test.csv",
+   "sha256": "7407084d89974c017016c6258a9063c911d6c476651b0f3569ed880359b574a4",
+   "bytes": 19393,
+   "rows": 605,
+   "start": "2025-01-04",
+   "end": "2026-08-31",
+   "copied_as": "ret_test.csv"
+  },
+  "bench": {
+   "path": "crypto_perp/out/bench_trainvalid.csv",
+   "sha256": "a3d394ba43dcf33fcfa06b3d705da815e2d1a80cd31e97a1881f3f186669b799",
+   "bytes": 59201,
+   "rows": 1850,
+   "start": "2020-01-08",
+   "end": "2025-01-30",
+   "copied_as": "bench_trainvalid.csv",
+   "note": "同池等权"
+  },
+  "bench_test": {
+   "path": "crypto_perp/out/bench_test.csv",
+   "sha256": "669db74ce63a7883019df7f030c6a9a1ae8cd287f10ba0c85f4bbd2f56c1abb2",
+   "bytes": 19490,
+   "rows": 605,
+   "start": "2025-01-04",
+   "end": "2026-08-31",
+   "copied_as": "bench_test.csv"
+  },
+  "report": {
+   "path": "crypto_perp/out/falsify_trainvalid.json",
+   "sha256": "831c9a836fd981261434b541ec269a80603092a341a362c25c13ba5ebc403e0f",
+   "bytes": 25567,
+   "copied_as": "falsify_trainvalid.json"
+  },
+  "report_test": {
+   "path": "crypto_perp/out/falsify_test.json",
+   "sha256": "81d051e147da26da3fd578fc4f6a4cd609557e9db8c9de9aeb65cf3f4df933ce",
+   "bytes": 23974,
+   "copied_as": "falsify_test.json"
+  },
+  "trials": {
+   "path": "crypto_perp/out/trials_trainvalid.json",
+   "sha256": "a6c47e0433847a6f3e61c2af89d1a579d424f9700f9e29feb455f823dbbca005",
+   "bytes": 846,
+   "copied_as": "trials_trainvalid.json"
+  },
+  "trials_test": {
+   "path": "crypto_perp/out/trials_test.json",
+   "sha256": "fa504bd1485cc69fdd60fe241e3837219ecd86732694bea95d3e0fa19c84a7ec",
+   "bytes": 834,
+   "copied_as": "trials_test.json"
+  }
+ },
+ "superseded": [],
+ "reproduce": "cd crypto_perp && /opt/homebrew/bin/python3.11 scripts/falsify_h0007.py trainvalid && ... test  # 归档时未重跑",
+ "recomputed": {
+  "trainvalid": {
+   "n": 1850,
+   "window": "2020-01-08~2025-01-30",
+   "ann_cagr": -0.2489,
+   "vol": 1.2461,
+   "sharpe": 0.3946,
+   "mdd": -0.9429
+  },
+  "test": {
+   "n": 605,
+   "window": "2025-01-04~2026-08-31",
+   "ann_cagr": 0.0749,
+   "vol": 0.9777,
+   "sharpe": 0.5661,
+   "mdd": -0.8416
+  },
+  "bench_trainvalid": {
+   "ann_cagr": 0.3603
+  },
+  "bench_test": {
+   "ann_cagr": -0.4937
+  }
+ },
+ "card_says": {
+  "trainvalid": {
+   "ann": -0.249,
+   "sharpe": 0.395,
+   "mdd": -0.943,
+   "vol": 1.246
+  },
+  "test": {
+   "ann": 0.075,
+   "sharpe": 0.566,
+   "mdd": -0.842,
+   "vol": 0.978
+  },
+  "bench_trainvalid": {
+   "ann": 0.36
+  },
+  "bench_test": {
+   "ann": -0.494
+  }
+ },
+ "discrepancies": [
+  "完全一致，且这张卡的产物最齐：年化/波动/回撤/资金费拆解/alpha/置换/全起点/参数排名相关全部在 falsify_*.json 里，与 §7 逐项相同。",
+  "口径提醒：json 的 `ann` 是复利 CAGR，`sharpe` 是算术年化/波动——同一个字典里混着两种年化，横比时注意（H0004 也是这个 json 格式）。"
+ ],
+ "missing": [],
+ "notes": [
+  "§7 里最有复用价值的两条（IS/OOS 参数排名 Spearman −0.762；上市日随机重排置换 TV 96.7%→TEST 87.0%）分别在 json 的 param_rank_corr 与 permutation 里，可直接取。"
+ ]
+}

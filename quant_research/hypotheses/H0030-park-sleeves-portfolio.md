@@ -61,6 +61,8 @@ H0022 `cn_stock/out/equity_primary.csv`、H0024 `cn_stock/out_h0024/equity_prima
 两种权重、分段）→ `eval_weightings.py`（封顶、聚类、有效赌注数）。产物在 `portfolio/out/`，
 归档在 `verified/H0030/`。
 
+归档：`verified/H0030/manifest.json`（权威产物映射；不改 §7 数字与裁决）
+
 ## 7. 验收结果（quant-backtest-protocol 研究漏斗）
 
 **A 层：相关结构（这一层就判死了）**

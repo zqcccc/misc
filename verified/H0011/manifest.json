@@ -1,0 +1,128 @@
+{
+ "id": "H0011",
+ "verdict": "FAIL",
+ "title_short": "Binance 永续 15m 短期均值回归",
+ "impl_dir": "quant_research/crypto_perp/reversal_h0011",
+ "impl_note": "fetch_data.py → strategy_h0011.py → falsify_h0011.py；产物在 out/。注意这是 quant_research/crypto_perp/，与仓库根的 crypto_perp/ 是两个目录",
+ "authoritative": {
+  "returns": {
+   "path": "quant_research/crypto_perp/reversal_h0011/out/returns_taker_5bp.csv",
+   "sha256": "6ccca8a1e803d2bf55ba7d12c6bcae1aa501ebf86f021623a606d6267882d238",
+   "bytes": 68410,
+   "rows": 2173,
+   "start": "2020-09-14",
+   "end": "2026-08-31",
+   "copied_as": "returns_taker_5bp.csv",
+   "note": "主口径 taker 5bp/边"
+  },
+  "returns_maker": {
+   "path": "quant_research/crypto_perp/reversal_h0011/out/returns_maker_2bp.csv",
+   "sha256": "86b45d83b4a605c08d21315c3e2a8ec9ed3ced5ec6d5bc3a7349e0677090d0a6",
+   "bytes": 69160,
+   "rows": 2173,
+   "start": "2020-09-14",
+   "end": "2026-08-31",
+   "copied_as": "returns_maker_2bp.csv",
+   "note": "maker 2bp/边对照"
+  },
+  "bench": {
+   "path": "quant_research/crypto_perp/reversal_h0011/out/bench_taker_5bp.csv",
+   "sha256": "5b4ab28cef7410d1b739181bd1b8879123c70077233b132fa4d6e9cee8ba4fd8",
+   "bytes": 66001,
+   "rows": 2173,
+   "start": "2020-09-14",
+   "end": "2026-08-31",
+   "copied_as": "bench_taker_5bp.csv"
+  },
+  "report": {
+   "path": "quant_research/crypto_perp/reversal_h0011/out/oos_verdict_taker.json",
+   "sha256": "e1fa7c6e0fabea1282f295020994e89d0286aa45e4cd811dbb65f2a91a408c19",
+   "bytes": 2431,
+   "copied_as": "oos_verdict_taker.json"
+  },
+  "report_maker": {
+   "path": "quant_research/crypto_perp/reversal_h0011/out/oos_verdict_maker.json",
+   "sha256": "94d00f7a158b6ec7e84d0cca41829866f93a20c45c18464ae10d945f1de9b4cb",
+   "bytes": 2428,
+   "copied_as": "oos_verdict_maker.json"
+  },
+  "permutation": {
+   "path": "quant_research/crypto_perp/reversal_h0011/out/perm_result.txt",
+   "sha256": "2d80678f6d0c23bc185745ed124ec8349d075f0e44e167f28c84d62f7aeb0d0a",
+   "bytes": 70,
+   "copied_as": "perm_result.txt",
+   "note": "毛 edge 换手匹配置换分位 27.8%"
+  },
+  "trials": {
+   "path": "quant_research/crypto_perp/reversal_h0011/out/trials_taker_5bp.json",
+   "sha256": "625efe7016267d13e7f0bc697978bc03299ccee4bb25c4f1fdb4226dd27a830d",
+   "bytes": 97,
+   "copied_as": "trials_taker_5bp.json"
+  },
+  "panel": {
+   "path": "quant_research/crypto_perp/reversal_h0011/out/panel_taker_5bp.csv",
+   "sha256": "56c1fd41edc8bb58032fcdb78efa8776a052a3cce9f9e2fa3d07157925992673",
+   "bytes": 32908137,
+   "copied_as": null,
+   "note": "33MB 15m 面板，未复制"
+  }
+ },
+ "superseded": [
+  {
+   "path": "quant_research/crypto_perp/reversal_h0011/out/bench_maker_2bp.csv",
+   "why": "与 bench_taker_5bp.csv 同尺寸的基准副本，成本档不同但基准本身相同，冗余"
+  },
+  {
+   "path": "quant_research/crypto_perp/reversal_h0011/out/strategy_taker_5bp.csv",
+   "why": "21MB 逐 bar 持仓明细，非结果序列"
+  },
+  {
+   "path": "quant_research/crypto_perp/reversal_h0011/out/strategy_maker_2bp.csv",
+   "why": "22MB 同上"
+  },
+  {
+   "path": "quant_research/crypto_perp/reversal_h0011/out/panel_maker_2bp.csv",
+   "why": "33MB 面板，与 taker 版相同（sha 相同），冗余"
+  }
+ ],
+ "reproduce": "cd quant_research/crypto_perp/reversal_h0011 && /opt/homebrew/bin/python3.11 falsify_h0011.py  # 归档时未重跑",
+ "recomputed": {
+  "taker_5bp": {
+   "n": 2173,
+   "window": "2020-09-14~2026-08-31",
+   "ann_arith": -93.93,
+   "mdd_wallet": -659.1,
+   "note": "这条序列 6 年内跌到 0（复利净值 0.0000），算术年化 −9393% 是钱包加总口径的直读值，没有经济含义，只用来确认『成本是 edge 的 300~800 倍』"
+  },
+  "maker_2bp": {
+   "ann_arith": -40.98
+  },
+  "bench": {
+   "ann_cagr": 0.7912,
+   "sharpe_arith": 1.1596
+  }
+ },
+ "card_says": {
+  "taker": {
+   "ann": -93.7,
+   "sharpe": -218,
+   "mdd": 6.591,
+   "alpha": -93.7,
+   "alpha_t": -532
+  },
+  "maker": {
+   "ann": -40.9,
+   "sharpe": -84
+  },
+  "perm_pct": 0.278
+ },
+ "discrepancies": [
+  "与 oos_verdict_taker.json 完全一致：ann_return −93.7097、sharpe −218.422、max_drawdown 659.098、alpha −93.72 (t=−532.69)，卡片逐项照抄。maker 档同理（−40.9 / −84）。",
+  "我按 csv 直接重算得算术年化 −93.93、夏普 −261.5，与 json 的 −93.71 / −218.4 略有出入：json 用 T_days=2178，csv 只有 2173 行非空（5 天缺口），且 json 的 ann_vol=0.429 与逐日重算的 0.359 不同。差异不影响任何结论——这条序列的量级本身就是『成本吃穿一切』的注脚。",
+  "置换 27.8% 与 perm_result.txt 一致（real=-2.62e-6/bar vs perm_p95=7.77e-6）。"
+ ],
+ "missing": [],
+ "notes": [
+  "本卡的核心事实是换手 21.6 万次/年、成本是毛 edge 的 300~800 倍；毛 edge 的逐年数字（2021 −0.94bp ~ 2026 +0.40bp/bar）没有单独落盘。"
+ ]
+}

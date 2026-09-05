@@ -1,0 +1,118 @@
+{
+ "id": "H0027",
+ "verdict": "FAIL",
+ "title_short": "拍卖需求随机森林选债 ETF",
+ "impl_dir": "quant_research/rates/auction_ml_h0027",
+ "impl_note": "fetch_data.py → research.py dev（模型依赖在临时目录，需 PYTHONPATH=/tmp/quant_research_h0027_pydeps）→ causality_fn.py；产物在 out/。注意目录是 quant_research/rates/，不是仓库根的 rates/（那是 H0008）",
+ "authoritative": {
+  "returns": {
+   "path": "quant_research/rates/auction_ml_h0027/out/valid_strategy.csv",
+   "sha256": "7a2e452919137470f1298e561ba6298f2ce47dfe28e20ca555f075f7b69c2694",
+   "bytes": 24560,
+   "rows": 757,
+   "start": "2019-01-02",
+   "end": "2021-12-31",
+   "copied_as": "valid_strategy.csv",
+   "note": "VALID 2019-2021 段的 RF 策略；判读就止步于此层"
+  },
+  "bench": {
+   "path": "quant_research/rates/auction_ml_h0027/out/valid_benchmark.csv",
+   "sha256": "45c95b37711e186ebac4f09dc8276d4eb10307535d9b4a8b3d4974bd76211d92",
+   "bytes": 24948,
+   "rows": 757,
+   "start": "2019-01-02",
+   "end": "2021-12-31",
+   "copied_as": "valid_benchmark.csv",
+   "note": "SHY/IEF/TLT 月度等权"
+  },
+  "report": {
+   "path": "quant_research/rates/auction_ml_h0027/out/qbt_valid_report.json",
+   "sha256": "ee5ff7a0efb40125cf992edafd085f7a0c08d67f1de648219c5b9c6dcaca0ceb",
+   "bytes": 2078,
+   "copied_as": "qbt_valid_report.json"
+  },
+  "report_dev": {
+   "path": "quant_research/rates/auction_ml_h0027/out/research_dev.json",
+   "sha256": "d248c5a680162909cb1e71f4f95993bbf63cc3d24df575dd0e0ea096bd10c08a",
+   "bytes": 8576,
+   "copied_as": "research_dev.json"
+  },
+  "trials": {
+   "path": "quant_research/rates/auction_ml_h0027/out/trials.json",
+   "sha256": "d563ab3162663ccbfa793a1d38a6902495d70f334c5e2bc49e8dde8d598acb28",
+   "bytes": 264,
+   "copied_as": "trials.json",
+   "note": "N=3（RF / Logistic / ExtraTrees）"
+  },
+  "monthly": {
+   "path": "quant_research/rates/auction_ml_h0027/out/monthly_dev.csv",
+   "sha256": "17c5e75116f14d94be72b7b3e55023bc76fbf6765a57aa79f447561d04d76358",
+   "bytes": 32835,
+   "copied_as": "monthly_dev.csv"
+  },
+  "predictions_rf": {
+   "path": "quant_research/rates/auction_ml_h0027/out/predictions_rf_dev.csv",
+   "sha256": "f227f27b972aa110f3c498244e991fc4a4a6cc6e77b009077cc8e587e5bef5b1",
+   "bytes": 3698,
+   "copied_as": "predictions_rf_dev.csv"
+  },
+  "predictions_logistic": {
+   "path": "quant_research/rates/auction_ml_h0027/out/predictions_logistic_dev.csv",
+   "sha256": "6229e488e5b9e3404154390ff42a56820818f1d67ba45473f237e94d3a4f3b58",
+   "bytes": 4231,
+   "copied_as": "predictions_logistic_dev.csv"
+  },
+  "predictions_extra_trees": {
+   "path": "quant_research/rates/auction_ml_h0027/out/predictions_extra_trees_dev.csv",
+   "sha256": "15094cafccda43fe747a8d647a399af0b588c4f2f705a1cff8826c1c0724a993",
+   "bytes": 4540,
+   "copied_as": "predictions_extra_trees_dev.csv"
+  }
+ },
+ "superseded": [],
+ "reproduce": "cd quant_research/rates/auction_ml_h0027 && PYTHONPATH=/tmp/quant_research_h0027_pydeps /opt/homebrew/bin/python3.11 research.py dev  # 归档时未重跑；TEST 从未揭盲",
+ "recomputed": {
+  "valid_rf": {
+   "n": 757,
+   "window": "2019-01-02~2021-12-31",
+   "ann_cagr": -0.0171,
+   "vol": 0.073,
+   "sharpe": -0.1991,
+   "mdd": -0.1346
+  },
+  "valid_bench": {
+   "ann_cagr": 0.0513,
+   "vol": 0.0758,
+   "sharpe": 0.6956,
+   "mdd": -0.1006
+  }
+ },
+ "card_says": {
+  "valid_rf": {
+   "ann": -0.0171,
+   "sharpe": -0.199,
+   "mdd": -0.1346
+  },
+  "valid_bench": {
+   "ann": 0.0511,
+   "sharpe": 0.696,
+   "mdd": -0.1006
+  },
+  "alpha": -0.0439,
+  "alpha_t": -1.46,
+  "beta": 0.557,
+  "dsr": 0.1401
+ },
+ "discrepancies": [
+  "一致：RF −1.71%/−0.1991/−13.46% 精确相同；基准重算 +5.13% vs 卡片 +5.11%（夏普 0.6956 vs 0.696、回撤 −10.06% 精确相同），差异在小数第三位。"
+ ],
+ "missing": [
+  "**TEST 2022-2026 从未揭盲**——这是刻意的：第 1 层已证伪，按协议停止，不为死假设污染考卷。所以本卡永远没有 TEST 产物，这是正确状态不是缺失。",
+  "第 4 层循环移位置换未运行（同上原因）。",
+  "TRAIN 段（2014-03~2018-12，RF 0.91% vs 等权 2.70%、alpha −3.23% t=−1.73）的序列没有单独落盘，只在 research_dev.json 里。"
+ ],
+ "notes": [
+  "三个模型的 VALID 夏普分别是 RF −0.199 / Logistic +0.698 / ExtraTrees −0.121——模型形式极不稳定，三条 predictions_*.csv 都归档了，方便后人看这个不稳定性。",
+  "TEST 三文件当时保持 0444 存在工作区外，现已随 /tmp 清空。"
+ ]
+}

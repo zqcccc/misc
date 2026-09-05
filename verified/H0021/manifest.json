@@ -1,0 +1,164 @@
+{
+ "id": "H0021",
+ "verdict": "PARK",
+ "title_short": "做空 VIX 期货 30 天恒定到期",
+ "impl_dir": "quant_research/vol",
+ "impl_note": "fetch_data.py → build_series.py → strategy_h0021.py → falsify_h0021.py；产物全在 vol/data/",
+ "authoritative": {
+  "returns": {
+   "path": "quant_research/vol/data/qbt_v0_full.csv",
+   "sha256": "91edcdeafba89284bdafb21aeea987325af6351385463860eb625bc45f9b8570",
+   "bytes": 119378,
+   "rows": 3938,
+   "start": "2011-01-05",
+   "end": "2026-09-02",
+   "copied_as": "qbt_v0_full.csv",
+   "note": "V0 = 卡片 §7 主口径（恒定满仓做空，无择时）"
+  },
+  "returns_test": {
+   "path": "quant_research/vol/data/qbt_v0_TEST.csv",
+   "sha256": "7c8116da0e9b55971b928865266467688026cb3ccbadf79a8d4b5099f2c60c6f",
+   "bytes": 43132,
+   "rows": 1423,
+   "start": "2021-01-04",
+   "end": "2026-09-02",
+   "copied_as": "qbt_v0_TEST.csv"
+  },
+  "bench": {
+   "path": "quant_research/vol/data/bench_bill.csv",
+   "sha256": "6aea74b04da081371b12b4ef315b2439543554bcd433bbfc80255b3e06c7496f",
+   "bytes": 127145,
+   "rows": 3938,
+   "start": "2011-01-05",
+   "end": "2026-09-02",
+   "copied_as": "bench_bill.csv",
+   "note": "T-bill（DTB3）现金抵押基准"
+  },
+  "bench_spx": {
+   "path": "quant_research/vol/data/bench_spx.csv",
+   "sha256": "26ecec6afcb6590e36f4c1631588194349948dce451f644816f0a4f2f868a978",
+   "bytes": 119740,
+   "rows": 3938,
+   "start": "2011-01-05",
+   "end": "2026-09-02",
+   "copied_as": "bench_spx.csv",
+   "note": "β_SPX 归因用"
+  },
+  "report": {
+   "path": "quant_research/vol/data/falsify_results.json",
+   "sha256": "ebbf59257d9cb1ee799728b578bc32eb5989754d962a777d696eeb2df3b02597",
+   "bytes": 18120,
+   "copied_as": "falsify_results.json"
+  },
+  "trials": {
+   "path": "quant_research/vol/data/trials.json",
+   "sha256": "cbdb111b27c208896f18c9d9c82501a9afd18ec840b3a8db7b48deb363ba9552",
+   "bytes": 164,
+   "copied_as": "trials.json"
+  }
+ },
+ "superseded": [
+  {
+   "path": "quant_research/vol/data/qbt_v1_full.csv",
+   "why": "V1（信号择时）变体：置换分位 92.8% < 95%，卡片主口径是 V0"
+  },
+  {
+   "path": "quant_research/vol/data/qbt_v1_TEST.csv",
+   "why": "同上，V1 的 TEST 段"
+  },
+  {
+   "path": "quant_research/vol/data/qbt_v2_full.csv",
+   "why": "V2（vol-target）变体：置换分位仅 3.5%，卡片明确判为负贡献"
+  },
+  {
+   "path": "quant_research/vol/data/qbt_v2_TEST.csv",
+   "why": "同上"
+  },
+  {
+   "path": "quant_research/vol/data/qbt_v3_full.csv",
+   "why": "V3（vol-target 变体）：置换分位 11.8%，同为负贡献"
+  },
+  {
+   "path": "quant_research/vol/data/qbt_v3_TEST.csv",
+   "why": "同上"
+  },
+  {
+   "path": "quant_research/vol/data/qbt_long_full.csv",
+   "why": "做多 VIX 对照腿（年化 −45%、MDD −100%），只作对照，不是策略结果"
+  },
+  {
+   "path": "quant_research/vol/data/master.csv",
+   "why": "中间合成表（700KB），非结果序列"
+  },
+  {
+   "path": "quant_research/vol/data/strat.csv",
+   "why": "逐日仓位/成本明细（952KB），非结果序列"
+  }
+ ],
+ "reproduce": "cd quant_research/vol && /opt/homebrew/bin/python3.11 falsify_h0021.py  # 归档时未重跑",
+ "recomputed": {
+  "v0_full": {
+   "n": 3938,
+   "window": "2011-01-05~2026-09-02",
+   "final_equity": 17.5035,
+   "ann_arith": 0.4399,
+   "ann_cagr252": 0.201,
+   "vol": 0.6955,
+   "sharpe": 0.6325,
+   "mdd_compound": -0.9165,
+   "mdd_additive_wallet": -0.7521
+  },
+  "v0_test": {
+   "n": 1423,
+   "window": "2021-01-04~2026-09-02",
+   "ann_arith": 0.5324,
+   "vol": 0.7015,
+   "sharpe": 0.759,
+   "mdd_compound": -0.7817
+  },
+  "long_control": {
+   "ann_arith": -0.4519,
+   "mdd_compound": -1.0
+  },
+  "bench_bill": {
+   "ann_arith": 0.0156
+  },
+  "v1_full": {
+   "ann_arith": 0.4655,
+   "sharpe": 0.7878
+  },
+  "v2_full": {
+   "ann_arith": 0.0672,
+   "sharpe": 0.5653
+  },
+  "v3_full": {
+   "ann_arith": 0.0681,
+   "sharpe": 0.6117
+  }
+ },
+ "card_says": {
+  "v0_full": {
+   "ann_arith": 0.44,
+   "ann_compound": 0.201,
+   "sharpe": 0.63,
+   "mdd": -0.917
+  },
+  "v0_test": {
+   "ann": 0.532,
+   "sharpe": 0.76,
+   "mdd": -0.782
+  },
+  "long_control": {
+   "ann": -0.45,
+   "mdd": -1.0
+  }
+ },
+ "discrepancies": [
+  "完全一致：V0 FULL 43.99% 算术 / 20.10% 复利 / 夏普 0.6325 / 复利回撤 −91.65%，与卡片 44.0%(20.1%)/0.63/−91.7% 逐项相同；TEST 53.24%/0.759/−78.17% 对 53.2%/0.76/−78.2%；对照做多 −45.19%、MDD −100%。",
+  "回撤口径提醒：卡片 §7 用的是复利净值回撤（−91.7%），falsify_results.json 里 qbt 的 max_drawdown=0.7521 是日收益加总钱包口径，两者相差很大，引用时须写清。"
+ ],
+ "missing": [],
+ "notes": [
+  "卡片 §7 最后一行的『36 天 VIX 盘中高点≥1.4×昨收』在 falsify_results.json 的 vix_intraday_spike_days 里有明细；SVXY 2018-02-06 隔夜路径对照数据在 data/svxy_max.csv。"
+ ]
+}

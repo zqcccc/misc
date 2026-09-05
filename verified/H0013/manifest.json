@@ -1,0 +1,85 @@
+{
+ "id": "H0013",
+ "verdict": "FAIL",
+ "title_short": "商品期货隔夜→日内横截面反转",
+ "impl_dir": "futures",
+ "impl_note": "fetch.py / fetch_contracts.py / build_panel13.py → strategy_h0013.py（第一轮，连续合约）与 strategy_h0013_v2.py（复活实验，分合约干净数据）",
+ "authoritative": {
+  "returns": null,
+  "bench": null,
+  "report": null,
+  "input_panel_continuous": {
+   "path": "futures/data/ohlc.parquet",
+   "sha256": "df15a6fe67983aebe02635ad079f9121071a6d44dfde20a7a37c4a8c11d9c9be",
+   "bytes": 2078611,
+   "copied_as": null,
+   "note": "2MB，22 品种连续合约 2000-2026，第一轮（7a）的输入；结论是它被换月收益污染、不可检验"
+  },
+  "input_panel_single_contract": {
+   "path": "futures/data/backfill_scan.csv",
+   "sha256": "a72886a135b2161bda9414d4daa94623ab540593d982489dfcd8f3b844ac0f45",
+   "bytes": 3764,
+   "copied_as": "backfill_scan.csv",
+   "note": "97 个在市单合约的回填占比自检（回填 0%）"
+  },
+  "input_panel13_dir": {
+   "path": "futures/data/panel13/",
+   "files": [
+    "CL.csv",
+    "GC.csv",
+    "HG.csv",
+    "NG.csv",
+    "SI.csv",
+    "ZC.csv"
+   ],
+   "copied_as": null,
+   "note": "6 主力品种的分合约干净面板，7b 复活实验的输入；已核对 sha 见下"
+  },
+  "input_panel13_sha": {
+   "CL": "3df9f110a724a8df4d658333010828519ca3e9a1224571306a1fc65ef6e2ff6b",
+   "GC": "fa5a0bfed9c981aed1656d9d498823df561bd3c6d376f556da6bd1ec76fbb855",
+   "HG": "386232951fefc6965c917c5116058e29a44fbe8db4a664d5c014df1977275737",
+   "NG": "1c8e3d0c583f0a019a61d2c265ccb16a56ec65b969beb51652e44a239431ae4f",
+   "SI": "d4ab7bd89c556c0199a2b9e0ea86703030fac8b4a349e68fdf0d287f1a64bc1e",
+   "ZC": "e7a5b3e0290d3cc2009bce36a89b8695f6086ee528f5ff2ab5abf3dee16be004"
+  }
+ },
+ "superseded": [
+  {
+   "path": "futures/strategy_h0013.py",
+   "why": "第一轮（连续合约）的策略；§7a 已判定该数据口径不可检验，勿用它的任何数字"
+  }
+ ],
+ "reproduce": "cd futures && /opt/homebrew/bin/python3.11 fetch_contracts.py && build_panel13.py && strategy_h0013_v2.py  # 无 run_h0013.py / falsify_h0013.py 留存",
+ "recomputed": {},
+ "card_says": {
+  "full": {
+   "ann": -0.0862,
+   "sharpe": -0.095,
+   "mdd": -0.62
+  },
+  "test": {
+   "ann": -0.1353
+  },
+  "lb_family": [
+   0.0936,
+   -0.0862,
+   -0.0591
+  ],
+  "nw_t": -0.36,
+  "dsr": 0.267,
+  "perm_pct": 0.544
+ },
+ "discrepancies": [
+  "无法核对——本卡没有留下任何收益序列或证伪报告。"
+ ],
+ "missing": [
+  "**这张卡的结论目前无法复现。** §7b 的全部数字（FULL −8.62%/夏普 −0.095/回撤 −62%、TEST −13.53%、lb∈{10,20,60} 鲁棒族、NW t=−0.36、DSR 0.267、90 组常数篮子枚举置换分位 54.4%）都只存在于卡片文字里。",
+  "`futures/verified/` 目录存在但是空的；卡片 §6 提到的 `run_h0013.py` 与 `falsify_h0013.py` 在仓库里已不存在，只剩 strategy_h0013.py / strategy_h0013_v2.py。",
+  "唯一能复用的是输入侧：`futures/data/panel13/`（6 品种分合约干净面板）与 `backfill_scan.csv`。§7b 里最有价值的『干净数据上隔夜漂移真实存在，GC +25.2%/年、SI +42.9%』也没有落盘。",
+  "要复核必须用 strategy_h0013_v2.py 对 panel13 重跑——但那属于重跑回测，超出本次归档范围。"
+ ],
+ "notes": [
+  "`qr leads` 把本卡列为有未接手线索（自建 back-adjusted 连续序列 / 另立带期限结构控制的新卡）。接手前先补一次产物落盘，否则新卡也没有可比基线。"
+ ]
+}

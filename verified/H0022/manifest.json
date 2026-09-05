@@ -1,0 +1,146 @@
+{
+ "id": "H0022",
+ "verdict": "PARK",
+ "title_short": "A股质量因子（ROE+稳定性+经营现金流）",
+ "impl_dir": "quant_research/cn_stock",
+ "impl_note": "build_h0022.py → falsify_h0022.py → causality_fn.py；产物在 cn_stock/out/（目录名不带 ID 的这个是 H0022，out_h0024/ 是 H0024，out_h0028/ 是 H0028）",
+ "authoritative": {
+  "returns": {
+   "path": "quant_research/cn_stock/out/equity_primary.csv",
+   "sha256": "301dd2a3478f6af41576fedba2deb6b7132bb78e42431f4c8c352f6a80bbb9bd",
+   "bytes": 84057,
+   "rows": 2591,
+   "start": "2016-01-04",
+   "end": "2026-09-01",
+   "copied_as": "equity_primary.csv",
+   "note": "primary_quality_top20 净收益日序列；FULL 一条，TEST(2022-01-04 起,1130 天) 是它的子窗口，无独立文件"
+  },
+  "bench": {
+   "path": "quant_research/cn_stock/out/bench_ew.csv",
+   "sha256": "82514767299e3f386355abc34340cb6c62e2c3a5a89dc57b8875a063977aa6e7",
+   "bytes": 65183,
+   "rows": 2836,
+   "start": "2015-01-05",
+   "end": "2026-09-02",
+   "copied_as": "bench_ew.csv",
+   "note": "同池等权；文件覆盖 2015-01-05~2026-09-02(2836 天)，比策略序列长 245 天，算超额前必须先 reindex 对齐到策略索引"
+  },
+  "bench_hs300": {
+   "path": "quant_research/cn_stock/out/bench_hs300.csv",
+   "sha256": "556ad6b25bab71b2bf8823e3663f3fa038bcb4819a180033d950a6a3be600aa4",
+   "bytes": 92484,
+   "rows": 2836,
+   "start": "2015-01-05",
+   "end": "2026-09-02",
+   "copied_as": "bench_hs300.csv"
+  },
+  "report": {
+   "path": "quant_research/cn_stock/out/falsification.json",
+   "sha256": "3e828cde81b44e4f29f0d125a1203f8c12f20848ea0eeb3205dcd68379827159",
+   "bytes": 4982,
+   "copied_as": "falsification.json"
+  },
+  "split_stats": {
+   "path": "quant_research/cn_stock/out/split_stats.json",
+   "sha256": "09c297a3489a53d0df857b7ea5c3b2046ff89e87b0f4ec0e7576f87ca7ab33c5",
+   "bytes": 1222,
+   "copied_as": "split_stats.json"
+  },
+  "trials": {
+   "path": "quant_research/cn_stock/out/trials.json",
+   "sha256": "a35fe9863199ec119b11819ec32bdf3c9ffafea4961a65565173e0133b889ab4",
+   "bytes": 1674,
+   "copied_as": "trials.json"
+  },
+  "turnover": {
+   "path": "quant_research/cn_stock/out/turnover.csv",
+   "sha256": "6628b131f5b27f016e987f5c969e77d249f162856d3e752a3d7c84a1bceac948",
+   "bytes": 49030,
+   "rows": 2591,
+   "start": "2016-01-04",
+   "end": "2026-09-01",
+   "copied_as": "turnover.csv"
+  },
+  "score_panel": {
+   "path": "quant_research/cn_stock/out/quality_score.parquet",
+   "sha256": "6fb56cf040d73533f65b71c9166a34818c031fe2732efc5877227fa0789ead92",
+   "bytes": 60319948,
+   "copied_as": null,
+   "note": "60MB PIT 质量打分面板，未复制，只记指纹；读它要 /opt/homebrew/bin/python3.11（需 pyarrow）"
+  }
+ },
+ "superseded": [
+  {
+   "path": "quant_research/cn_stock/out/equity_level.csv",
+   "why": "净值(level)形式而非日收益，且首列不是收益率——直接当收益序列读会得到 inf；用 equity_primary.csv"
+  },
+  {
+   "path": "quant_research/cn_stock/out/chart_data.json",
+   "why": "看板绘图用的抽稀数据，非结果"
+  },
+  {
+   "path": "quant_research/cn_stock/out/chart_option.js",
+   "why": "同上"
+  },
+  {
+   "path": "quant_research/cn_stock/out/chart_option.json",
+   "why": "同上"
+  }
+ ],
+ "reproduce": "cd quant_research/cn_stock && /opt/homebrew/bin/python3.11 build_h0022.py && /opt/homebrew/bin/python3.11 falsify_h0022.py  # 归档时未重跑",
+ "recomputed": {
+  "convention": "卡片 §7 口径：『年化收益』= 日历年复利 CAGR；『夏普』= 该 CAGR / 年化波动；『超额vs等权』= 逐日超额 (策略−等权) 复利后的日历年 CAGR（不是两个 CAGR 相减）。",
+  "full": {
+   "n": 2591,
+   "window": "2016-01-04~2026-09-01",
+   "final_equity": 1.5641,
+   "ann_cagr_calendar": 0.0429,
+   "ann_cagr252": 0.0445,
+   "ann_arith": 0.066,
+   "vol": 0.2114,
+   "sharpe": 0.2027,
+   "mdd": -0.4073,
+   "excess_vs_ew_compound": 0.0298
+  },
+  "test": {
+   "n": 1130,
+   "window": "2022-01-04~2026-09-01",
+   "final_equity": 0.9861,
+   "ann_cagr_calendar": -0.003,
+   "sharpe": -0.0139,
+   "mdd": -0.4073,
+   "excess_vs_ew_compound": -0.0295
+  },
+  "bench_ew_aligned": {
+   "n": 2591,
+   "ann_cagr_calendar": 0.0013,
+   "vol": 0.2484,
+   "mdd": -0.5508
+  }
+ },
+ "card_says": {
+  "full": {
+   "ann": 0.043,
+   "sharpe": 0.21,
+   "excess": 0.0299
+  },
+  "test": {
+   "ann": -0.003,
+   "sharpe": -0.01,
+   "excess": -0.0297
+  },
+  "alpha_full": 0.0331,
+  "alpha_t_full": 2.15,
+  "dsr_full": 0.792
+ },
+ "discrepancies": [
+  "一致。FULL 4.29% vs 卡片 4.30%、夏普 0.203 vs 0.21（卡片用 split_stats.json 的 vol 0.208，重算 ddof=1 得 0.2114，差异只在这）、回撤 −40.73% 精确一致、超额 +2.98% vs +2.99%；TEST −0.30%/−0.014/超额 −2.95% vs 卡片 −0.30%/−0.01/−2.97%。",
+  "超额的算法必须记牢：是逐日超额序列复利后年化，不是两条 CAGR 相减。按相减算会得到 +4.15%（FULL）/ −1.81%（TEST），与卡片差 1 个百分点以上。",
+  "bench_ew.csv 的窗口（2015-01-05 起，2836 天）比策略序列（2016-01-04 起，2591 天）长 245 天。不对齐直接算基准年化会得到 +0.05%，对齐后是 +0.13%。这是『序列窗口比卡片声明的长』的具体表现，不是数据错误。",
+  "卡片 §7 的 alpha 3.31%(t=2.15)、DSR 0.792、置换分位 100%(p=0.0025)、逐年剔除最低 t=1.63@2016、IC FULL 0.0246(t=10.5)/TEST 0.0045(t=1.15) 与 falsification.json 逐项一致。"
+ ],
+ "missing": [],
+ "notes": [
+  "out/causality_data/ 是因果闸 panel 模式的 400 个切片输入，未复制。"
+ ]
+}

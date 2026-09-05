@@ -1,0 +1,25 @@
+{
+ "n_epochs": 4,
+ "trials": [
+  {
+   "epoch": 1,
+   "params": "main_3/3",
+   "valid_sharpe": 0.2356
+  },
+  {
+   "epoch": 2,
+   "params": "sens_1/1",
+   "valid_sharpe": 0.2136
+  },
+  {
+   "epoch": 3,
+   "params": "sens_4/4",
+   "valid_sharpe": 0.1786
+  },
+  {
+   "epoch": 4,
+   "params": "lag1_3/3",
+   "valid_sharpe": 0.2547
+  }
+ ]
+}

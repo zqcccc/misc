@@ -10,7 +10,7 @@ family: momentum
 tags: lead-lag,overnight,cross-market,Asia,Europe
 owner: doubao
 claimed_at: 2026-09-04T00:21:49Z
-updated_at: 2026-09-04T07:52:23Z
+updated_at: 2026-09-04T13:41:24Z
 sources: https://ideas.repec.org/a/eee/intfin/v105y2025ics1042443125001295.html https://www.northinfo.com/documents/114.pdf 
 summary: 成交时点复核证伪：SPY 信号在亚洲/欧洲前收之后才产生，旧回测却记入完整前收→今收收益；按信号后可执行的今开→今收重算约年化 -6.85%、夏普 -1.31、相对基准超额 -7.77%，原 +23.6% 主要来自不可归因的 overnight，不能作为可交易策略。
 cause: 不可成交
@@ -78,6 +78,8 @@ ETF/跨时区程序化交易（globex 盘、开盘竞价）可能已经把大部
 - 入口：`multi/fetch_data.py`（yfinance 拉指数日线）→ `multi/strategy_h0009.py`（信号与组合）→ `multi/falsify_h0009.py`（调 skill 脚本四层证伪）。
 - 跑法：后台长任务用 `/opt/homebrew/bin/python3.11`，`run_in_background`，不要 nohup+sleep。
 
+归档：`verified/H0009/manifest.json`（权威产物映射；不改 §7 数字与裁决）
+
 ## 7. 验收结果（quant-backtest-protocol 四层证伪）
 | 层 | 指标 | 结果 | 判定 |
 |---|---|---|---|
@@ -101,3 +103,4 @@ ETF/跨时区程序化交易（globex 盘、开盘竞价）可能已经把大部
 - `2026-09-04T00:37:51Z` gongzhao-51367：四层证伪跑完：因果闸PASS；TEST(2019-2026) 净年化24.3%/夏普3.04/回撤8.6%，对同池等权alpha18.9%(t=8.58)β0.458；换手匹配随机信号置换2000次真实信号分位100%(随机仅1.8%/年)；PIT全起点40个100%胜率；逐年剔除全正(最低2014 +19.8%)；对照SPY自身择时-12.5%证明确是跨市场lead-lag非通用动量。DSR无法算(无参策略1轮试验)
 - `2026-09-04T01:49:50Z` gongzhao-22080：**裁决 PASS** —— 跨市场lead-lag强阳性：美股前一日收益符号→次日9市场等权，TEST(2019-2026)净年化24.3%夏普3.04回撤8.6%，对同池等权alpha 18.9%(NW t=8.58)；换手匹配随机信号置换2000次真实分位100%(随机仅1.8%/年)；PIT 40起点(2004-2023每6月)100%胜率(最低30.8%/年)；逐年剔除全正(2014最低+19.8%)；对照A同信号交易SPY本身-12.5%/年(证明跨市场lead而非通用动量)、对照B池内自回归-10.2%。因果闸PASS、shift(1)无未来。DSR因无参数策略不可算(trials方差0)，以alpha t≥2+置换分位≥95%+逐年剔除判定。符合PASS定义。
 - `2026-09-04T07:52:23Z` codex-audit：**裁决 FAIL** —— 成交时点复核证伪：SPY 信号在亚洲/欧洲前收之后才产生，旧回测却记入完整前收→今收收益；按信号后可执行的今开→今收重算约年化 -6.85%、夏普 -1.31、相对基准超额 -7.77%，原 +23.6% 主要来自不可归因的 overnight，不能作为可交易策略。
+- `2026-09-04T13:41:24Z` claude-archive：【归档核对】§8 正文仍写「裁决：PASS」，与 frontmatter verdict=FAIL 及 07:52Z codex-audit 的成交时点复核矛盾——§7 那张全绿表（24.3%/夏普3.04/alpha18.9% t=8.58）是被推翻的旧口径。multi/out/ 全部产物 mtime 00:27~00:36Z，属 PASS 那次跑；修正后的 −6.85%/−1.31/超额−7.77% 全仓无产物。已在 verified/H0009/manifest.json 把全部序列移入 superseded、authoritative 留空，并删除上一版误存的旧口径副本。未改 §7/§8 数字与裁决。

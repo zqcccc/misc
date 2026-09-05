@@ -1,0 +1,116 @@
+{
+ "id": "H0009",
+ "verdict": "FAIL",
+ "title_short": "跨市场 lead-lag（美股→亚欧时区传导）",
+ "impl_dir": "quant_research/multi",
+ "impl_note": "fetch_data.py → strategy_h0009.py → prepare_qbt.py → robustness_h0009.py / random_signal_perm.py；产物在 multi/out/",
+ "ARCHIVE_WARNING": "⚠️ 本卡 out/ 下的全部产物是【成交时点修正前】的旧口径，对应已被推翻的 PASS 那次跑。判 FAIL 所依据的修正后序列没有落盘。详见 discrepancies / missing。",
+ "authoritative": {
+  "returns": null,
+  "bench": null,
+  "report": null,
+  "note": "留空是结论，不是遗漏：现存序列全部属于被推翻的口径，没有任何一条可以代表本卡的 FAIL 裁决。"
+ },
+ "superseded": [
+  {
+   "path": "quant_research/multi/out/returns_oos.csv",
+   "why": "**成交时点修正前的旧口径，勿用**。SPY 信号在亚洲/欧洲前收之后才产生，这条序列却记入完整『前收→今收』收益，把不可归因的隔夜段算成了策略收益。它给出的 +24.3%/年、alpha +18.9%(t=8.58) 就是 2026-09-04T00:37Z 那次 PASS 跑的数字，已于同日 07:52Z 被 codex-audit 推翻。",
+   "recomputed_anyway": {
+    "n": 1993,
+    "window": "2019-01-02~2026-08-28",
+    "ann_arith": 0.2431,
+    "vol": 0.0865,
+    "sharpe_arith": 2.8122,
+    "mdd_wallet": -0.0869,
+    "mdd_compound": -0.1033
+   }
+  },
+  {
+   "path": "quant_research/multi/out/returns_full.csv",
+   "why": "同上，2000 起全期版本，同一旧口径"
+  },
+  {
+   "path": "quant_research/multi/out/bench_oos.csv",
+   "why": "配套旧口径的同池等权基准"
+  },
+  {
+   "path": "quant_research/multi/out/bench_full.csv",
+   "why": "同上"
+  },
+  {
+   "path": "quant_research/multi/out/oos_verdict.json",
+   "why": "旧口径的 qbt 裁决报告（ann 0.2431 / sharpe 2.812 / alpha 0.1893 t=8.58），是 §7 那张全绿表的出处；该表已被推翻，勿引用"
+  },
+  {
+   "path": "quant_research/multi/out/strategy_returns.csv",
+   "why": "旧口径逐市场分腿明细"
+  },
+  {
+   "path": "quant_research/multi/out/signals.csv",
+   "why": "旧口径信号明细"
+  },
+  {
+   "path": "quant_research/multi/out/trades.csv",
+   "why": "旧口径成交流水"
+  },
+  {
+   "path": "quant_research/multi/out/trades_qbt.csv",
+   "why": "旧口径 qbt 输入"
+  },
+  {
+   "path": "quant_research/multi/out/trials.json",
+   "why": "旧口径 trials（N=1，方差 0 → DSR 不可算）"
+  },
+  {
+   "path": "quant_research/multi/out/panel.csv",
+   "why": "1.1MB 指数日线面板；面板本身没错，但基于它的旧回测口径错了，重跑必须改成信号后可执行的『今开→今收』"
+  }
+ ],
+ "reproduce": "cd quant_research/multi && /opt/homebrew/bin/python3.11 strategy_h0009.py  # ⚠️ 现有 strategy_h0009.py 仍是旧口径（前收→今收）；要复现 FAIL 结论必须先改成今开→今收再跑",
+ "recomputed": {
+  "superseded_series": {
+   "note": "下列是对已作废序列 returns_oos.csv 的重算，仅用于确认它就是 §7 那张表的出处，**不代表本卡结论**",
+   "ann_arith": 0.2431,
+   "sharpe_arith": 2.8122,
+   "mdd_wallet": -0.0869
+  },
+  "corrected_caliber": {
+   "note": "codex-audit 的修正后数字，无产物可重算，此处照录日志",
+   "ann": -0.0685,
+   "sharpe": -1.31,
+   "excess_vs_bench": -0.0777
+  }
+ },
+ "card_says": {
+  "section7_stale_PASS_table": {
+   "ann": 0.243,
+   "sharpe": 3.04,
+   "mdd": -0.086,
+   "excess": 0.189,
+   "alpha_t": 8.58,
+   "beta": 0.458
+  },
+  "frontmatter_verdict": "FAIL",
+  "audit_log_corrected": {
+   "ann": -0.0685,
+   "sharpe": -1.31,
+   "excess": -0.0777
+  }
+ },
+ "discrepancies": [
+  "**本卡 §7 与它自己的裁决不是一回事。** §7 那张全绿表（净年化 24.3% / 夏普 3.04 / alpha 18.9% t=8.58 / 置换分位 100%）是 2026-09-04T00:37Z 那次跑的结果，§8 正文至今仍写着『裁决：PASS』；但 frontmatter 的 verdict 是 **FAIL**，依据是同日 07:52Z codex-audit 的成交时点复核：SPY 信号在亚洲/欧洲前收之后才产生，旧回测却记入完整前收→今收收益，按信号后可执行的『今开→今收』重算约 **年化 −6.85%、夏普 −1.31、对基准超额 −7.77%**，原 +23.6% 主要来自不可归因的 overnight。",
+  "**磁盘上没有修正后的产物。** multi/out/ 全部文件 mtime 为本地 08:27~08:36（= 00:27~00:36Z），紧接首条 PASS 日志；codex-audit 那次（07:52Z = 本地 15:52）没有写下任何文件，全仓也搜不到 −6.85% / −1.31 对应的序列或报告。所以这些文件**只能代表被推翻的口径**。",
+  "顺带解掉了上一版归档里『夏普 3.04 找不到出处』那个悬案：不是口径问题——oos_verdict.json 与逐日重算都给 2.812，脚本里 sharpe 就是 mean*252/(std*√252)，3.04 在任何定义下都复不出来（非零日口径 3.11、复利口径 3.24 最接近但都不是）。它是那次已作废的跑里一个来源不明的数，现在整条序列都作废了，这个数也随之失去意义。",
+  "上一版归档把 returns_oos.csv 记成了 authoritative——**那是错的，本次已改正**：全部移入 superseded，authoritative 留空。"
+ ],
+ "missing": [
+  "**判 FAIL 所依据的修正后收益序列不存在**，无法复现 −6.85%/−1.31/−7.77%。要复核必须把 strategy_h0009.py 的成交口径从『前收→今收』改成『今开→今收』后重跑——那属于重跑回测，超出归档范围。",
+  "codex-audit 的复核过程没有落盘（既无脚本也无报告），只有探索日志里的一行结论。",
+  "旧口径那次跑的置换 2000 次、PIT 40 起点、两个对照组（同信号交易 SPY −12.5%/年、池内自回归 −10.2%）同样没有落盘——但那批数字本来也已作废。"
+ ],
+ "notes": [
+  "**这张卡是全批最该警惕的一张**：产物看起来齐全（序列 + 基准 + qbt 裁决 json 一应俱全）、数字漂亮（夏普 2.8、alpha t=8.58、置换分位 100%），四层证伪全绿——但整套东西建立在一个错误的成交时点上。任何人从 multi/out/ 直接取数都会取到一条已被推翻的曲线，而目录里没有任何标记提示这一点。这正是本次归档要解决的问题。",
+  "教训（可迁移）：跨时区策略必须先问『信号产生的那一刻，标的市场还开不开盘』。美股收盘 = 北京时间次日凌晨，亚洲市场当天的前收早已发生，前收→今收这一段里有一大半是信号根本吃不到的隔夜跳空。",
+  "multi/ 下的 profitability_h0026/ 是 H0026 的子目录，与本卡无关。"
+ ]
+}

@@ -1,0 +1,83 @@
+{
+  "market": "cn_stock",
+  "periods_per_year": 252,
+  "performance": {
+    "T_days": 2750,
+    "start": "2015-01-05",
+    "end": "2026-08-28",
+    "total_return": 0.4201,
+    "ann_return": 0.0385,
+    "sharpe_daily_wallet": 0.198,
+    "sortino": 0.361,
+    "max_drawdown": 0.3845,
+    "calmar": 0.1,
+    "ann_vol": 0.1947,
+    "positive_days_pct": 0.474
+  },
+  "alpha_beta": {
+    "n_days": 2750,
+    "beta": 0.313,
+    "r_squared": 0.101,
+    "ann_alpha": 0.0047,
+    "alpha_t": 0.08,
+    "alpha_p": 0.9333,
+    "alpha_significant": false,
+    "strategy_total": 0.4201,
+    "benchmark_total": 1.1781,
+    "note": "total/drag/contribution 为日收益加总口径（与日频夏普一致），非复利净值涨跌幅",
+    "beta_drag": 0.369,
+    "alpha_contribution": 0.0511,
+    "verdict": "正 alpha：策略本身有效"
+  },
+  "benchmark": {
+    "T_days": 2750,
+    "start": "2015-01-05",
+    "end": "2026-08-28",
+    "total_return": 1.6257,
+    "ann_return": 0.0925,
+    "sharpe_daily_wallet": 0.548,
+    "sortino": 0.758,
+    "max_drawdown": 0.3064,
+    "calmar": 0.302,
+    "ann_vol": 0.1971,
+    "positive_days_pct": 0.516
+  },
+  "deflated_sharpe": {
+    "error": "各轮得分方差为 0，无法估计运气基线"
+  },
+  "monte_carlo": {
+    "n": 2750,
+    "iters": 5000,
+    "block": 10,
+    "original_final": 1.2445,
+    "prob_profit": 0.5998,
+    "p5": 0.4187,
+    "p50": 1.1846,
+    "p95": 3.7725,
+    "verdict": "尚可"
+  },
+  "p_value": {
+    "observed_daily_mean": 0.000153,
+    "p_value": 0.5476,
+    "significant": false,
+    "verdict": "与 0 无显著差异（噪音）"
+  },
+  "random_portfolio": {
+    "iters": 2000,
+    "n_long": 5,
+    "n_short": 5,
+    "rebalance_bars": 1,
+    "random_sharpe_mean": -0.002,
+    "random_sharpe_p50": -0.004,
+    "random_sharpe_p95": 0.506,
+    "random_sharpe_max": 1.198,
+    "actual_sharpe": 0.198,
+    "percentile_vs_random": 0.7395,
+    "p_value": 0.2605,
+    "verdict": "打不过随机组合 —— 收益来自宇宙/仓位结构，不是你的因子"
+  },
+  "falsification_failures": [
+    "打不过 95% 随机组合：因子无信息"
+  ],
+  "verdict": "未通过：打不过 95% 随机组合：因子无信息"
+}

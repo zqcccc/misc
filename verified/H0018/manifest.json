@@ -1,0 +1,66 @@
+{
+ "id": "H0018",
+ "verdict": "FAIL",
+ "title_short": "G10 汇率 12-1 月动量",
+ "impl_dir": "fx",
+ "impl_note": "strategy_h0018.py → falsify_h0018.py（前台 <2min）；只落了一个 json，没有收益序列",
+ "authoritative": {
+  "returns": null,
+  "bench": null,
+  "report": {
+   "path": "verified/h0018_falsify.json",
+   "sha256": "61fc129ee75ddf6037d3f49daea897aa546db44585ee97909baed7a79792cf48",
+   "bytes": 1600,
+   "copied_as": "h0018_falsify.json",
+   "note": "已在 verified/ 根目录，原文件保持原位不动（避免破坏既有引用），此处存一份副本；含 l1(FULL/TEST 绩效) / robust(f∈{1,3,6,12}) / attrib / dsr / boot / perm"
+  }
+ },
+ "superseded": [],
+ "reproduce": "cd fx && /opt/homebrew/bin/python3.11 falsify_h0018.py  # 归档时未重跑",
+ "recomputed": {
+  "note": "没有收益序列可重算；以下直接引自 verified/h0018_falsify.json 的 l1 节点",
+  "full": {
+   "n": 273,
+   "freq": "月频",
+   "cagr": -0.008293,
+   "vol": 0.06713,
+   "sharpe": -0.09073,
+   "mdd": -0.35406,
+   "avg_turnover": 0.6099
+  },
+  "test": {
+   "n": 80,
+   "cagr": -0.000447,
+   "vol": 0.0652,
+   "sharpe": 0.02512,
+   "mdd": -0.15858,
+   "avg_turnover": 0.6125
+  }
+ },
+ "card_says": {
+  "full": {
+   "ann": -0.0083,
+   "sharpe": -0.091,
+   "mdd": -0.354
+  },
+  "test": {
+   "ann": -0.0004,
+   "sharpe": 0.025,
+   "mdd": -0.159
+  },
+  "dsr": 0.429,
+  "perm_full": 0.323,
+  "perm_test": 0.543
+ },
+ "discrepancies": [
+  "卡片 §7 与 h0018_falsify.json 逐项一致（FULL −0.83%/−0.091/−35.4%，TEST −0.04%/+0.025/−15.9%）。这是核对过的，不是无法核对。"
+ ],
+ "missing": [
+  "**没有收益序列**：falsify_h0018.py 只写 json，不导出月度收益 csv。所以本卡的净值曲线无法重建，只能相信 json 里的汇总统计；也无法把它接进任何组合层研究（这也是 H0030 的 8 条腿里没有它的原因之一）。",
+  "同理没有基准序列——本卡是零投资美元中性组合，基准恒为 0，但连策略自身的月度序列都没有。"
+ ],
+ "notes": [
+  "fx/ 目录下 H0018 只有代码没有产物；ret_main.csv / bench_zero.csv / trials_h0015.json 都是 H0015 的，别拿错。",
+  "verified/h0018_falsify.json 是本次归档前 verified/ 里仅有的两份产物之一（另一份是 verified/H0030/），保持原路径未移动。"
+ ]
+}

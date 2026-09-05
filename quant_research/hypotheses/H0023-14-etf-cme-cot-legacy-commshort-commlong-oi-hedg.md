@@ -111,6 +111,8 @@ ETF 内嵌的费用与展期损耗使这是**最严口径**（年鉴坑 2：UNG 
 - 补充证伪：`futures/cot_falsify_extra.py`（逐年剔除 NW t、腿归因、五分位）
 - 输出：`futures/data/cot/out/`（pit_hp / panel_returns / is_returns / test_returns / trades / trials.json）
 
+归档：`verified/H0023/manifest.json`（权威产物映射；不改 §7 数字与裁决）
+
 ## 7. 验收结果（quant-backtest-protocol 四层证伪）
 数据事实修正（非口径变更）：UHN（取暖油 ETF）2011 前清算 → HO 无载体剔除，宇宙 16→15；
 JO/NIB/BAL（iPath ETN）2023-07 清算 → KC/CC/CT 之后机械退出；全池共同起点 2011-10-01。

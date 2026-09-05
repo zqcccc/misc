@@ -75,6 +75,8 @@ plain: 长期确实一直在收保费，但历史上有过一天亏四成、累�
 strategy_h0021.py（V0-V3 + 成本 + 清盘规则）→ falsify_h0021.py（四层证伪主入口，调 qbt.py）。
 跑法：`/opt/homebrew/bin/python3.11 vol/falsify_h0021.py`（全部秒级完成，无后台长任务）。
 
+归档：`verified/H0021/manifest.json`（权威产物映射；不改 §7 数字与裁决）
+
 ## 7. 验收结果（quant-backtest-protocol 四层证伪）
 
 主口径（数据源变更说明见探索日志）：VIXY 隐含 ER，2011-01-05 → 2026-09-02（3939 天，样本起点

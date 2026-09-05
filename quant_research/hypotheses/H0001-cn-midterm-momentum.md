@@ -40,6 +40,8 @@ A 股散户占比高、换手率极高，反应不足的前提未必存在。
 ## 6. 实现
 `astock_quant/aq/factors.py` 的 mom60 / mom120 / high52w；IC 检验见 `scripts/run_research.py`。
 
+归档：`verified/H0001/manifest.json`（权威产物映射；不改 §7 数字与裁决）
+
 ## 7. 验收结果
 | 指标 | 结果 |
 |---|---|

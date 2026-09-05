@@ -1,0 +1,85 @@
+{
+  "market": "crypto",
+  "periods_per_year": 365,
+  "performance": {
+    "T_days": 2178,
+    "start": "2020-09-14",
+    "end": "2026-08-31",
+    "total_return": -559.1771,
+    "ann_return": -93.7097,
+    "sharpe_daily_wallet": -218.422,
+    "sortino": -260.931,
+    "max_drawdown": 659.098,
+    "calmar": -0.142,
+    "ann_vol": 0.429,
+    "positive_days_pct": 0.0
+  },
+  "alpha_beta": {
+    "n_days": 2178,
+    "beta": 0.015,
+    "r_squared": 0.001,
+    "ann_alpha": -93.7221,
+    "alpha_t": -532.69,
+    "alpha_p": 0.0,
+    "alpha_significant": true,
+    "strategy_total": -559.1771,
+    "benchmark_total": 5.0949,
+    "note": "total/drag/contribution 为日收益加总口径（与日频夏普一致），非复利净值涨跌幅",
+    "beta_drag": 0.0744,
+    "alpha_contribution": -559.2515,
+    "verdict": "负 alpha：选股/择时本身在亏钱"
+  },
+  "benchmark": {
+    "T_days": 2178,
+    "start": "2020-09-14",
+    "end": "2026-08-31",
+    "total_return": 31.2701,
+    "ann_return": 0.79,
+    "sharpe_daily_wallet": 1.158,
+    "sortino": 1.621,
+    "max_drawdown": 0.7961,
+    "calmar": 0.992,
+    "ann_vol": 0.7372,
+    "positive_days_pct": 0.529
+  },
+  "deflated_sharpe": {
+    "error": "各轮得分方差为 0，无法估计运气基线"
+  },
+  "monte_carlo": {
+    "n": 2173,
+    "iters": 5000,
+    "block": 10,
+    "original_final": 0.9456,
+    "prob_profit": 0.0,
+    "p5": 0.9454,
+    "p50": 0.9456,
+    "p95": 0.9458,
+    "verdict": "prob(profit) < 10% —— 这条曲线赚钱是小概率事件"
+  },
+  "p_value": {
+    "observed_daily_mean": -0.256739,
+    "p_value": 0.0,
+    "significant": true,
+    "verdict": "显著亏损"
+  },
+  "random_portfolio": {
+    "iters": 2000,
+    "n_long": 5,
+    "n_short": 1,
+    "rebalance_bars": 1,
+    "random_sharpe_mean": -0.001,
+    "random_sharpe_p50": -0.001,
+    "random_sharpe_p95": 0.068,
+    "random_sharpe_max": 0.146,
+    "actual_sharpe": -218.422,
+    "percentile_vs_random": 0.0,
+    "p_value": 1.0,
+    "verdict": "打不过随机组合 —— 收益来自宇宙/仓位结构，不是你的因子"
+  },
+  "falsification_failures": [
+    "alpha ≤ 0：收益不来自选股/择时",
+    "prob(profit) 0.0：赚钱是小概率事件",
+    "打不过 95% 随机组合：因子无信息"
+  ],
+  "verdict": "未通过：alpha ≤ 0：收益不来自选股/择时；prob(profit) 0.0：赚钱是小概率事件；打不过 95% 随机组合：因子无信息"
+}

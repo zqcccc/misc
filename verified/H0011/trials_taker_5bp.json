@@ -1,0 +1,1 @@
+{"n_epochs": 1, "trials": [{"epoch": 0, "params": {}, "train_sharpe": 0.0, "valid_sharpe": 0.0}]}

@@ -1,0 +1,19 @@
+{
+ "n_epochs": 2,
+ "trials": [
+  {
+   "epoch": 1,
+   "params": {
+    "window": "W1 t-1c->tc"
+   },
+   "valid_sharpe": 0.4282
+  },
+  {
+   "epoch": 2,
+   "params": {
+    "window": "W2 t-2c->tc"
+   },
+   "valid_sharpe": 0.5137
+  }
+ ]
+}

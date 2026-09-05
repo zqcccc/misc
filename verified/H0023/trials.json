@@ -1,0 +1,53 @@
+{
+ "n_epochs": 4,
+ "trials": [
+  {
+   "params": {
+    "hp_mode": "latest",
+    "n": "5v5",
+    "pit_lag": 5,
+    "cost_bp": 15.0
+   },
+   "train_sharpe": null,
+   "valid_sharpe": 0.013,
+   "is_sharpe": 0.013,
+   "is_ann": 0.0026
+  },
+  {
+   "params": {
+    "hp_mode": "latest",
+    "n": "3v3",
+    "pit_lag": 5,
+    "cost_bp": 15.0
+   },
+   "train_sharpe": null,
+   "valid_sharpe": 0.195,
+   "is_sharpe": 0.195,
+   "is_ann": 0.0474
+  },
+  {
+   "params": {
+    "hp_mode": "ma4",
+    "n": "5v5",
+    "pit_lag": 5,
+    "cost_bp": 15.0
+   },
+   "train_sharpe": null,
+   "valid_sharpe": 0.063,
+   "is_sharpe": 0.063,
+   "is_ann": 0.013
+  },
+  {
+   "params": {
+    "hp_mode": "ma4",
+    "n": "3v3",
+    "pit_lag": 5,
+    "cost_bp": 15.0
+   },
+   "train_sharpe": null,
+   "valid_sharpe": 0.194,
+   "is_sharpe": 0.194,
+   "is_ann": 0.0474
+  }
+ ]
+}

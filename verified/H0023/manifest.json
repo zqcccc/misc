@@ -1,0 +1,136 @@
+{
+ "id": "H0023",
+ "verdict": "FAIL",
+ "title_short": "COT 商业套保压力横截面",
+ "impl_dir": "futures",
+ "impl_note": "cot_parse.py / cot_fetch_etf.py → cot_backtest.py → cot_falsify_extra.py / cot_prep_causality.py；产物在 futures/data/cot/out/",
+ "authoritative": {
+  "returns_test": {
+   "path": "futures/data/cot/out/test_returns.csv",
+   "sha256": "a3eada64436f64bd89bbe40c51d27ad05ae904b184760103dfa7169f819a26a7",
+   "bytes": 38020,
+   "rows": 1169,
+   "start": "2022-01-03",
+   "end": "2026-08-31",
+   "copied_as": "test_returns.csv",
+   "note": "判读段 TEST 2022-01~2026-08"
+  },
+  "returns": {
+   "path": "futures/data/cot/out/is_returns.csv",
+   "sha256": "365cf0291df18c24632a35ee51437e2dee5d2ff526321e638dee3be73c20a3d9",
+   "bytes": 84039,
+   "rows": 2580,
+   "start": "2011-10-03",
+   "end": "2021-12-31",
+   "copied_as": "is_returns.csv",
+   "note": "IS 2011-10~2021-12"
+  },
+  "bench_test": {
+   "path": "futures/data/cot/out/test_bench.csv",
+   "sha256": "2ac8dce23966d732159b98dc0218708dee51d209da3b6bc785f669ada3359ead",
+   "bytes": 38147,
+   "rows": 1169,
+   "start": "2022-01-03",
+   "end": "2026-08-31",
+   "copied_as": "test_bench.csv",
+   "note": "同池等权"
+  },
+  "bench": {
+   "path": "futures/data/cot/out/is_bench.csv",
+   "sha256": "fa436c75de05249f2c5551d146797109344bb2186d85b64b2b0eb36a522e9aeb",
+   "bytes": 84449,
+   "rows": 2580,
+   "start": "2011-10-03",
+   "end": "2021-12-31",
+   "copied_as": "is_bench.csv"
+  },
+  "trials": {
+   "path": "futures/data/cot/out/trials.json",
+   "sha256": "67260103d578fa062b8414b14c62b94731e2de9a2aaf0924426034e8a9a94b9d",
+   "bytes": 839,
+   "copied_as": "trials.json",
+   "note": "4 组敏感性 {当期,ma4}×{5v5,3v3}"
+  },
+  "holdings": {
+   "path": "futures/data/cot/out/holdings_log.csv",
+   "sha256": "73ad67161eb309933871dee22cd98dec21e0bc21f0dbdddc4c916e7d83f07ced",
+   "bytes": 8619,
+   "copied_as": "holdings_log.csv",
+   "note": "逐期持仓名单"
+  },
+  "trades": {
+   "path": "futures/data/cot/out/trades.csv",
+   "sha256": "823ea8adf8a864b50a5c1a7a4948adcfcfc76fe49a6b512ec6c3e71461164b1d",
+   "bytes": 9377,
+   "copied_as": "trades.csv"
+  },
+  "pit_hp": {
+   "path": "futures/data/cot/out/pit_hp.csv",
+   "sha256": "44fbc0ce78c543a66852b11ba54fd7b3f7cad230120dc5bbab34a0931eddee91",
+   "bytes": 1188889,
+   "copied_as": null,
+   "note": "1.2MB PIT 套保压力面板，未复制"
+  },
+  "panel_returns": {
+   "path": "futures/data/cot/out/panel_returns.csv",
+   "sha256": "130c862e96d531e22e658042e4fbcefd68461b9d44a9434d4de7ee919c50fc14",
+   "bytes": 1117114,
+   "copied_as": null,
+   "note": "1.1MB ETF 载体日收益面板，未复制"
+  }
+ },
+ "superseded": [],
+ "reproduce": "cd futures && /opt/homebrew/bin/python3.11 cot_backtest.py && cot_falsify_extra.py  # 归档时未重跑",
+ "recomputed": {
+  "test": {
+   "n": 1169,
+   "window": "2022-01-03~2026-08-31",
+   "ann_arith": -0.0023,
+   "ann_cagr": -0.0267,
+   "vol": 0.2232,
+   "sharpe": -0.0101,
+   "mdd_wallet": -0.4295,
+   "mdd_compound": -0.3842
+  },
+  "bench_test": {
+   "ann_arith": 0.1118,
+   "sharpe": 0.688,
+   "mdd_wallet": -0.1986
+  },
+  "is": {
+   "n": 2580,
+   "window": "2011-10-03~2021-12-31",
+   "ann_arith": 0.0026,
+   "sharpe": 0.0129,
+   "mdd_compound": -0.4698
+  }
+ },
+ "card_says": {
+  "test": {
+   "ann": -0.0023,
+   "sharpe": -0.01,
+   "mdd": -0.43
+  },
+  "bench_test": {
+   "ann": 0.1118,
+   "sharpe": 0.688,
+   "mdd": -0.199
+  },
+  "alpha_test": -0.042,
+  "alpha_t": -0.42,
+  "dsr": 0.408,
+  "perm_pct": 0.501
+ },
+ "discrepancies": [
+  "一致（算术年化 + 日收益加总钱包回撤，即 qbt 默认口径）：TEST −0.23%/−0.0101/−42.95% 与卡片 −0.23%/−0.01/−43.0%；基准 +11.18%/0.6880/−19.86% 与 +11.18%/0.688/−19.9%。",
+  "复利口径差别很大（TEST −2.67%、回撤 −38.42%），卡片用的不是这一套。",
+  "is_bench.csv 比 is_returns.csv 少一天（2579 vs 2580，起点差一天），算 IS 超额时要先对齐。"
+ ],
+ "missing": [
+  "cot_falsify_extra.py 的输出未落成 json：§7 的 DSR 0.408、换手匹配随机组合置换分位 50.1%、逐年剔除、五分位表（Q1 −0.7% … Q5 +4.8%）、腿归因（多头腿 +3.57%、空头腿自身 +2.56%）都只在卡片文字里。腿归因那条是本卡最有价值的诊断。"
+ ],
+ "notes": [
+  "宇宙经过两次机械收缩：UHN 2011 前清算 → HO 无载体剔除（16→15）；JO/NIB/BAL 2023-07 清算 → KC/CC/CT 之后退出。这是数据事实不是口径变更，卡片 §7 抬头已注明。",
+  "futures/ 目录同时住着 H0006（ret_*.csv / bench_ung_*.csv）、H0013（strategy_h0013*.py / data/panel13/）和本卡（cot_*）。"
+ ]
+}

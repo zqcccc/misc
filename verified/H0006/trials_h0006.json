@@ -1,0 +1,37 @@
+{
+ "n_epochs": 4,
+ "trials": [
+  {
+   "epoch": 1,
+   "params": {
+    "window": "NovMar"
+   },
+   "train_sharpe": -0.5864,
+   "valid_sharpe": -0.7685
+  },
+  {
+   "epoch": 2,
+   "params": {
+    "window": "OctMar"
+   },
+   "train_sharpe": -0.7294,
+   "valid_sharpe": -0.6189
+  },
+  {
+   "epoch": 3,
+   "params": {
+    "window": "NovFeb"
+   },
+   "train_sharpe": -0.5182,
+   "valid_sharpe": -0.8579
+  },
+  {
+   "epoch": 4,
+   "params": {
+    "window": "DecFeb"
+   },
+   "train_sharpe": -0.4749,
+   "valid_sharpe": -1.2063
+  }
+ ]
+}

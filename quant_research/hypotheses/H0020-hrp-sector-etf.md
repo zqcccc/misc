@@ -110,6 +110,8 @@ HRP 还会系统性减持高波动但高风险溢价的周期/科技行业。若
 - `artifacts/`：`dev_summary.json`、`trials.json`、`reveal_summary.json`、QBT 输入 CSV 与
   `qbt_report.json`。协议脚本直接从 skill 目录调用，没有复制或修改。
 
+归档：`verified/H0020/manifest.json`（权威产物映射；不改 §7 数字与裁决）
+
 ## 7. 验收结果（quant-backtest-protocol 四层证伪）
 | 层 | 指标 | 结果 | 判定 |
 |---|---|---|---|

@@ -1,0 +1,129 @@
+{
+ "id": "H0010",
+ "verdict": "PARK",
+ "title_short": "恒生 AH 溢价 H 股折价均值回复",
+ "impl_dir": "quant_research/hk_stock",
+ "impl_note": "fetch_data.py → strategy_h0010.py → falsify_h0010.py；产物全在 out/",
+ "authoritative": {
+  "returns": {
+   "path": "quant_research/hk_stock/out/returns_long_only.csv",
+   "sha256": "331a65ac35ecec8a1cdae72f735c650e92be30146b7e1525e5aee618ac505846",
+   "bytes": 89292,
+   "rows": 2750,
+   "start": "2015-01-05",
+   "end": "2026-08-28",
+   "copied_as": "returns_long_only.csv"
+  },
+  "returns_long_short": {
+   "path": "quant_research/hk_stock/out/returns_long_short.csv",
+   "sha256": "5eed279b99f4272fa334648393c7d7e96ab903bebf8efb45230f6d8ad6324b69",
+   "bytes": 89854,
+   "rows": 2750,
+   "start": "2015-01-05",
+   "end": "2026-08-28",
+   "copied_as": "returns_long_short.csv"
+  },
+  "bench": {
+   "path": "quant_research/hk_stock/out/bench_long_only.csv",
+   "sha256": "d56c8d6675abab2f40882dc3819bb47d8e17af95195168954c0f2793b7297180",
+   "bytes": 89666,
+   "rows": 2750,
+   "start": "2015-01-05",
+   "end": "2026-08-28",
+   "copied_as": "bench_long_only.csv"
+  },
+  "report": {
+   "path": "quant_research/hk_stock/out/oos_verdict_long_only.json",
+   "sha256": "de886349094ef99dd02d2faf16ecdd99415a104e0f59057c9232faa48c3fad86",
+   "bytes": 2294,
+   "copied_as": "oos_verdict_long_only.json"
+  },
+  "report_long_short": {
+   "path": "quant_research/hk_stock/out/oos_verdict_long_short.json",
+   "sha256": "a23b8b0eea3b0162d94054fd246fbb0eeba9e64eb81c8e7227e524111887134f",
+   "bytes": 2186,
+   "copied_as": "oos_verdict_long_short.json"
+  },
+  "panel": {
+   "path": "quant_research/hk_stock/out/panel.csv",
+   "sha256": "53ba1772692debea1c1206aefc653c51cb1cbb7eea2c87d6d9be90eb41f6dc4d",
+   "bytes": 3491474,
+   "copied_as": null,
+   "note": "3.3MB 原始面板（125 标的日线+溢价），未复制，只记指纹"
+  }
+ },
+ "superseded": [
+  {
+   "path": "quant_research/hk_stock/out/bench_long_short.csv",
+   "why": "与 bench_long_only.csv 逐字节相同（同一 sha256），冗余副本"
+  },
+  {
+   "path": "quant_research/hk_stock/out/strategy_long_only.csv",
+   "why": "逐日持仓/权重明细，不是收益序列；复现用，勿当结果"
+  },
+  {
+   "path": "quant_research/hk_stock/out/strategy_long_short.csv",
+   "why": "同上（多空腿）"
+  },
+  {
+   "path": "quant_research/hk_stock/out/trades_long_only.csv",
+   "why": "成交流水，非结果序列"
+  },
+  {
+   "path": "quant_research/hk_stock/out/trades_long_short.csv",
+   "why": "同上"
+  }
+ ],
+ "reproduce": "cd quant_research/hk_stock && /opt/homebrew/bin/python3.11 falsify_h0010.py  # 归档时未重跑",
+ "recomputed": {
+  "window": "2015-01-05~2026-08-28, n=2750",
+  "long_only": {
+   "final_equity": 2.8974,
+   "ann_cagr_252": 0.1024,
+   "ann_cagr_calendar": 0.0957,
+   "ann_arith": 0.1417,
+   "vol": 0.2991,
+   "sharpe_arith": 0.4738,
+   "mdd_compound": -0.5057,
+   "mdd_additive_wallet": -0.4022
+  },
+  "long_short": {
+   "final_equity": 1.2445,
+   "ann_cagr_252": 0.0202,
+   "ann_arith": 0.0385,
+   "vol": 0.1947,
+   "sharpe_arith": 0.1978,
+   "mdd_compound": -0.4632
+  },
+  "bench": {
+   "ann_cagr_252": 0.0925,
+   "ann_arith": 0.108,
+   "sharpe_arith": 0.5477,
+   "mdd_additive_wallet": -0.3064
+  },
+  "excess_arith_long_only": 0.0337
+ },
+ "card_says": {
+  "long_only": {
+   "ann": 0.102,
+   "sharpe": 0.47,
+   "mdd": -0.4,
+   "excess_vs_ew": 0.034
+  },
+  "long_short": {
+   "ann": 0.02,
+   "sharpe": 0.2
+  }
+ },
+ "discrepancies": [
+  "年化/夏普/超额全部对得上：纯多 10.24%(252日CAGR) vs 卡片 10.2%、夏普 0.474 vs 0.47、对等权超额 +3.37%(算术) vs 卡片 +3.4%；多空 2.02%/0.198 vs 卡片 2.0%/0.20。",
+  "回撤口径不同：卡片的 −40% 是 qbt 的『日收益加总钱包』口径（oos_verdict_long_only.json max_drawdown=0.4022），按复利净值重算是 −50.57%。不是错误，是口径差；引用时须写清是哪一种。",
+  "卡片 §7 同一行里混用了两种年化：『净年化 10.2%』是复利 CAGR，『对等权 +3.4%』是算术年化之差。"
+ ],
+ "missing": [
+  "§7 第 3′/4 层的分块自助与 qbt randomport 明细在 oos_verdict_long_only.json 里有；逐年剔除/信号五分位诊断（Q1 −19.4bp~Q5 +20.8bp）无持久化产物，只在卡片文字里。"
+ ],
+ "notes": [
+  "load_parks.py 取的是 returns_long_only.csv，与本 manifest 的 authoritative.returns 一致。"
+ ]
+}

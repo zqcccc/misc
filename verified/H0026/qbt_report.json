@@ -1,0 +1,92 @@
+{
+  "market": "us_stock",
+  "periods_per_year": 252,
+  "performance": {
+    "T_days": 3022,
+    "start": "2015-01-01",
+    "end": "2026-07-31",
+    "total_return": 1.3042,
+    "ann_return": 0.0721,
+    "sharpe_daily_wallet": 0.566,
+    "sortino": 0.755,
+    "max_drawdown": 0.3239,
+    "calmar": 0.223,
+    "ann_vol": 0.1403,
+    "positive_days_pct": 0.532
+  },
+  "alpha_beta": {
+    "n_days": 3022,
+    "beta": 0.974,
+    "r_squared": 0.958,
+    "ann_alpha": -0.0048,
+    "alpha_t": -0.58,
+    "alpha_p": 0.5614,
+    "alpha_significant": false,
+    "strategy_total": 0.9532,
+    "benchmark_total": 1.0384,
+    "note": "total/drag/contribution 为日收益加总口径（与日频夏普一致），非复利净值涨跌幅",
+    "beta_drag": 1.0113,
+    "alpha_contribution": -0.0581,
+    "verdict": "负 alpha：选股/择时本身在亏钱"
+  },
+  "benchmark": {
+    "T_days": 3022,
+    "start": "2015-01-01",
+    "end": "2026-07-31",
+    "total_return": 1.5057,
+    "ann_return": 0.0796,
+    "sharpe_daily_wallet": 0.614,
+    "sortino": 0.786,
+    "max_drawdown": 0.3398,
+    "calmar": 0.234,
+    "ann_vol": 0.141,
+    "positive_days_pct": 0.542
+  },
+  "deflated_sharpe": {
+    "n_trials": 3,
+    "trial_score_var": 0.0058,
+    "observed_sharpe": 0.566,
+    "luck_baseline_sharpe": 0.065,
+    "T_days": 3022,
+    "skew": -0.424,
+    "kurtosis": 11.92,
+    "DSR": 0.9573,
+    "verdict": "显著 (DSR≥0.95)"
+  },
+  "monte_carlo": {
+    "n": 3022,
+    "iters": 5000,
+    "block": 10,
+    "original_final": 2.3042,
+    "prob_profit": 0.934,
+    "p5": 0.9319,
+    "p50": 2.3616,
+    "p95": 5.6742,
+    "verdict": "尚可"
+  },
+  "p_value": {
+    "observed_daily_mean": 0.000315,
+    "p_value": 0.0814,
+    "significant": false,
+    "verdict": "与 0 无显著差异（噪音）"
+  },
+  "random_portfolio": {
+    "iters": 2000,
+    "n_long": 1,
+    "n_short": 0,
+    "rebalance_bars": 252,
+    "random_sharpe_mean": 0.6,
+    "random_sharpe_p50": 0.603,
+    "random_sharpe_p95": 0.712,
+    "random_sharpe_max": 0.813,
+    "actual_sharpe": 0.566,
+    "percentile_vs_random": 0.308,
+    "p_value": 0.692,
+    "verdict": "打不过随机组合 —— 收益来自宇宙/仓位结构，不是你的因子"
+  },
+  "falsification_failures": [
+    "alpha ≤ 0：收益不来自选股/择时",
+    "打不过 95% 随机组合：因子无信息"
+  ],
+  "verdict": "未通过：alpha ≤ 0：收益不来自选股/择时；打不过 95% 随机组合：因子无信息"
+}

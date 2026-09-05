@@ -1,0 +1,70 @@
+{
+  "market": "futures",
+  "periods_per_year": 252,
+  "performance": {
+    "T_days": 4876,
+    "start": "2007-04-18",
+    "end": "2026-09-02",
+    "total_return": -0.9951,
+    "ann_return": -0.2404,
+    "sharpe_daily_wallet": -1.23,
+    "sortino": -0.962,
+    "max_drawdown": 0.9952,
+    "calmar": -0.242,
+    "ann_vol": 0.2061,
+    "positive_days_pct": 0.075
+  },
+  "alpha_beta": {
+    "n_days": 4876,
+    "beta": 0.175,
+    "r_squared": 0.173,
+    "ann_alpha": -0.2167,
+    "alpha_t": -5.09,
+    "alpha_p": 0.0,
+    "alpha_significant": true,
+    "strategy_total": -4.9038,
+    "benchmark_total": -4.0649,
+    "note": "total/drag/contribution 为日收益加总口径（与日频夏普一致），非复利净值涨跌幅",
+    "beta_drag": -0.7104,
+    "alpha_contribution": -4.1934,
+    "verdict": "负 alpha：选股/择时本身在亏钱"
+  },
+  "benchmark": {
+    "T_days": 4876,
+    "start": "2007-04-18",
+    "end": "2026-09-02",
+    "total_return": -0.9984,
+    "ann_return": -0.2819,
+    "sharpe_daily_wallet": -0.428,
+    "sortino": -0.657,
+    "max_drawdown": 0.9988,
+    "calmar": -0.282,
+    "ann_vol": 0.4913,
+    "positive_days_pct": 0.478
+  },
+  "deflated_sharpe": {
+    "error": "各轮得分方差为 0，无法估计运气基线"
+  },
+  "monte_carlo": {
+    "n": 4876,
+    "iters": 5000,
+    "block": 10,
+    "original_final": -3.9038,
+    "prob_profit": 0.0,
+    "p5": -5.2714,
+    "p50": -3.886,
+    "p95": -2.4495,
+    "verdict": "prob(profit) < 10% —— 这条曲线赚钱是小概率事件"
+  },
+  "p_value": {
+    "observed_daily_mean": -0.001006,
+    "p_value": 0.0,
+    "significant": true,
+    "verdict": "显著亏损"
+  },
+  "falsification_failures": [
+    "alpha ≤ 0：收益不来自选股/择时",
+    "prob(profit) 0.0：赚钱是小概率事件"
+  ],
+  "verdict": "未通过：alpha ≤ 0：收益不来自选股/择时；prob(profit) 0.0：赚钱是小概率事件"
+}

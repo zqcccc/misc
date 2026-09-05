@@ -1,0 +1,89 @@
+{
+ "id": "H0002",
+ "verdict": "PARK",
+ "title_short": "A股 低波+反转 小微盘多因子",
+ "impl_dir": "astock_quant",
+ "impl_note": "代码 astock_quant/aq/strategy.py + scripts/run_rigorous_ashare_research.py；产物散在 astock_quant/verified/ 与 astock_quant/reports/ 两处",
+ "authoritative": {
+  "returns": {
+   "path": "astock_quant/verified/oos_returns.csv",
+   "sha256": "58f24b291cf799c3276cb593183698d882c16bdf2cd6a20b701e321687c3101d",
+   "bytes": 60424,
+   "rows": 1860,
+   "start": "2019-01-02",
+   "end": "2026-09-01",
+   "copied_as": "oos_returns.csv"
+  },
+  "bench": {
+   "path": "astock_quant/verified/bench_ew.csv",
+   "sha256": "f46be6b2becc9576b14e88f0b958a1dfd3687a686db48e28ebb637dd88a76919",
+   "bytes": 60392,
+   "rows": 1860,
+   "start": "2019-01-02",
+   "end": "2026-09-01",
+   "copied_as": "bench_ew.csv"
+  },
+  "report": {
+   "path": "astock_quant/reports/walkforward.json",
+   "sha256": "496c92857f5d1c115210115ae1202aa298fa5d6839c6e453b29ed1f78811e201",
+   "bytes": 124783,
+   "copied_as": "walkforward.json"
+  },
+  "report_falsification": {
+   "path": "astock_quant/reports/validation.json",
+   "sha256": "4be88d43fd56a6434c1541498e07b2092b43fd01b2e4bb562f81287872227f1d",
+   "bytes": 8697,
+   "copied_as": "validation.json"
+  }
+ },
+ "superseded": [
+  {
+   "path": "astock_quant/verified/oos_verdict.json",
+   "why": "同一条 oos_returns.csv 的另一套 qbt 默认口径统计（算术年化 14.72%、夏普 0.676、加总口径回撤 −26.45%、DSR 0.7705/40 trials）；卡片 §7 引的是 walkforward+validation 的口径，两套数字不可混用"
+  },
+  {
+   "path": "astock_quant/reports/validation_200x40.json",
+   "why": "top_n=200/freq=40 参数变体，非卡片 §5 锁定的 300只/20日 主口径"
+  },
+  {
+   "path": "astock_quant/reports/validation_top50.json",
+   "why": "top50 参数变体，非主口径"
+  },
+  {
+   "path": "astock_quant/reports/walkforward_200x40.json",
+   "why": "同上，200×40 变体"
+  },
+  {
+   "path": "astock_quant/reports/walkforward_top50.json",
+   "why": "同上，top50 变体"
+  }
+ ],
+ "reproduce": "cd astock_quant && /opt/homebrew/bin/python3.11 scripts/run_rigorous_ashare_research.py  # 归档时未重跑",
+ "recomputed": {
+  "window": "2019-01-02~2026-09-01, n=1860",
+  "final_equity": 2.485,
+  "ann_cagr_calendar": 0.1261,
+  "ann_cagr_252": 0.1313,
+  "ann_arith": 0.1472,
+  "vol": 0.2178,
+  "sharpe_calendar": 0.5792,
+  "sharpe_arith": 0.6758,
+  "mdd": -0.3801
+ },
+ "card_says": {
+  "ann": 0.1268,
+  "sharpe": 0.59,
+  "mdd": -0.38,
+  "excess_vs_ew": 0.0429
+ },
+ "discrepancies": [
+  "一致。卡片 §7 口径 = 日历年 CAGR / 年化波动：重算 12.61% vs 卡片 12.68%、0.579 vs 0.59、−38.01% vs −38.0%，差异只来自年数取整。",
+  "溯源确认：卡片 §7 第 1 行三个数出自 reports/walkforward.json 绩效[0]（超额 4.29% = 12.68 − 等权全A 8.39）；第 2~4 行（alpha 5.09%/t 1.75、DSR 0.743/58 trials、置换 p=0.005）出自 reports/validation.json。",
+  "walkforward.json 内嵌的 净值.策略 与 oos_returns.csv 逐点复利净值 max|diff| = 1.1e-13，确认同一条序列。",
+  "bench_ew.csv 与 walkforward.json 的『等权全A(可投池)』相差一个首日对齐（csv 首日填 0.0），年化 8.71% vs 8.39%。"
+ ],
+ "missing": [],
+ "notes": [
+  "astock_quant/verified/ 下的 ext_*.json、s0*_*returns.csv/verdict.json 属于另一条课题线（多策略平台审计/PB-ROE），不是 H0002 的产物，勿误取。"
+ ]
+}
