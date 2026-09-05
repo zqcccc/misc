@@ -340,14 +340,50 @@ def load_permutation_result(path: str | None) -> dict:
     obj = _load_json_object(path, "permutation result")
     if "error" in obj:
         return obj
-    pct = obj.get("percentile_vs_random", obj.get("percentile"))
-    if pct is None and obj.get("p_value") is not None:
-        pct = 1.0 - float(obj["p_value"])
-    try:
-        pct = float(pct)
-    except (TypeError, ValueError):
+    values = {}
+    for key in ("percentile_vs_random", "percentile", "p_value"):
+        if key not in obj:
+            continue
+        value = obj[key]
+        if not valid_gate_number(value, probability=True):
+            return {"error": f"permutation result {key} 必须是 [0, 1] 内的有限数值"}
+        values[key] = 1.0 - float(value) if key == "p_value" else float(value)
+    if not values:
         return {"error": "permutation result 缺 percentile_vs_random/percentile/p_value"}
-    return {**obj, "percentile_vs_random": round(pct, 4)}
+    pct = next(iter(values.values()))
+    if any(not math.isclose(pct, v, rel_tol=0, abs_tol=1e-12) for v in values.values()):
+        return {"error": "permutation result 多个统计字段互相矛盾"}
+    # 保留原始精度，不能把低于门槛的数值四舍五入成通过。
+    return {**obj, "percentile_vs_random": pct}
+
+
+def valid_gate_number(value, probability=False):
+    """门禁仅接受有限实数；布尔、字符串和缺失值均不是统计证据。"""
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, (int, float, np.integer, np.floating)):
+        return False
+    try:
+        number = float(value)
+    except (ValueError, TypeError, OverflowError):
+        return False
+    return math.isfinite(number) and (not probability or 0 <= number <= 1)
+
+
+def validate_gate_statistics(rep):
+    """在最终裁决处复核，兼顾内置面板统计与外部置换结果。"""
+    checks = [
+        ("alpha_beta", "ann_alpha", False),
+        ("alpha_beta", "alpha_t", False),
+        ("monte_carlo", "prob_profit", True),
+        ("random_portfolio", "percentile_vs_random", True),
+    ]
+    selection = rep.get("selection_adjustment", {})
+    checks.append(("selection_adjustment", "DSR" if "DSR" in selection else "PSR", True))
+    failures = []
+    for section, field, probability in checks:
+        value = rep.get(section, {}).get(field)
+        if not valid_gate_number(value, probability):
+            failures.append(f"{section}.{field} 缺失或不是合法有限统计值")
+    return failures
 
 
 def load_trial_scores(path: str, field: str | None = None) -> np.ndarray:
@@ -820,6 +856,7 @@ def main():
             for name, result in required.items():
                 if not result or result.get("error"):
                     fails.append(f"{name} 缺失或失败：{result.get('error', '无结果')}")
+        fails.extend(validate_gate_statistics(rep))
         ab = rep.get("alpha_beta", {})
         if ab.get("ann_alpha", 0) <= 0:
             fails.append("alpha ≤ 0：收益不来自选股/择时")

@@ -18,6 +18,62 @@ SPEC.loader.exec_module(qbt)
 
 
 class QbtV2Tests(unittest.TestCase):
+    def test_permutation_rejects_invalid_values_for_every_alias(self):
+        bad = [None, True, False, "NaN", "0.99", float("nan"), float("inf"),
+               -float("inf"), -0.01, 1.01, [], {}, 10**400]
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "perm.json"
+            for field in ("percentile_vs_random", "percentile", "p_value"):
+                for value in bad:
+                    with self.subTest(field=field, value=repr(value)):
+                        path.write_text(json.dumps({field: value}))
+                        self.assertIn("error", qbt.load_permutation_result(str(path)))
+                for value in (0, 1, 0.94999, 0.95):
+                    path.write_text(json.dumps({field: value}))
+                    out = qbt.load_permutation_result(str(path))
+                    self.assertNotIn("error", out)
+                    self.assertEqual(out["percentile_vs_random"], 1-value if field == "p_value" else value)
+            for obj in ({}, {"percentile": .99, "p_value": .5},
+                        {"percentile_vs_random": .99, "percentile": "NaN"}):
+                path.write_text(json.dumps(obj))
+                self.assertIn("error", qbt.load_permutation_result(str(path)))
+
+    def test_final_gate_rejects_invalid_internal_statistics(self):
+        good = {"alpha_beta": {"ann_alpha": .1, "alpha_t": 3},
+                "monte_carlo": {"prob_profit": .99},
+                "random_portfolio": {"percentile_vs_random": .99},
+                "selection_adjustment": {"PSR": .99}}
+        self.assertEqual(qbt.validate_gate_statistics(good), [])
+        for section, fields in good.items():
+            for field in fields:
+                for value in (None, float("nan"), float("inf"), True, "0.99"):
+                    obj = json.loads(json.dumps(good))
+                    obj[section][field] = value
+                    self.assertTrue(qbt.validate_gate_statistics(obj), (section, field, value))
+        good["selection_adjustment"] = {"DSR": 1.1}
+        self.assertTrue(qbt.validate_gate_statistics(good))
+
+    def test_registry_rejects_invalid_statistics_without_writing_cards(self):
+        registry = SCRIPT.parents[4] / "quant_research" / "qr"
+        source = registry.read_text()
+        code = source.split("import json, sys, math\np, expected_role", 1)[1].split("\nPY", 1)[0]
+        code = "import json, sys, math\np, expected_role" + code
+        good = {"schema_version": 2, "stage": "candidate", "role": "alpha",
+                "verdict_code": "PASS", "falsification_failures": [],
+                "execution_check": {}, "data_provenance": {}, "window_consistency": {},
+                "alpha_beta": {"ann_alpha": .1, "alpha_t": 3},
+                "monte_carlo": {"prob_profit": .99},
+                "random_portfolio": {"percentile_vs_random": .99},
+                "selection_adjustment": {"PSR": .99}}
+        with tempfile.TemporaryDirectory() as td:
+            report = Path(td) / "report.json"
+            for value, expected in ((.99, 0), (float("nan"), 1), (1.1, 1), (None, 1), (True, 1)):
+                good["random_portfolio"]["percentile_vs_random"] = value
+                report.write_text(json.dumps(good))
+                proc = subprocess.run([sys.executable, "-c", code, str(report), "alpha"],
+                                      capture_output=True, text=True)
+                self.assertEqual(proc.returncode, expected, proc.stderr)
+
     def test_alpha_beta_reports_hac_standard_error(self):
         idx = pd.date_range("2020-01-01", periods=400, freq="B", tz="UTC")
         rng = np.random.default_rng(7)
@@ -169,6 +225,25 @@ class QbtV2Tests(unittest.TestCase):
             ], check=True, capture_output=True, text=True)
             out = json.loads(out_path.read_text())
             self.assertEqual(out["verdict_code"], "PASS", out["falsification_failures"])
+            for field, value, expected in [
+                ("percentile_vs_random", "NaN", "FAIL"),
+                ("percentile_vs_random", 1.1, "FAIL"),
+                ("p_value", "invalid", "FAIL"),
+                ("percentile", 0.94999, "FAIL"),
+                ("percentile", 0.95, "PASS"),
+            ]:
+                (root / "perm.json").write_text(json.dumps({field: value}))
+                subprocess.run([
+                    sys.executable, str(SCRIPT), "report", "--returns", str(root / "r.csv"),
+                    "--bench", str(root / "b.csv"), "--single-spec", "--market", "us_stock",
+                    "--permutation-result", str(root / "perm.json"),
+                    "--execution-manifest", str(root / "execution.json"),
+                    "--data-manifest", str(root / "data.json"),
+                    "--out", str(out_path), "--iters", "100",
+                ], check=True, capture_output=True, text=True)
+                result = json.loads(out_path.read_text())
+                self.assertEqual(result["verdict_code"], expected, (field, value, result))
+
 
 
 if __name__ == "__main__":

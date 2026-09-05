@@ -102,7 +102,7 @@ validate_pass_report() {  # $1=report path $2=expected role
   local report; report="$(resolve_artifact "$1")"
   [ -f "$report" ] || die "PASS 报告不存在: $report"
   python3 - "$report" "${2:-alpha}" <<'PY'
-import json, sys
+import json, sys, math
 p, expected_role = sys.argv[1], sys.argv[2]
 try:
     obj = json.load(open(p, encoding="utf-8"))
@@ -123,6 +123,20 @@ for key in ("execution_check", "data_provenance", "window_consistency"):
     val = obj.get(key)
     if not isinstance(val, dict) or val.get("error"):
         problems.append(f"{key} 缺失或失败")
+for section, field, probability in (
+    ("alpha_beta", "ann_alpha", False), ("alpha_beta", "alpha_t", False),
+    ("monte_carlo", "prob_profit", True), ("random_portfolio", "percentile_vs_random", True),
+    ("selection_adjustment", "DSR" if "DSR" in obj.get("selection_adjustment", {}) else "PSR", True),
+):
+    block = obj.get(section)
+    value = block.get(field) if isinstance(block, dict) else None
+    try:
+        valid = (not isinstance(value, bool) and isinstance(value, (int, float))
+                 and math.isfinite(value) and (not probability or 0 <= value <= 1))
+    except (TypeError, ValueError, OverflowError):
+        valid = False
+    if not valid:
+        problems.append(f"{section}.{field} 缺失或不是合法有限统计值")
 if problems:
     raise SystemExit("qr: PASS 报告未通过门禁: " + "；".join(problems))
 PY

@@ -33,7 +33,33 @@ cat > "$TMP/verified/H0002/candidate.json" <<'JSON'
 {"schema_version": 2, "stage": "candidate", "role": "alpha", "verdict_code": "PASS",
  "falsification_failures": [],
  "execution_check": {"validated": true}, "data_provenance": {"source_count": 1},
- "window_consistency": {"oos_start": "2019-01-02"}}
+ "window_consistency": {"oos_start": "2019-01-02"},
+ "alpha_beta": {"ann_alpha": 0.08, "alpha_t": 3.1},
+ "monte_carlo": {"prob_profit": 0.98},
+ "random_portfolio": {"percentile_vs_random": 0.99},
+ "selection_adjustment": {"DSR": 0.97}}
+JSON
+
+# 门禁必须 fail-closed：无效统计值（NaN / 越界）不能因为「不小于阈值」就放行
+cat > "$TMP/verified/H0002/nan_stat.json" <<'JSON'
+{"schema_version": 2, "stage": "candidate", "role": "alpha", "verdict_code": "PASS",
+ "falsification_failures": [],
+ "execution_check": {"validated": true}, "data_provenance": {"source_count": 1},
+ "window_consistency": {"oos_start": "2019-01-02"},
+ "alpha_beta": {"ann_alpha": 0.08, "alpha_t": 3.1},
+ "monte_carlo": {"prob_profit": 0.98},
+ "random_portfolio": {"percentile_vs_random": NaN},
+ "selection_adjustment": {"DSR": 0.97}}
+JSON
+cat > "$TMP/verified/H0002/oob_stat.json" <<'JSON'
+{"schema_version": 2, "stage": "candidate", "role": "alpha", "verdict_code": "PASS",
+ "falsification_failures": [],
+ "execution_check": {"validated": true}, "data_provenance": {"source_count": 1},
+ "window_consistency": {"oos_start": "2019-01-02"},
+ "alpha_beta": {"ann_alpha": 0.08, "alpha_t": 3.1},
+ "monte_carlo": {"prob_profit": 0.98},
+ "random_portfolio": {"percentile_vs_random": 1.1},
+ "selection_adjustment": {"DSR": 0.97}}
 JSON
 
 echo "── claim 参数校验"
@@ -49,6 +75,8 @@ echo "── verdict PASS 门禁"
 expect_fail "PASS 缺 --report 被拒"           "$QR" verdict H0001 PASS "对冲卡想直接过"
 expect_fail "非 alpha 角色不能自动 PASS"       "$QR" verdict H0001 PASS "对冲角色配 alpha 报告" --report verified/H0002/candidate.json
 expect_fail "stage=exploratory 的报告不能 PASS" "$QR" verdict H0002 PASS "拿探索报告冒充" --report verified/H0002/exploratory.json
+expect_fail "统计值是 NaN 的报告不能 PASS"     "$QR" verdict H0002 PASS "统计值算崩了" --report verified/H0002/nan_stat.json
+expect_fail "统计值越界的报告不能 PASS"        "$QR" verdict H0002 PASS "分位大于 1" --report verified/H0002/oob_stat.json
 expect_ok   "candidate 报告可以 PASS"          "$QR" verdict H0002 PASS "证据齐全" --report verified/H0002/candidate.json
 expect_eq   "PASS 已写回卡片"                 "$(fmval H0002 verdict)" "PASS"
 
