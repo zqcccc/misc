@@ -6,6 +6,7 @@
 """
 from __future__ import annotations
 
+import json
 import os
 import sys
 
@@ -58,6 +59,7 @@ def _panel_path(field: str) -> str:
 
 
 def build_panel(codes: list[str] | None = None, verbose: bool = True) -> dict[str, pd.DataFrame]:
+    allowed = set(adjusted_manifest()["codes"])
     meta = pd.read_csv(os.path.join(config.DATA_DIR, "meta.csv"))
     meta = meta.drop_duplicates(subset="code")
     if codes is None:
@@ -66,7 +68,7 @@ def build_panel(codes: list[str] | None = None, verbose: bool = True) -> dict[st
     series: dict[str, dict[str, pd.Series]] = {f: {} for f in FIELDS}
     missing_adj = []
     for i, code in enumerate(codes):
-        adj = load_adjusted(code)
+        adj = load_adjusted(code) if code in allowed else None
         if adj is None or adj.empty:
             # 没通过重建对账的标的（配股、无 baostock 对照…）宁可不进面板，
             # 也不要放一只没对上账的进去。数量与原因见 data/rebuild_report.json。
@@ -118,6 +120,21 @@ def save_panels(panels: dict[str, pd.DataFrame]) -> None:
         out = df.copy()
         out.index.name = "date"
         out.to_parquet(_panel_path(f))
+
+
+def adjusted_manifest() -> dict:
+    """读重建复权序列的产出清单。没有清单就拒绝使用整个目录。
+
+    每个 CSV 自己说不出它是哪一版算法跑的。历史教训：修完事件求解器之后，上一轮遗留的
+    339 份旧产物还躺在目录里，build_panel 把它们静默吃进了面板，而面板看起来完全正常。
+    """
+    path = os.path.join(config.KLINE_ADJ_DIR, "_manifest.json")
+    if not os.path.exists(path):
+        raise FileNotFoundError(
+            f"缺 {path}：复权序列没有产出清单，无法确认它们是哪一版算法跑出来的。"
+            f"先跑 scripts/rebuild_adjusted.py。")
+    with open(path, encoding="utf-8") as fh:
+        return json.load(fh)
 
 
 def load_adjusted(code: str) -> pd.DataFrame | None:

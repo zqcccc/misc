@@ -26,9 +26,11 @@
 """
 import argparse
 import glob
+import hashlib
 import json
 import os
 import warnings
+from datetime import datetime, timezone
 
 import numpy as np
 import pandas as pd
@@ -41,6 +43,7 @@ RAW = os.path.join(ROOT, "data", "kline_raw")
 BSD = os.path.join(ROOT, "data_bs", "daily")
 OUT_DIR = os.path.join(ROOT, "data", "kline_adj")
 ACTIONS = os.path.join(ROOT, "data", "corporate_actions.csv")
+MANIFEST = os.path.join(OUT_DIR, "_manifest.json")
 REPORT = os.path.join(ROOT, "data", "rebuild_report.json")
 
 EVENT_TOL = 3e-4      # r_raw 与交易所 pctChg 的分歧阈值：超过即判为除权日
@@ -299,8 +302,15 @@ def main():
     recs, rows = [], []
     for n, code in enumerate(codes, 1):
         out, rec = rebuild(code)
-        if out is not None:
-            out.to_csv(os.path.join(OUT_DIR, f"{code}.csv"))
+        path = os.path.join(OUT_DIR, f"{code}.csv")
+        if out is None:
+            # 上一轮跑出来、这一轮不合格的产物必须删掉。留着的话 panel 会把旧算法的
+            # 结果静默吃进去 —— 实测修完 solver 后有 339 个陈旧文件混进面板。
+            if os.path.exists(path):
+                os.remove(path)
+                rec["stale_removed"] = True
+        else:
+            out.to_csv(path)
             for day, (mm, dd) in rec.pop("_events", {}).items():
                 rows.append({"code": code, "date": day,
                              "share_multiple": mm, "cash_per_share_pre_split": dd})
@@ -310,6 +320,9 @@ def main():
             print(f"  ...{n}/{len(codes)}", flush=True)
     pd.DataFrame(rows).to_csv(ACTIONS, index=False)
 
+    stale = sum(1 for r in recs if r.get("stale_removed"))
+    if stale:
+        print(f"删除 {stale} 份上一轮遗留、这一轮不合格的复权序列", flush=True)
     df_rec = pd.DataFrame(recs)
     summary = {
         "total": len(recs),
@@ -324,6 +337,19 @@ def main():
     }
     with open(REPORT, "w", encoding="utf-8") as fh:
         json.dump({"summary": summary, "per_code": recs}, fh, ensure_ascii=False, indent=1)
+
+    # 产物溯源：每个 CSV 自己说不出「我是哪一版算法跑的」，所以在目录里放一份清单。
+    # 修完 solver 后有 339 份上一轮的遗留文件被 build_panel 静默吃进面板——面板看起来
+    # 完全正常（股票数没少、数值不荒谬），是靠核对「5402 vs 5064」这两个数才发现的。
+    # 有了清单，下游就能拒绝加载不属于本次产出的文件。
+    with open(MANIFEST, "w", encoding="utf-8") as fh:
+        json.dump({
+            "script_sha256": hashlib.sha256(
+                open(os.path.abspath(__file__), "rb").read()).hexdigest(),
+            "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "codes": sorted(r["code"] for r in recs if r["status"] == "ok"),
+            "summary": summary,
+        }, fh, ensure_ascii=False)
     print(json.dumps(summary, ensure_ascii=False, indent=1))
     print(f"\n复权序列 → {OUT_DIR}/\n公司行动表 → {ACTIONS}（{len(rows)} 条）\n对账报告 → {REPORT}")
 
