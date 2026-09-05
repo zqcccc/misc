@@ -616,6 +616,7 @@ cmd_screen() {
   done
   [ -n "$report" ] || die "qr screen 必须提供 --report"
   local file; file="$(hyp_file "$id")"
+  require_owner "$id" "改成本闸"
   local path; path="$(resolve_artifact "$report")"
   [ -f "$path" ] || die "screen 报告不存在: $path"
   local parsed

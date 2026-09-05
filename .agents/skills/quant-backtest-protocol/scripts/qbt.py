@@ -439,7 +439,9 @@ def carrier_swap(carrier: pd.Series, incumbent: pd.Series, ppy: int,
     diff_t = d_mu / math.sqrt(var / n) if var > 1e-18 else 0.0
 
     def mdd(x):
-        eq = np.cumprod(1.0 + x)
+        # 期初本金必须进净值路径，否则第一天的亏损永远看不见：
+        # 首日 −50% 随后连涨，不含期初本金的口径报最大回撤 0（B0009）。
+        eq = np.concatenate([[1.0], np.cumprod(1.0 + x)])
         return float((eq / np.maximum.accumulate(eq) - 1.0).min())
 
     years = pd.Series(diff, index=j.index).groupby(j.index.year).sum()
@@ -571,7 +573,11 @@ def perf_stats(r: pd.Series, ppy: int, compound: bool = False) -> dict:
         ann_ret = float((eq.iloc[-1]) ** (ppy / T) - 1.0) if eq.iloc[-1] > 0 else -1.0
     else:
         ann_ret = total * ppy / T
-    dd = float((eq / eq.cummax() - 1.0).min())
+    # 期初本金必须进净值路径，否则第一天的亏损永远看不见：equity_path 的第一个点
+    # 已经是「第一天收盘后」的净值，用它自己做 cummax 的起点等于把首日亏损当成新起点。
+    # 首日 −50% 随后连涨，旧口径报最大回撤 0（B0009）。
+    eq_with_capital = pd.concat([pd.Series([1.0]), pd.Series(eq.to_numpy())], ignore_index=True)
+    dd = float((eq_with_capital / eq_with_capital.cummax() - 1.0).min())
     downside = r[r < 0]
     dsd = float(downside.std(ddof=1)) if len(downside) > 1 else 0.0
     sharpe = float(r.mean() / sd * math.sqrt(ppy)) if sd > 0 else 0.0

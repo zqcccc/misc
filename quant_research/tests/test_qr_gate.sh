@@ -166,6 +166,16 @@ sed -i '' 's/^parent: H9999$/parent:/' "$(card H0002)"
 sed -i '' 's/^protocol_sha256: .*$/protocol_sha256: unresolved/' "$(card H0002)"
 expect_fail "PASS 但协议指纹为 unresolved 被 audit 拦下" "$QR" audit
 
+echo "── 归属保护必须覆盖【所有】改卡片的写入口（B0008）"
+# gpt 2026-09-05 发现：verdict/release 有归属校验，screen 没有，于是别的 agent 能把
+# 别人卡上的成本闸从 STOP 覆盖成 GO，而 qr audit 照样通过。
+# 这条测试遍历所有会改卡片的子命令，漏掉任何一个都会红。
+OWNED="$("$QR" claim "归属保护测试卡" --market multi --family other --agent owner-a 2>/dev/null | head -1 | awk '{print $1}')"
+expect_fail "非坑主不能改成本闸(screen)" env QR_AGENT=intruder "$QR" screen "$OWNED" --report verified/H0002/screen_go.json
+expect_fail "非坑主不能裁决(verdict)"    env QR_AGENT=intruder "$QR" verdict "$OWNED" FAIL --cause 强度不足 "太弱了不值得做"
+expect_fail "非坑主不能释放(release)"    env QR_AGENT=intruder "$QR" release "$OWNED" "抢一个"
+expect_ok   "坑主自己可以改成本闸"        env QR_AGENT=owner-a "$QR" screen "$OWNED" --report verified/H0002/screen_go.json
+
 echo "── execution 角色走载体替换验收，不套 alpha 的判读线"
 cat > "$TMP/verified/H0002/carrier.json" <<'JSON'
 {"schema_version": 2, "stage": "candidate", "role": "execution", "verdict_code": "PASS",

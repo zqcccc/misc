@@ -239,6 +239,32 @@ class QbtV2Tests(unittest.TestCase):
         self.assertGreater(good["null_beta_p50"], 0.5)
         self.assertLess(abs(bad["null_beta_p50"]), 0.35)
 
+    def test_max_drawdown_counts_the_initial_capital(self):
+        """首日就亏掉的钱必须算进最大回撤（B0009）。
+
+        反例（B0007 要求每道判读线都能举出会让它失败的输入）：
+        首日 −50%、随后连涨的净值路径。不把期初本金放进路径的话，第一天就成了
+        cummax 的起点，那 50% 永远看不见，最大回撤被报成 0 —— 一个亏一半开局的
+        策略会以「零回撤」通过风险判读。
+        """
+        idx = pd.date_range("2020-01-01", periods=40, freq="B")
+        crash_then_rally = pd.Series([-0.5] + [0.02] * 39, index=idx)
+        self.assertAlmostEqual(
+            qbt.perf_stats(crash_then_rally, 252)["max_drawdown"], 0.5, places=6)
+
+        # 同一个坑在 carrier 的 mdd 里也有一份
+        rng = np.random.default_rng(3)
+        inc = pd.Series(rng.normal(0.0005, 0.01, 120), index=pd.date_range(
+            "2020-01-01", periods=120, freq="B"))
+        car = inc.copy()
+        car.iloc[0] = -0.5
+        got = qbt.carrier_swap(car, inc, 252)
+        self.assertLess(got["max_drawdown_carrier"], -0.45)
+
+        # 正常路径不受影响：全程上涨的最大回撤仍是 0
+        up = pd.Series([0.001] * 40, index=idx)
+        self.assertAlmostEqual(qbt.perf_stats(up, 252)["max_drawdown"], 0.0, places=6)
+
     def test_alpha_beta_reports_hac_standard_error(self):
         idx = pd.date_range("2020-01-01", periods=400, freq="B", tz="UTC")
         rng = np.random.default_rng(7)
