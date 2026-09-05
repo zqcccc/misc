@@ -26,7 +26,7 @@ sys.path.insert(0, AQ_ROOT)
 sys.path.insert(0, PROJECT_ROOT)
 
 from aq import datasource as ds  # noqa: E402
-from aq import live_smallcap as live  # noqa: E402
+from aq import adjust, live_smallcap as live  # noqa: E402
 from aq import panel  # noqa: E402
 from smallcap_service import (  # noqa: E402
     fetch_live_snapshots,
@@ -475,8 +475,22 @@ def run_once(args: argparse.Namespace) -> dict:
     state_path = Path(args.cache_dir) / "state.json"
     state = load_state(state_path, deliverable, cleaned)
     os.environ.setdefault("SMALLCAP_STATE_DIR", str(Path(args.cache_dir) / "notify"))
+
+    # 腾讯的 hfq 是【加法复权】，日收益被系统性压缩（工行年化波动 0.1193，交易所口径
+    # 0.1837）。rev5 与 ivol60 都建立在 close 上，所以打分前必须把 close 换成重建的
+    # 乘法复权价；liqsize20 走 amount（来自不复权价），本来就是干净的。
+    # 见 quant_research/blockers/B0005-*。
+    #
+    # 缓存仍然存 hfq 原样不动：滚动合并要求新旧 bar 在同一口径上，而重建结果依赖整段
+    # 窗口，逐日增量写回会让历史随每次运行漂移。所以重建只作用于打分这一步。
+    scoring = dict(cleaned)
+    scoring["close"] = adjust.adjusted_close(cleaned["close"], cleaned["close_raw"])
+    dropped = len(cleaned["close"].columns) - len(scoring["close"].columns)
+    print(f"[smallcap-live] 复权重建：{len(scoring['close'].columns)} 只可用"
+          f"（{dropped} 只缺不复权价，未进打分）", flush=True)
+
     deliverable, state, rebalanced = update_deliverable(
-        deliverable, cleaned, state, names, validation, mature_codes=mature_codes
+        deliverable, scoring, state, names, validation, mature_codes=mature_codes
     )
     state["last_success_wall_date"] = datetime.now().strftime("%Y-%m-%d")
     state["last_success_market_date"] = str(expected.date())
