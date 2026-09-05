@@ -208,6 +208,37 @@ class QbtV2Tests(unittest.TestCase):
             self.assertEqual(neg["verdict_code"], "FAIL")
             self.assertTrue(any("≤ 0" in f for f in neg["falsification_failures"]))
 
+    def test_control_shape_check_catches_long_only_vs_long_short_control(self):
+        """B0002 那个真实事故的回归：纯多策略配多空中性对照，必须被判不同构。
+
+        这条测试本身就是 B0007 要求的「反例」——一道给不出反例的检查等于没有检查。
+        """
+        idx = pd.date_range("2020-01-01", periods=500, freq="B")
+        rng = np.random.default_rng(17)
+        M = 30
+        mkt = rng.normal(0.0003, 0.011, len(idx))
+        panel = pd.DataFrame(
+            {f"s{i}": mkt + rng.normal(0, 0.012, len(idx)) for i in range(M)}, index=idx)
+
+        # 真策略：纯多（等权持有 5 只），beta ≈ 1
+        long_only = panel.iloc[:, :5].mean(axis=1)
+
+        # 对照 A：多空中性（--n-short 5，旧的默认值）→ beta ≈ 0，与真策略不同构
+        bad = qbt.random_portfolio(panel, 5, 5, 1, 200, 1, 252, 1.0)
+        got_bad = qbt.control_shape_check(long_only, panel, bad)
+        self.assertFalse(got_bad["same_shape"], got_bad)
+        self.assertIn("不是一种东西", got_bad["说人话"])
+
+        # 对照 B：同样纯多（--n-short 0）→ beta ≈ 1，同构
+        good = qbt.random_portfolio(panel, 5, 0, 1, 200, 1, 252, 1.0)
+        got_good = qbt.control_shape_check(long_only, panel, good)
+        self.assertTrue(got_good["same_shape"], got_good)
+
+        # 两者的分位数差多少 —— 这就是当初 75.05% → 99.65% 的来源
+        self.assertLess(good["null_beta_p50"] - bad["null_beta_p50"], 2.0)
+        self.assertGreater(good["null_beta_p50"], 0.5)
+        self.assertLess(abs(bad["null_beta_p50"]), 0.35)
+
     def test_alpha_beta_reports_hac_standard_error(self):
         idx = pd.date_range("2020-01-01", periods=400, freq="B", tz="UTC")
         rng = np.random.default_rng(7)

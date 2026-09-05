@@ -499,6 +499,48 @@ def validate_carrier_risk(path: str | None) -> dict:
     return {**obj, "validated": True}
 
 
+def control_shape_check(real: pd.Series, panel: pd.DataFrame, rp: dict,
+                        tol: float = 0.35) -> dict:
+    """检验对照组与真策略是不是同一种形状的东西。
+
+    置换检验只有在「零假设除了信号之外和真策略一模一样」时才有意义。现行门禁只看
+    分位数够不够高，不看对照是怎么搭的 —— 而搭错的对照会给出完全正常的统计输出：
+    纯多策略配上多空中性的随机组合，分位被系统性抬高（实测 75.05% → 99.65%，
+    结论正好反过来）。
+
+    用市场暴露做判据：真策略对宇宙等权的 beta，必须落在对照组 beta 分布里面。
+    纯多策略 beta≈1，多空中性的对照 beta≈0，一比就露馅。
+
+    **这道检查会在什么输入下失败**（B0007 要求每道判读线都要能举出反例）：
+    把一个纯多策略（beta≈1）配上 `--n-short 5` 生成的多空对照（beta≈0），
+    差 1.0 远超容差 0.35，判 FAIL。这正是 B0002 那个真实事故。
+    """
+    j = pd.concat([real.rename("r"), panel.mean(axis=1).rename("b")], axis=1).dropna()
+    if len(j) < 30:
+        return {"error": f"与宇宙重叠样本太短 n={len(j)}"}
+    vb = float(np.var(j.b.to_numpy(), ddof=1))
+    if vb < 1e-18:
+        return {"error": "宇宙等权无波动，无法比较暴露"}
+    beta_real = float(np.cov(j.r.to_numpy(), j.b.to_numpy(), ddof=1)[0, 1] / vb)
+    p50 = rp.get("null_beta_p50")
+    if not valid_gate_number(p50):
+        return {"error": "对照组没有记录 beta 分布，无法检验同构性"}
+    gap = abs(beta_real - p50)
+    return {
+        "beta_real": round(beta_real, 4),
+        "null_beta_p50": p50,
+        "null_beta_p05": rp.get("null_beta_p05"),
+        "null_beta_p95": rp.get("null_beta_p95"),
+        "gap": round(gap, 4), "tolerance": tol,
+        "same_shape": bool(gap <= tol),
+        "说人话": ("对照组和真策略的市场暴露差不多，置换分位可以照读"
+                   if gap <= tol else
+                   f"对照组和真策略不是一种东西：真策略 beta={round(beta_real, 2)}，"
+                   f"随机对照 beta={p50}。分位数在这种情况下没有意义，"
+                   f"先把对照的多空结构改成和真策略一致再跑"),
+    }
+
+
 def load_trial_scores(path: str, field: str | None = None) -> np.ndarray:
     """搜索日志里每一轮的【验证集】得分（DSR 用它估搜索规模与离散度）。"""
     df = _read_any(path)
@@ -766,6 +808,7 @@ def random_portfolio(panel: pd.DataFrame, n_long: int, n_short: int, hold: int,
     rng = np.random.default_rng(seed)
     vals = px.to_numpy(float)
     sharpes = np.empty(iters)
+    rets = np.empty((iters, T))
     for k in range(iters):
         w = np.zeros((T, M))
         cur = None
@@ -782,8 +825,21 @@ def random_portfolio(panel: pd.DataFrame, n_long: int, n_short: int, hold: int,
         pr = np.sum(np.vstack([np.zeros(M), w[:-1]]) * vals, axis=1)
         sd = pr.std(ddof=1)
         sharpes[k] = pr.mean() / sd * math.sqrt(ppy) if sd > 0 else 0.0
+        rets[k] = pr
+
+    # 对照组自己的市场暴露：拿它和真策略的暴露比，才能知道两者是不是同一种形状的东西。
+    # 只看分位数是看不出来的 —— 纯多策略配多空中性的对照，统计输出完全正常，
+    # 分位却被系统性抬高（实测同一策略 75.05% → 99.65%，结论反向）。见 B0002 / B0007。
+    bench = vals.mean(axis=1)
+    vb = float(np.var(bench, ddof=1))
+    null_betas = (np.array([float(np.cov(r, bench, ddof=1)[0, 1] / vb) for r in rets])
+                  if vb > 1e-18 else np.zeros(iters))
     out = {
         "iters": iters, "n_long": n_long, "n_short": n_short, "rebalance_bars": hold,
+        "universe_size": int(M),
+        "null_beta_p50": round(float(np.percentile(null_betas, 50)), 4),
+        "null_beta_p05": round(float(np.percentile(null_betas, 5)), 4),
+        "null_beta_p95": round(float(np.percentile(null_betas, 95)), 4),
         "random_sharpe_mean": round(float(sharpes.mean()), 3),
         "random_sharpe_p50": round(float(np.percentile(sharpes, 50)), 3),
         "random_sharpe_p95": round(float(np.percentile(sharpes, 95)), 3),
@@ -853,6 +909,8 @@ def main():
     ap.add_argument("--min-profit-prob", type=float, default=0.95,
                     help="分块自助路径赚钱概率；候选验收默认 95%%")
     ap.add_argument("--min-random-percentile", type=float, default=0.95)
+    ap.add_argument("--control-beta-tol", type=float, default=0.35,
+                    help="真策略与随机对照的市场暴露允许差多少；超了说明对照没搭对")
     ap.add_argument("--gross-annual", type=float, help="screen: 信号的年化毛收益上限（小数，0.05=5%%）")
     ap.add_argument("--turnover", type=float, help="screen: 单边换手次数/年")
     ap.add_argument("--cost-bps", type=float, help="screen: 单边成本 bp（照市场年鉴锁死）")
@@ -1050,6 +1108,9 @@ def main():
                 rep["random_portfolio"] = random_portfolio(
                     pn, a.n_long, require_n_short(a.n_short), a.hold, min(a.iters, 2000), a.seed, ppy,
                     rep["performance"].get("sharpe_daily_wallet"))
+                # 分位数只有在对照与真策略同构时才有意义，所以顺带验一下形状
+                rep["control_shape"] = control_shape_check(
+                    r, pn, rep["random_portfolio"], a.control_beta_tol)
         else:
             rep["random_portfolio"] = load_permutation_result(a.permutation_result)
 
@@ -1089,6 +1150,14 @@ def main():
         rp = rep.get("random_portfolio", {})
         if rp.get("percentile_vs_random") is not None and rp["percentile_vs_random"] < a.min_random_percentile:
             fails.append(f"随机/置换分位 {rp['percentile_vs_random']} < {a.min_random_percentile}")
+        # 对照没搭对时，分位数再高也不能用来晋级
+        cs = rep.get("control_shape")
+        if isinstance(cs, dict) and cs and not cs.get("error"):
+            if not cs.get("same_shape"):
+                fails.append(
+                    f"对照组与真策略不同构：真策略 beta={cs.get('beta_real')} vs "
+                    f"随机对照 beta={cs.get('null_beta_p50')}（容差 {cs.get('tolerance')}），"
+                    f"置换分位在这种情况下没有意义")
         td = rep.get("trades_diagnostic", {})
         if td.get("outside_returns_window"):
             fails.append("trades 含策略收益窗口以外的记录，禁止把 FULL 成交和 OOS 业绩拼接")
