@@ -123,15 +123,32 @@ if obj.get("verdict_code") != "PASS":
     problems.append(f"verdict_code={obj.get('verdict_code')!r}，不是 PASS")
 if obj.get("falsification_failures"):
     problems.append("falsification_failures 非空")
-for key in ("execution_check", "data_provenance", "window_consistency"):
+# 每个研究角色声称的东西不一样，判读线也不一样：
+#   alpha     声称「这个信号有超额」→ 归因、搜索调整、路径、置换
+#   execution 声称「同一份敞口换个载体拿更划算」→ 同暴露、净差、压力成本、载体风险
+# 拿 alpha 的门禁去判 execution 是错的（它压根不声称有 alpha）。
+if expected_role == "execution":
+    required_blocks = ("carrier_swap", "carrier_swap_stressed", "carrier_risk",
+                       "execution_check", "data_provenance")
+    gate_fields = (
+        ("carrier_swap", "net_diff_annual", False), ("carrier_swap", "net_diff_t", False),
+        ("carrier_swap", "exposure_adjusted_excess_annual", False),
+        ("carrier_swap", "exposure_adjusted_t", False),
+        ("carrier_swap", "beta_vs_incumbent", False), ("carrier_swap", "r_squared", True),
+        ("carrier_swap_stressed", "net_diff_annual", False),
+    )
+else:
+    required_blocks = ("execution_check", "data_provenance", "window_consistency")
+    gate_fields = (
+        ("alpha_beta", "ann_alpha", False), ("alpha_beta", "alpha_t", False),
+        ("monte_carlo", "prob_profit", True), ("random_portfolio", "percentile_vs_random", True),
+        ("selection_adjustment", "DSR" if "DSR" in obj.get("selection_adjustment", {}) else "PSR", True),
+    )
+for key in required_blocks:
     val = obj.get(key)
     if not isinstance(val, dict) or val.get("error"):
         problems.append(f"{key} 缺失或失败")
-for section, field, probability in (
-    ("alpha_beta", "ann_alpha", False), ("alpha_beta", "alpha_t", False),
-    ("monte_carlo", "prob_profit", True), ("random_portfolio", "percentile_vs_random", True),
-    ("selection_adjustment", "DSR" if "DSR" in obj.get("selection_adjustment", {}) else "PSR", True),
-):
+for section, field, probability in gate_fields:
     block = obj.get(section)
     value = block.get(field) if isinstance(block, dict) else None
     try:
@@ -348,7 +365,12 @@ cmd_verdict() {
   if [ "$v" = "PASS" ]; then
     [ -n "$report" ] || die "PASS 必须提供 --report verified/<ID>/verdict.json"
     local role; role="$(fm "$file" research_role)"; role="${role:-alpha}"
-    [ "$role" = "alpha" ] || die "当前 qbt v2 只自动验收 alpha；$role 角色需专用组合/对冲/执行报告，暂不能 PASS"
+    case "$role" in
+      alpha) ;;
+      execution) ;;   # 走 qbt.py carrier 的载体替换验收，判读线见 SKILL.md
+      *) die "$role 角色还没有验收路径：diversifier/hedge 需要各自的专用报告（组合增量 / 对冲有效性），
+现在没有，不能 PASS。alpha 用 qbt.py report，execution 用 qbt.py carrier。";;
+    esac
     validate_pass_report "$report" "$role"
   fi
   set_fm "$file" status "done"

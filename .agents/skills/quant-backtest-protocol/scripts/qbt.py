@@ -386,6 +386,116 @@ def validate_gate_statistics(rep):
     return failures
 
 
+
+# ============================================================================
+# 载体替换（execution 角色）验收
+#
+# alpha 角色问的是「这个信号有没有超额」。执行角色问的完全是另一件事：
+# 「一个本来就要拿这份敞口的人，换个载体拿是不是更划算」。
+# 拿 alpha 的判读线去判它是错的——它压根不声称有 alpha，它声称的是省钱。
+# 所以判读线换成：同暴露、净差、压力成本后仍为正、跨期一致、回撤不更深、
+# 载体特有风险已申报。
+# ============================================================================
+
+def carrier_swap(carrier: pd.Series, incumbent: pd.Series, ppy: int,
+                 nw_lags: int | None = None) -> dict:
+    """新载体 vs 旧载体的逐日盯市对比。
+
+    两条腿必须是【同一份敞口的两种拿法】。所以第一件事不是算差额，是先验证
+    暴露真的一样：beta 明显偏离 1 就说明新载体多拿（或少拿）了敞口，
+    那部分收益是多担风险换来的，不是载体省下来的。
+    """
+    j = pd.concat([carrier.rename("c"), incumbent.rename("i")], axis=1).dropna()
+    if len(j) < 60:
+        return {"error": f"重叠样本太短 n={len(j)}"}
+    c, i = j["c"].to_numpy(float), j["i"].to_numpy(float)
+    n = len(c)
+    var_i = float(np.var(i, ddof=1))
+    if var_i < 1e-14:
+        return {"error": "旧载体无波动，无法比较暴露"}
+
+    design = np.column_stack([np.ones(n), i])
+    coef = np.linalg.lstsq(design, c, rcond=None)[0]
+    a_d, beta = float(coef[0]), float(coef[1])
+    resid = c - design @ coef
+    ss_tot = float(np.sum((c - c.mean()) ** 2))
+    r2 = 1.0 - float(np.sum(resid ** 2)) / ss_tot if ss_tot > 1e-14 else 0.0
+    if nw_lags is None:
+        nw_lags = max(1, int(math.floor(4.0 * (n / 100.0) ** (2.0 / 9.0))))
+    nw_lags = min(max(int(nw_lags), 0), n - 2)
+    hac = _newey_west_cov(design, resid, nw_lags)
+    se_a = math.sqrt(max(float(hac[0, 0]), 0.0))
+    adj_t = a_d / se_a if se_a > 1e-14 else 0.0
+
+    diff = c - i
+    d_mu = float(diff.mean())
+    d_res = diff - d_mu
+    var = float(d_res @ d_res) / n
+    for lag in range(1, nw_lags + 1):
+        var += 2.0 * (1.0 - lag / (nw_lags + 1.0)) * float(d_res[lag:] @ d_res[:-lag]) / n
+    diff_t = d_mu / math.sqrt(var / n) if var > 1e-18 else 0.0
+
+    def mdd(x):
+        eq = np.cumprod(1.0 + x)
+        return float((eq / np.maximum.accumulate(eq) - 1.0).min())
+
+    years = pd.Series(diff, index=j.index).groupby(j.index.year).sum()
+    sd_c, sd_i = float(np.std(c, ddof=1)), float(np.std(i, ddof=1))
+    return {
+        "n_days": n,
+        "window": [str(j.index[0].date()), str(j.index[-1].date())],
+        "carrier_ann": round(float(c.mean()) * ppy, 4),
+        "incumbent_ann": round(float(i.mean()) * ppy, 4),
+        "net_diff_annual": round(d_mu * ppy, 4),
+        "net_diff_t": round(diff_t, 2),
+        "beta_vs_incumbent": round(beta, 4),
+        "r_squared": round(r2, 4),
+        "vol_ratio": round(sd_c / sd_i, 4) if sd_i > 1e-14 else None,
+        "exposure_adjusted_excess_annual": round(a_d * ppy, 4),
+        "exposure_adjusted_t": round(adj_t, 2),
+        "max_drawdown_carrier": round(mdd(c), 4),
+        "max_drawdown_incumbent": round(mdd(i), 4),
+        "drawdown_worse_by": round(mdd(i) - mdd(c), 4),
+        "years_positive": int((years > 0).sum()),
+        "years_total": int(len(years)),
+        "yearly_diff": {str(k): round(float(v), 4) for k, v in years.items()},
+        "nw_lags": nw_lags,
+    }
+
+
+CARRIER_RISK_KEYS = {
+    "margin_ratio": "保证金比例（无保证金的载体写 0）",
+    "peak_drawdown_over_margin": "历史最大回撤 ÷ 保证金，>1 表示中途会被追保",
+    "min_capital": "能按这个方案跑起来的最小资金（合约面值/最小申购单位决定）",
+    "forced_liquidation_plan": "追保时先动谁：具体到卖哪条腿、多久到账",
+    "roll_liquidity_evidence": "换月/调仓时盘口深度的证据，不能只有历史成交量",
+    "regulatory_tail": "这个载体特有的监管尾部（限仓、停牌、政策变动）",
+}
+
+
+def validate_carrier_risk(path: str | None) -> dict:
+    """载体特有风险必须逐项申报。这里只验「有没有写」，不验「写得对不对」。
+
+    执行角色最容易死的地方不是收益不够，是中途被追保强平——那时候纸面年化
+    多好都没意义。所以没申报就不许 PASS。
+    """
+    if not path:
+        return {"error": "缺 --carrier-risk：载体特有风险必须逐项申报（保证金、追保、最小资金、换月流动性、监管尾部）"}
+    obj = _load_json_object(path, "carrier risk")
+    if "error" in obj:
+        return obj
+    missing = []
+    for key, desc in CARRIER_RISK_KEYS.items():
+        val = obj.get(key)
+        if val is None or (isinstance(val, str) and not val.strip()):
+            missing.append(f"{key}（{desc}）")
+        elif isinstance(val, (int, float)) and not isinstance(val, bool) and not math.isfinite(float(val)):
+            missing.append(f"{key} 不是有限数值")
+    if missing:
+        return {"error": "载体风险申报缺项：" + "；".join(missing)}
+    return {**obj, "validated": True}
+
+
 def load_trial_scores(path: str, field: str | None = None) -> np.ndarray:
     """搜索日志里每一轮的【验证集】得分（DSR 用它估搜索规模与离散度）。"""
     df = _read_any(path)
@@ -709,7 +819,7 @@ def _emit(obj, out=None):
 def main():
     ap = argparse.ArgumentParser(description="回测证伪工具箱（EP004 方法论通用实现）")
     ap.add_argument("cmd", choices=["screen", "sharpe", "alphabeta", "dsr", "mc", "pvalue",
-                                    "randomport", "report"])
+                                    "randomport", "report", "carrier"])
     ap.add_argument("--returns", help="策略日收益/权益曲线/成交文件")
     ap.add_argument("--bench", help="基准日收益/指数收盘价文件")
     ap.add_argument("--trades", help="逐笔成交文件（report 中只作数量/窗口诊断）")
@@ -745,6 +855,13 @@ def main():
     ap.add_argument("--cost-bps", type=float, help="screen: 单边成本 bp（照市场年鉴锁死）")
     ap.add_argument("--funding-annual", type=float, default=0.0, help="screen: 年化持有成本（资金费/借券/融资）")
     ap.add_argument("--cost-stress", type=float, default=2.0, help="screen: 压力成本倍数，默认 2x")
+    ap.add_argument("--carrier-risk", help="carrier: 载体特有风险申报 JSON（保证金/追保/最小资金/换月流动性/监管尾部）")
+    ap.add_argument("--carrier-stressed", help="carrier: 压力成本档下的新载体日收益，用于压力后仍为正的门禁")
+    ap.add_argument("--beta-tol", type=float, default=0.05,
+                    help="carrier: 新旧载体的 beta 允许偏离 1 多少；超了说明不是同一份敞口")
+    ap.add_argument("--min-diff-t", type=float, default=2.0, help="carrier: 净差与暴露调整后差额的最低 NW t")
+    ap.add_argument("--max-dd-worse", type=float, default=0.05, help="carrier: 新载体最大回撤最多比旧载体深多少")
+    ap.add_argument("--min-positive-years", type=float, default=0.7, help="carrier: 净差为正的年份占比下限")
     ap.add_argument("--out", help="结果 JSON 落盘路径")
     a = ap.parse_args()
     ppy, cal = _market(a)
@@ -793,6 +910,80 @@ def main():
         pn = pd.read_csv(a.panel, index_col=0, parse_dates=True).sort_index()
         _emit(random_portfolio(pn, a.n_long, require_n_short(a.n_short), a.hold, min(a.iters, 2000),
                                a.seed, ppy, a.sharpe), a.out)
+
+    elif a.cmd == "carrier":
+        if not a.bench:
+            sys.exit("[qbt] carrier 需要 --bench（旧载体的日收益，即你本来打算怎么拿这份敞口）")
+        cs = carrier_swap(R(), B(), ppy)
+        rep = {"schema_version": REPORT_SCHEMA_VERSION, "stage": "candidate",
+               "role": "execution", "market": a.market, "periods_per_year": ppy,
+               "carrier_swap": cs,
+               "carrier_risk": validate_carrier_risk(a.carrier_risk),
+               "execution_check": validate_execution_manifest(a.execution_manifest),
+               "data_provenance": validate_data_manifest(a.data_manifest)}
+
+        stressed = {"error": "缺 --carrier-stressed：没有压力成本档就不能判 PASS"}
+        if a.carrier_stressed:
+            sr = load_daily_returns(a.carrier_stressed, a.capital, cal, a.compound)
+            stressed = carrier_swap(sr, B(), ppy)
+        rep["carrier_swap_stressed"] = stressed
+
+        fails, notes = [], []
+        for name, blk in (("carrier_swap", cs), ("carrier_swap_stressed", stressed),
+                          ("carrier_risk", rep["carrier_risk"]),
+                          ("execution_check", rep["execution_check"]),
+                          ("data_provenance", rep["data_provenance"])):
+            if not blk or blk.get("error"):
+                fails.append(f"{name} 缺失或失败：{blk.get('error', '无结果') if blk else '无结果'}")
+
+        if not cs.get("error"):
+            for field, label in (("net_diff_annual", "净年化差"),
+                                 ("exposure_adjusted_excess_annual", "暴露调整后年化差")):
+                if not valid_gate_number(cs.get(field)):
+                    fails.append(f"carrier_swap.{field} 不是合法有限统计值")
+                elif cs[field] <= 0:
+                    fails.append(f"{label} {cs[field]} ≤ 0：换载体没省下钱")
+            for field, label in (("net_diff_t", "净差"), ("exposure_adjusted_t", "暴露调整后差额")):
+                if not valid_gate_number(cs.get(field)):
+                    fails.append(f"carrier_swap.{field} 不是合法有限统计值")
+                elif cs[field] < a.min_diff_t:
+                    fails.append(f"{label} NW t {cs[field]} < {a.min_diff_t}")
+            # 暴露对不上不直接判死：上面的「暴露调整后差额」门禁已经把多拿的敞口剥掉了。
+            # 但必须写进报告和结论句——它决定这个数该怎么读。
+            beta = cs.get("beta_vs_incumbent")
+            if valid_gate_number(beta) and abs(beta - 1.0) > a.beta_tol:
+                notes.append(
+                    f"同暴露不成立：新载体相对旧载体的 beta={beta}（波动比 {cs.get('vol_ratio')}），"
+                    f"偏离 1 超过 {a.beta_tol}。净年化差 {cs.get('net_diff_annual')} 里有一部分是多拿敞口"
+                    f"换来的，真正属于载体的是暴露调整后的 {cs.get('exposure_adjusted_excess_annual')}。")
+            if valid_gate_number(cs.get("r_squared")) and cs["r_squared"] < 0.80:
+                fails.append(f"两条腿相关性太低 R²={cs['r_squared']} < 0.80：这不是同一份敞口的两种拿法")
+            if valid_gate_number(cs.get("drawdown_worse_by")) and cs["drawdown_worse_by"] > a.max_dd_worse:
+                fails.append(f"新载体最大回撤比旧载体深 {cs['drawdown_worse_by']} > {a.max_dd_worse}")
+            if cs.get("years_total"):
+                share = cs["years_positive"] / cs["years_total"]
+                if share < a.min_positive_years:
+                    fails.append(f"净差为正的年份只有 {cs['years_positive']}/{cs['years_total']}"
+                                 f"（{round(share, 2)} < {a.min_positive_years}）")
+        if not stressed.get("error"):
+            if not valid_gate_number(stressed.get("net_diff_annual")) or stressed["net_diff_annual"] <= 0:
+                fails.append(f"压力成本档下净年化差 {stressed.get('net_diff_annual')} ≤ 0：省下的钱不够付更贵的成本")
+
+        fails = list(dict.fromkeys(fails))
+        rep["falsification_failures"] = fails
+        rep["notes"] = notes
+        if fails:
+            rep["verdict_code"] = "FAIL"
+            rep["verdict"] = "未通过：" + "；".join(fails)
+        else:
+            rep["verdict_code"] = "PASS"
+            rep["verdict"] = ("载体替换验收通过 —— 下一步是小仓位实盘验证换月盘口与追保流程，"
+                              "不等于可直接整体切换" + ("；注意：" + "".join(notes) if notes else ""))
+        rep["说人话"] = (
+            f"本来要拿的这份敞口，换个方式拿，一年多留下 {round(cs.get('net_diff_annual', 0) * 100, 2)}%；"
+            f"把多拿的敞口剥掉之后还剩 {round(cs.get('exposure_adjusted_excess_annual', 0) * 100, 2)}%。"
+            if not cs.get("error") else "两条腿对不上，没法比。")
+        _emit(rep, a.out)
 
     else:  # report
         r = R()

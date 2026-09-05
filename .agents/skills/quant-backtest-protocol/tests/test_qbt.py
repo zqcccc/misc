@@ -106,6 +106,81 @@ class QbtV2Tests(unittest.TestCase):
         self.assertIn("不显著", out["verdict"])
         self.assertNotIn("策略本身有效", out["verdict"].split("：")[0])
 
+    def _carrier_fixture(self, root, beta=1.0, edge=0.0003):
+        idx = pd.date_range("2017-01-02", periods=1200, freq="B")
+        rng = np.random.default_rng(5)
+        inc = rng.normal(0.0002, 0.011, len(idx))
+        car = edge + beta * inc + rng.normal(0, 0.0015, len(idx))
+        pd.DataFrame({"date": idx, "ret": car}).to_csv(root / "car.csv", index=False)
+        pd.DataFrame({"date": idx, "ret": inc}).to_csv(root / "inc.csv", index=False)
+        pd.DataFrame({"date": idx, "ret": car - 0.00005}).to_csv(root / "car_stress.csv", index=False)
+        (root / "risk.json").write_text(json.dumps({
+            "margin_ratio": 0.12, "peak_drawdown_over_margin": 2.1, "min_capital": 1200000,
+            "forced_liquidation_plan": "先卖货币ETF，T+0 到账", "roll_liquidity_evidence": "换月日盘口五档实测",
+            "regulatory_tail": "限仓与保证金比例调整"}))
+        (root / "exec.json").write_text(json.dumps({
+            "information_time": "t-1 close", "decision_time": "after t-1 close",
+            "execution_time": "t open", "pnl_start": "t open", "pnl_end": "t close",
+            "price_field": "open", "timezone": "Asia/Shanghai",
+            "pnl_start_not_before_execution": True, "validated": True}))
+        raw = root / "raw.csv"
+        raw.write_text("date,close\n2017-01-02,1\n")
+        (root / "data.json").write_text(json.dumps({"sources": [{
+            "provider": "test fixture", "retrieved_at": "2026-09-05T00:00:00Z",
+            "url_or_query": "local", "raw_file": "raw.csv",
+            "sha256": hashlib.sha256(raw.read_bytes()).hexdigest(), "rows": 1,
+            "start": "2017-01-02", "end": "2021-08-06", "timezone": "Asia/Shanghai",
+            "adjustment": "none"}]}))
+
+    def _run_carrier(self, root, out, extra=()):
+        subprocess.run([sys.executable, str(SCRIPT), "carrier",
+                        "--returns", str(root / "car.csv"), "--bench", str(root / "inc.csv"),
+                        "--market", "cn_stock", "--carrier-risk", str(root / "risk.json"),
+                        "--execution-manifest", str(root / "exec.json"),
+                        "--data-manifest", str(root / "data.json"),
+                        "--out", str(out), *extra], check=True, capture_output=True, text=True)
+        return json.loads(out.read_text())
+
+    def test_carrier_passes_only_with_matched_exposure_stress_and_risk(self):
+        with tempfile.TemporaryDirectory() as td:
+            root, out = Path(td), Path(td) / "v.json"
+            self._carrier_fixture(root)
+
+            # 缺压力档 → 不许 PASS
+            miss = self._run_carrier(root, out)
+            self.assertEqual(miss["verdict_code"], "FAIL")
+            self.assertTrue(any("carrier_swap_stressed" in f for f in miss["falsification_failures"]))
+
+            good = self._run_carrier(root, out, ["--carrier-stressed", str(root / "car_stress.csv")])
+            self.assertEqual(good["verdict_code"], "PASS", good["falsification_failures"])
+            self.assertEqual(good["role"], "execution")
+            self.assertEqual(good["notes"], [])
+            self.assertAlmostEqual(good["carrier_swap"]["beta_vs_incumbent"], 1.0, delta=0.03)
+
+            # 载体风险少一项 → 立刻掉回 FAIL
+            (root / "risk.json").write_text(json.dumps({
+                "margin_ratio": 0.12, "peak_drawdown_over_margin": 2.1, "min_capital": 1200000,
+                "forced_liquidation_plan": "", "roll_liquidity_evidence": "x", "regulatory_tail": "y"}))
+            bad = self._run_carrier(root, out, ["--carrier-stressed", str(root / "car_stress.csv")])
+            self.assertEqual(bad["verdict_code"], "FAIL")
+            self.assertTrue(any("forced_liquidation_plan" in f for f in bad["falsification_failures"]))
+
+    def test_carrier_flags_exposure_mismatch_and_rejects_negative_edge(self):
+        with tempfile.TemporaryDirectory() as td:
+            root, out = Path(td), Path(td) / "v.json"
+            # 多拿 15% 敞口：原始净差被抬高，报告必须把这件事说出来
+            self._carrier_fixture(root, beta=1.15)
+            rep = self._run_carrier(root, out, ["--carrier-stressed", str(root / "car_stress.csv")])
+            self.assertTrue(any("同暴露不成立" in n for n in rep["notes"]), rep["notes"])
+            cs = rep["carrier_swap"]
+            self.assertGreater(cs["net_diff_annual"], cs["exposure_adjusted_excess_annual"])
+
+            # 换载体反而更贵：暴露调整后差额为负，必须判死
+            self._carrier_fixture(root, beta=1.0, edge=-0.0003)
+            neg = self._run_carrier(root, out, ["--carrier-stressed", str(root / "car_stress.csv")])
+            self.assertEqual(neg["verdict_code"], "FAIL")
+            self.assertTrue(any("≤ 0" in f for f in neg["falsification_failures"]))
+
     def test_alpha_beta_reports_hac_standard_error(self):
         idx = pd.date_range("2020-01-01", periods=400, freq="B", tz="UTC")
         rng = np.random.default_rng(7)

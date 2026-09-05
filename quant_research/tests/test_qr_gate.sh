@@ -166,6 +166,33 @@ sed -i '' 's/^parent: H9999$/parent:/' "$(card H0002)"
 sed -i '' 's/^protocol_sha256: .*$/protocol_sha256: unresolved/' "$(card H0002)"
 expect_fail "PASS 但协议指纹为 unresolved 被 audit 拦下" "$QR" audit
 
+echo "── execution 角色走载体替换验收，不套 alpha 的判读线"
+cat > "$TMP/verified/H0002/carrier.json" <<'JSON'
+{"schema_version": 2, "stage": "candidate", "role": "execution", "verdict_code": "PASS",
+ "falsification_failures": [],
+ "execution_check": {"validated": true}, "data_provenance": {"source_count": 1},
+ "carrier_risk": {"validated": true},
+ "carrier_swap": {"net_diff_annual": 0.03, "net_diff_t": 4.1,
+                  "exposure_adjusted_excess_annual": 0.028, "exposure_adjusted_t": 3.9,
+                  "beta_vs_incumbent": 1.01, "r_squared": 0.98},
+ "carrier_swap_stressed": {"net_diff_annual": 0.021}}
+JSON
+cat > "$TMP/verified/H0002/carrier_norisk.json" <<'JSON'
+{"schema_version": 2, "stage": "candidate", "role": "execution", "verdict_code": "PASS",
+ "falsification_failures": [],
+ "execution_check": {"validated": true}, "data_provenance": {"source_count": 1},
+ "carrier_swap": {"net_diff_annual": 0.03, "net_diff_t": 4.1,
+                  "exposure_adjusted_excess_annual": 0.028, "exposure_adjusted_t": 3.9,
+                  "beta_vs_incumbent": 1.01, "r_squared": 0.98},
+ "carrier_swap_stressed": {"net_diff_annual": 0.021}}
+JSON
+EXEC_ID="$("$QR" claim "载体替换测试卡" --market multi --family other --role execution 2>/dev/null | head -1 | awk '{print $1}')"
+expect_fail "execution 卡不能拿 alpha 报告 PASS" "$QR" verdict $EXEC_ID PASS "拿错报告" --report verified/H0002/candidate.json
+expect_fail "载体风险未申报不能 PASS"           "$QR" verdict $EXEC_ID PASS "缺风险申报" --report verified/H0002/carrier_norisk.json
+expect_ok   "载体替换报告可以 PASS"             "$QR" verdict $EXEC_ID PASS "同一份敞口换个方式拿，一年多留下三个点" --report verified/H0002/carrier.json
+expect_eq   "execution 的 PASS 写回卡片"        "$(fmval $EXEC_ID verdict)" "PASS"
+
+
 echo
 echo "qr gate: passed=$PASS_N failed=$FAIL_N"
 [ "$FAIL_N" -eq 0 ]
