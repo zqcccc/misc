@@ -146,8 +146,12 @@ next-env.d.ts
 !/quant_research/templates/
 !/quant_research/tests/
 !/quant_research/locks/
+!/quant_research/blockers/
 !/quant_research/portfolio/
 /quant_research/portfolio/out/
+/cn_index_futures/
+/multi_tsmom/
+/astock_quant/h0*/
 
 # A股量化策略与信号监控服务部署必需 (随 ashare-signal 与 ashare-smallcap-quant 镜像构建)
 !/scripts/ashare_quant/**
@@ -155,3 +159,6 @@ next-env.d.ts
 !/deliverables/smallcap_strategy.json
 !/astock_quant/data/meta.csv
 __pycache__
+
+# qr 每个 agent 的开工基线，属于本机运行态
+quant_research/runs/

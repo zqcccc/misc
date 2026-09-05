@@ -25,11 +25,15 @@ HYP="$HOME_DIR/hypotheses"
 LOCKS="$HOME_DIR/locks"
 TPL="$HOME_DIR/templates/hypothesis.md"
 [ -f "$TPL" ] || TPL="$SELF_DIR/templates/hypothesis.md"
+TPL_DIR="$(dirname "$TPL")"
 REGISTRY="$HOME_DIR/REGISTRY.md"
 KNOWLEDGE="$HOME_DIR/KNOWLEDGE.md"
+BLOCKERS="$HOME_DIR/blockers"
+RUNS="$HOME_DIR/runs"
+PROTOCOL_LOG="$HOME_DIR/PROTOCOL_LOG.md"
 STALE_HOURS="${QR_STALE_HOURS:-6}"
 
-mkdir -p "$HYP" "$LOCKS"
+mkdir -p "$HYP" "$LOCKS" "$BLOCKERS" "$RUNS"
 now_iso() { date -u +%Y-%m-%dT%H:%M:%SZ; }
 now_epoch() { date +%s; }
 die() { echo "qr: $*" >&2; exit 1; }
@@ -307,7 +311,13 @@ cmd_note() {
   [ $# -ge 2 ] || die '用法: qr note <ID> "<进展一句话>"'
   local id="$1"; shift
   local file; file="$(hyp_file "$id")"
-  printf -- '- `%s` %s：%s\n' "$(now_iso)" "$(agent_name "${QR_AGENT:-}")" "$*" >> "$file"
+  # note 允许非坑主写（接管前留痕就是这么用的），但要在日志里标出来是外人写的
+  local own me; own="$(owner_of "$id")"; me="$(agent_name "${QR_AGENT:-}")"
+  if [ -n "$own" ] && [ "$own" != "$me" ] && explicit_agent; then
+    printf -- '- `%s` %s（非坑主，坑主是 %s）：%s\n' "$(now_iso)" "$me" "$own" "$*" >> "$file"
+  else
+    printf -- '- `%s` %s：%s\n' "$(now_iso)" "$me" "$*" >> "$file"
+  fi
   set_fm "$file" updated_at "$(now_iso)"
   [ "$(fm "$file" status)" = "claimed" ] && set_fm "$file" status "running" || true
   cmd_index >/dev/null
@@ -334,6 +344,7 @@ cmd_verdict() {
   fi
   check_plain_language "$summary"
   local file; file="$(hyp_file "$id")"
+  require_owner "$id" "裁决"
   if [ "$v" = "PASS" ]; then
     [ -n "$report" ] || die "PASS 必须提供 --report verified/<ID>/verdict.json"
     local role; role="$(fm "$file" research_role)"; role="${role:-alpha}"
@@ -360,6 +371,7 @@ cmd_release() {
   [ $# -ge 1 ] || die '用法: qr release <ID> ["放弃原因"]'
   local id="$1"; shift || true
   local file; file="$(hyp_file "$id")"
+  require_owner "$id" "释放"
   set_fm "$file" status "abandoned"
   set_fm "$file" updated_at "$(now_iso)"
   printf -- '- `%s` %s：放弃占坑 —— %s\n' "$(now_iso)" "$(agent_name "${QR_AGENT:-}")" "${*:-未说明}" >> "$file"
@@ -719,8 +731,421 @@ cmd_protocol() {
     echo "指纹:     unresolved"
     return 1
   fi
+  local fp; fp="$(protocol_digest)"
   echo "协议目录: $dir"
-  echo "指纹:     $(protocol_digest)"
+  echo "指纹:     $fp"
+  echo "版本:     $(protocol_version_of "$fp")"
+  if [ "$(protocol_version_of "$fp")" = "未登记" ]; then
+    echo
+    echo "⚠️  当前协议指纹不在 PROTOCOL_LOG.md 里。协议改过就要登记版本，否则 qr rejudge 无法判断"
+    echo "    哪些历史裁决需要重判。由人授权的维护完成后跑："
+    echo "    ./qr protocol register v<N> --impact <none|tighten|loosen|breaking> --note \"改了什么\""
+  fi
+}
+
+# ============================================================================
+# 并行研究基础设施：受保护快照 / 阻塞记录 / 协议版本 / 重判队列 / 开工与自检
+#
+# 设计原则：
+#   1. 完整性检查看「本次运行的增量」，不看工作区绝对是否干净。
+#      维护者手上有没提交的活儿，不等于 agent 篡改了协议。
+#   2. 裁判可以被修，但每一版都要登记；修裁判产出「待重判队列」，不是全局停机。
+#   3. 阻塞是有状态的一等记录（open/closed + 严重级），不是散文。
+#   4. 台账的写入串行化；占坑的接管是 compare-and-swap，不是先到先得。
+# ============================================================================
+
+# ---------- 受保护快照 ----------
+protected_digest() {  # $1=protocol|cli|templates
+  case "$1" in
+    protocol) protocol_digest;;
+    cli)
+      { for f in "$HOME_DIR/qr" "$HOME_DIR/PROMPT.md" "$HOME_DIR/PROMPT_LONGRUN.md"; do
+          if [ -f "$f" ]; then printf '%s\n' "${f#$HOME_DIR/}"; cat "$f"; fi
+        done; } | shasum -a 256 | cut -c1-16
+      ;;
+    templates)
+      { if [ -d "$TPL_DIR" ]; then
+          find "$TPL_DIR" -type f -print0 | LC_ALL=C sort -z \
+            | while IFS= read -r -d '' f; do printf '%s\n' "${f#$HOME_DIR/}"; cat "$f"; done
+        fi; } | shasum -a 256 | cut -c1-16
+      ;;
+    *) die "protected_digest: 未知分组 $1";;
+  esac
+}
+
+# ---------- 台账写锁：同一时刻只允许一个 agent 改台账 ----------
+LEDGER_MUTEX="$LOCKS/.mutex-ledger"
+LOCK_HELD=0
+
+lock_release() { [ "$LOCK_HELD" = 1 ] && rmdir "$LEDGER_MUTEX" 2>/dev/null; LOCK_HELD=0; return 0; }
+
+lock_acquire() {
+  local waited=0 mt now
+  while ! mkdir "$LEDGER_MUTEX" 2>/dev/null; do
+    # 崩溃留下的陈旧锁自动回收，否则一次 Ctrl-C 就能让整个编队停摆
+    mt="$(stat -f %m "$LEDGER_MUTEX" 2>/dev/null || stat -c %Y "$LEDGER_MUTEX" 2>/dev/null || echo 0)"
+    now="$(now_epoch)"
+    if [ "$mt" != 0 ] && [ $((now - mt)) -gt "${QR_LOCK_STALE_SEC:-300}" ]; then
+      rmdir "$LEDGER_MUTEX" 2>/dev/null || true
+      continue
+    fi
+    sleep 0.2
+    waited=$((waited+1))
+    [ "$waited" -lt "${QR_LOCK_WAIT_TICKS:-300}" ] || die "等台账写锁超时（$LEDGER_MUTEX 被占用）"
+  done
+  LOCK_HELD=1
+  trap 'lock_release' EXIT INT TERM
+}
+
+# ---------- 占坑归属：写操作必须是坑主，接管必须 compare-and-swap ----------
+# 注意 set -o pipefail：文件不存在时 sed 会让整条管道非零，必须先判存在再读
+owner_of() {
+  [ -f "$LOCKS/$1/owner" ] || return 0
+  sed -n 's/^agent=//p' "$LOCKS/$1/owner" | head -1
+}
+
+# 身份没有显式给出时（退化成 whoami-$$）不做归属判定，避免误伤人工操作
+explicit_agent() { [ -n "${QR_AGENT:-}" ] || [ -n "${CLAUDE_AGENT_NAME:-}" ]; }
+
+require_owner() {  # $1=ID $2=动作名
+  local id="$1" act="$2" own me
+  own="$(owner_of "$id")"
+  [ -n "$own" ] || return 0                  # 没有活跃占坑（已裁决/已释放）不拦
+  explicit_agent || return 0
+  me="$(agent_name "")"
+  [ "$own" != "$me" ] || return 0
+  die "$id 的坑主是 $own，你是 $me，不能替他 $act。
+接管僵尸占坑用：./qr takeover $id --expect $own --agent $me
+（接管前先 ./qr note $id \"接管说明\" 留痕，见 PROMPT.md 阶段 0）"
+}
+
+cmd_takeover() {
+  local id="" expect="" agent="" force=0
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --expect) expect="$2"; shift 2;;
+      --agent) agent="$2"; shift 2;;
+      --force) force=1; shift;;
+      -*) die "未知参数 $1";;
+      *) id="$1"; shift;;
+    esac
+  done
+  [ -n "$id" ] || die '用法: qr takeover <ID> --expect <原坑主> --agent <你的名字> [--force]'
+  [ -n "$expect" ] || die "必须写 --expect <原坑主>：接管是 compare-and-swap，防止两个 agent 同时接管同一个坑"
+  local file; file="$(hyp_file "$id")"
+  local own; own="$(owner_of "$id")"
+  [ -n "$own" ] || die "$id 没有活跃占坑，不需要接管"
+  [ "$own" = "$expect" ] || die "$id 的坑主是 $own，不是你以为的 $expect —— 有人先接管了，重新跑 ./qr stale 再决定"
+  agent="$(agent_name "$agent")"
+  local ep age
+  ep="$(sed -n 's/^claimed_epoch=//p' "$LOCKS/$id/owner" | head -1)"
+  local mt; mt="$(stat -f %m "$file" 2>/dev/null || stat -c %Y "$file")"
+  [ "$mt" -gt "${ep:-0}" ] && ep="$mt" || true
+  age=$(( ($(now_epoch) - ${ep:-0}) / 3600 ))
+  if [ "$age" -lt "$STALE_HOURS" ] && [ "$force" != 1 ]; then
+    die "$id 才 ${age}h 没动，没到僵尸线（${STALE_HOURS}h）。确认对方真的死了再加 --force"
+  fi
+  printf 'agent=%s\nclaimed_at=%s\nclaimed_epoch=%s\nfile=%s\ntitle=%s\ntakeover_from=%s\n' \
+    "$agent" "$(now_iso)" "$(now_epoch)" "${file#$HOME_DIR/}" "$(fm "$file" title)" "$own" > "$LOCKS/$id/owner"
+  set_fm "$file" owner "$agent"
+  set_fm "$file" updated_at "$(now_iso)"
+  printf -- '- `%s` %s：从 %s 手上接管这张卡（僵尸 %sh 未更新）\n' "$(now_iso)" "$agent" "$own" "$age" >> "$file"
+  cmd_index >/dev/null
+  echo "$id 已接管：$own → $agent"
+}
+
+# ---------- 阻塞：有状态的一等记录，取代散文里的「我停了因为……」 ----------
+BLOCKER_SEVERITIES="HALT ASK WARN"
+
+blocker_file() {
+  local f; f="$(ls "$BLOCKERS/$1-"*.md 2>/dev/null | head -1 || true)"
+  [ -n "$f" ] || die "找不到阻塞记录 $1"
+  echo "$f"
+}
+
+cmd_blocker_open() {
+  local title="" sev="HALT" evidence="" agent="" scope="protocol"
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --severity) sev="$2"; shift 2;;
+      --evidence) evidence="$2"; shift 2;;
+      --agent) agent="$2"; shift 2;;
+      --scope) scope="$2"; shift 2;;
+      -*) die "未知参数 $1";;
+      *) title="$1"; shift;;
+    esac
+  done
+  [ -n "$title" ] || die '用法: qr blocker open "<一句话说清卡在哪>" --severity <HALT|ASK|WARN> --evidence <路径>'
+  case " $BLOCKER_SEVERITIES " in *" $sev "*) ;; *) die "--severity 只能是：$BLOCKER_SEVERITIES";; esac
+  agent="$(agent_name "$agent")"
+  local n=1 id
+  while :; do
+    id="$(printf 'B%04d' "$n")"
+    if mkdir "$LOCKS/$id" 2>/dev/null; then
+      if ls "$BLOCKERS/$id-"*.md >/dev/null 2>&1; then n=$((n+1)); continue; fi
+      : > "$LOCKS/$id/.gitkeep"
+      break
+    fi
+    n=$((n+1))
+  done
+  local file="$BLOCKERS/$id-$(slugify "$title").md"
+  cat > "$file" <<BLK
+---
+id: $id
+title: $title
+status: open
+severity: $sev
+scope: $scope
+opened_by: $agent
+opened_at: $(now_iso)
+closed_by:
+closed_at:
+evidence: $evidence
+---
+
+## 卡在哪
+
+$title
+
+## 证据
+
+${evidence:-（未提供，补上可复现的路径或命令）}
+
+## 处理日志
+
+- \`$(now_iso)\` $agent：开出这条阻塞（$sev）。
+BLK
+  echo "$id 已记录（$sev）→ ${file#$HOME_DIR/}"
+  case "$sev" in
+    HALT) echo "HALT 级会让所有 agent 的 ./qr start 停在开工检查上，直到有人 ./qr blocker close $id";;
+    ASK)  echo "ASK 级不挡开工，但每次 start 都会提示，需要人给一句话决定";;
+    WARN) echo "WARN 级只登记不挡路，适合「知道有这个毛病但不影响当前结论」";;
+  esac
+}
+
+cmd_blocker_close() {
+  local id="" evidence="" agent="" note=""
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --evidence) evidence="$2"; shift 2;;
+      --agent) agent="$2"; shift 2;;
+      -*) die "未知参数 $1";;
+      *) if [ -z "$id" ]; then id="$1"; else note="${note}${note:+ }$1"; fi; shift;;
+    esac
+  done
+  [ -n "$id" ] || die '用法: qr blocker close <BID> "<怎么解决的>" [--evidence <路径>]'
+  [ -n "$note" ] || die "关闭阻塞必须写清怎么解决的——下一个 agent 靠这句话决定要不要相信"
+  local file; file="$(blocker_file "$id")"
+  [ "$(fm "$file" status)" = "open" ] || die "$id 已经是 $(fm "$file" status) 状态"
+  agent="$(agent_name "$agent")"
+  set_fm "$file" status "closed"
+  set_fm "$file" closed_by "$agent"
+  set_fm "$file" closed_at "$(now_iso)"
+  [ -z "$evidence" ] || set_fm "$file" evidence "$evidence"
+  printf -- '- `%s` %s：**关闭** —— %s%s\n' "$(now_iso)" "$agent" "$note" \
+    "${evidence:+（证据：$evidence）}" >> "$file"
+  echo "$id 已关闭。"
+}
+
+cmd_blocker_list() {  # $1=open|all ；有未关闭的 HALT 时退出码 1
+  local mode="${1:-open}" f any=0 halt=0 st sev
+  for f in "$BLOCKERS"/B*.md; do
+    [ -e "$f" ] || continue
+    st="$(fm "$f" status)"; sev="$(fm "$f" severity)"
+    if [ "$mode" != "all" ] && [ "$st" != "open" ]; then continue; fi
+    any=1
+    printf '  %s [%s/%s] %s\n' "$(fm "$f" id)" "$st" "$sev" "$(fm "$f" title)"
+    printf '           开出者 %s  %s  →  %s\n' "$(fm "$f" opened_by)" "$(fm "$f" opened_at)" "${f#$HOME_DIR/}"
+    if [ "$st" = "open" ] && [ "$sev" = "HALT" ]; then halt=1; fi
+  done
+  [ "$any" = 1 ] || echo "  （无）"
+  [ "$halt" = 0 ]
+}
+
+cmd_blocker() {
+  local sub="${1:-list}"; shift || true
+  case "$sub" in
+    open)  cmd_blocker_open "$@";;
+    close) cmd_blocker_close "$@";;
+    list)  cmd_blocker_list "${1:-open}";;
+    *) die "用法: qr blocker <open|close|list>";;
+  esac
+}
+
+# ---------- 协议版本：指纹是哈希，版本才带语义 ----------
+protocol_version_of() {  # $1=fingerprint
+  [ -f "$PROTOCOL_LOG" ] || { echo "未登记"; return; }
+  python3 - "$PROTOCOL_LOG" "$1" <<'PVPY'
+import re, sys
+log, fp = sys.argv[1], sys.argv[2]
+for line in open(log, encoding="utf-8"):
+    cells = [c.strip().strip("`") for c in line.strip().strip("|").split("|")]
+    if len(cells) >= 4 and re.fullmatch(r"v\d+", cells[0]) and cells[1] == fp:
+        print(cells[0]); break
+else:
+    print("未登记")
+PVPY
+}
+
+cmd_protocol_register() {
+  local version="" impact="" note="" fp
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --impact) impact="$2"; shift 2;;
+      --note) note="$2"; shift 2;;
+      -*) die "未知参数 $1";;
+      *) version="$1"; shift;;
+    esac
+  done
+  [ -n "$version" ] || die '用法: qr protocol register v3 --impact <none|tighten|loosen|breaking> --note "改了什么"'
+  case "$version" in v[0-9]*) ;; *) die "版本号形如 v3";; esac
+  case "$impact" in
+    none|tighten|loosen|breaking) ;;
+    *) die "--impact 只能是 none（判读不可能变）/ tighten（门槛变严，PASS 可能翻）/ loosen（门槛变松，FAIL·PARK 可能翻）/ breaking（口径改变，全部要重判）";;
+  esac
+  [ -n "$note" ] || die "--note 必填：写清这次改了什么，下一个 agent 靠它判断要不要重判"
+  fp="$(protocol_digest)"
+  [ "$fp" != "unresolved" ] || die "找不到协议目录，无法登记"
+  local known; known="$(protocol_version_of "$fp")"
+  [ "$known" = "未登记" ] || die "当前指纹 $fp 已经登记为 $known，不要重复登记（版本台账只追加不改写）"
+  grep -q "^| $version " "$PROTOCOL_LOG" 2>/dev/null && die "$version 已存在于版本台账"
+  printf '| %s | `%s` | %s | `%s` | %s |\n' "$version" "$fp" "$(now_iso)" "$impact" "$note" >> "$PROTOCOL_LOG"
+  echo "已登记 $version = $fp（影响 $impact）"
+  echo "接下来跑 ./qr rejudge 看这次改动产生了多少张待重判的卡。"
+}
+
+# 修裁判的正确产物是「待重判队列」，不是让 43 张卡全部作废、也不是全局停机
+cmd_rejudge() {
+  python3 - "$HYP" "$PROTOCOL_LOG" "$(protocol_digest)" <<'RJPY'
+import glob, os, re, sys
+hyp, log, cur = sys.argv[1], sys.argv[2], sys.argv[3]
+
+versions = []
+if os.path.exists(log):
+    for line in open(log, encoding="utf-8"):
+        cells = [c.strip().strip("`") for c in line.strip().strip("|").split("|")]
+        if len(cells) >= 5 and re.fullmatch(r"v\d+", cells[0]):
+            versions.append({"v": cells[0], "fp": cells[1], "at": cells[2],
+                             "impact": cells[3], "note": cells[4]})
+
+fp_index = {e["fp"]: i for i, e in enumerate(versions)}
+cur_v = versions[fp_index[cur]]["v"] if cur in fp_index else None
+
+# 影响 → 这次改动可能翻掉哪些裁决
+AFFECTS = {"none": set(), "baseline": set(), "tighten": {"PASS"},
+           "loosen": {"FAIL", "PARK"}, "breaking": {"PASS", "FAIL", "PARK"}}
+
+def fm(t, k):
+    m = re.search(r"^%s:[ \t]*(.*)$" % k, t, re.M)
+    return (m.group(1).strip() if m else "")
+
+queue, legacy, current = [], [], 0
+for f in sorted(glob.glob(os.path.join(hyp, "*.md"))):
+    t = open(f, encoding="utf-8").read()
+    if fm(t, "status") != "done":
+        continue
+    verdict = fm(t, "verdict")
+    if verdict not in ("PASS", "FAIL", "PARK"):
+        continue
+    fp = fm(t, "protocol_sha256")
+    if not fp or fp == "unresolved" or fp not in fp_index:
+        legacy.append((fm(t, "id"), verdict, fp or "无"))
+        continue
+    if fp == cur:
+        current += 1
+        continue
+    reasons = [e for e in versions[fp_index[fp] + 1:]
+               if verdict in AFFECTS.get(e["impact"], set())]
+    if reasons:
+        queue.append((fm(t, "id"), verdict, versions[fp_index[fp]]["v"],
+                      "→".join(e["v"] for e in reasons), reasons[0]["note"][:60]))
+    else:
+        current += 1
+
+print(f"当前协议：{cur}（{cur_v or '未登记 —— 先跑 qr protocol register'}）")
+print(f"已裁决卡：按当前口径仍然成立 {current} 张；待重判 {len(queue)} 张；指纹未登记的历史卡 {len(legacy)} 张")
+if queue:
+    print()
+    print("== 待重判（协议在它们判完之后往会翻转结论的方向改过）==")
+    for hid, v, was, path, why in queue:
+        print(f"  {hid}  {v}  判于 {was}，之后经过 {path}：{why}")
+    print()
+    print("处理方式：重跑它的严格报告再 ./qr verdict 覆盖；或确认这次改动够不着它，")
+    print("在卡片里追加一条说明为什么不受影响。不要因为有待重判就停掉整个编队。")
+if legacy:
+    print()
+    print(f"== 指纹未登记的历史卡 {len(legacy)} 张（判它们的那版协议没有进版本台账，无法自动比较）==")
+    print("  " + " ".join(h for h, _, _ in legacy[:20]) + (" …" if len(legacy) > 20 else ""))
+RJPY
+}
+
+# ---------- 开工 / 自检：一条命令一个退出码，取代五句话的自然语言规则 ----------
+cmd_start() {
+  local agent=""
+  while [ $# -gt 0 ]; do
+    case "$1" in --agent) agent="$2"; shift 2;; -*) die "未知参数 $1";; *) agent="$1"; shift;; esac
+  done
+  agent="$(agent_name "$agent")"
+  local pfp cfp tfp head rc=0
+  pfp="$(protocol_digest)"; cfp="$(protected_digest cli)"; tfp="$(protected_digest templates)"
+  head="$(git -C "$HOME_DIR" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+  printf 'agent=%s\nstarted_at=%s\nprotocol_fp=%s\ncli_fp=%s\ntemplates_fp=%s\ngit_head=%s\n' \
+    "$agent" "$(now_iso)" "$pfp" "$cfp" "$tfp" "$head" > "$RUNS/$agent.env"
+
+  echo "== 开工基线（agent=$agent）=="
+  echo "  协议 $pfp（$(protocol_version_of "$pfp")）   CLI $cfp   模板 $tfp   HEAD $head"
+  echo "  基线已存 runs/$agent.env —— 自检比对的是「你跑这一趟有没有改动它们」，不是工作区干不干净"
+  echo
+  echo "== 台账体检 =="
+  cmd_audit || rc=1
+  echo
+  echo "== 未关闭的阻塞 =="
+  cmd_blocker_list open || rc=1
+  echo
+  echo "== 协议版本与待重判 =="
+  cmd_rejudge
+  echo
+  if [ "$rc" != 0 ]; then
+    echo "❌ 开工检查未通过。台账有错误、或有 HALT 级阻塞没关闭 —— 先处理，不要开始研究。"
+    return 1
+  fi
+  echo "✅ 可以开工。研究期间 export QR_AGENT=$agent，收工跑 ./qr selfcheck --agent $agent"
+}
+
+cmd_selfcheck() {
+  local agent=""
+  while [ $# -gt 0 ]; do
+    case "$1" in --agent) agent="$2"; shift 2;; -*) die "未知参数 $1";; *) agent="$1"; shift;; esac
+  done
+  agent="$(agent_name "$agent")"
+  local base="$RUNS/$agent.env"
+  [ -f "$base" ] || die "没有 $agent 的开工基线（runs/$agent.env）——开工时应先跑 ./qr start --agent $agent"
+  local rc=0 bp bc bt np nc nt
+  bp="$(sed -n 's/^protocol_fp=//p' "$base" | head -1)"
+  bc="$(sed -n 's/^cli_fp=//p' "$base" | head -1)"
+  bt="$(sed -n 's/^templates_fp=//p' "$base" | head -1)"
+  np="$(protocol_digest)"; nc="$(protected_digest cli)"; nt="$(protected_digest templates)"
+
+  echo "== 受保护文件：对比本次开工基线 =="
+  if [ "$np" = "$bp" ]; then echo "  ✅ 验收协议 $np 未变"; else
+    echo "  ❌ 验收协议在你这一趟里被改过：$bp → $np"; rc=1; fi
+  if [ "$nc" = "$bc" ]; then echo "  ✅ qr / PROMPT 未变"; else
+    echo "  ❌ qr 或 PROMPT 在你这一趟里被改过：$bc → $nc"; rc=1; fi
+  if [ "$nt" = "$bt" ]; then echo "  ✅ 模板未变"; else
+    echo "  ❌ 模板在你这一趟里被改过：$bt → $nt"; rc=1; fi
+  echo
+  echo "== 台账体检 =="
+  cmd_audit || rc=1
+  echo
+  echo "== 未关闭的阻塞 =="
+  cmd_blocker_list open || rc=1
+  echo
+  if [ "$rc" != 0 ]; then
+    echo "❌ 自检未通过。改动受保护文件属于协议维护，必须由人授权后单独做；"
+    echo "   发现协议有毛病的正确出口是 ./qr blocker open \"...\" --severity HALT --evidence <复现路径>"
+    return 1
+  fi
+  echo "✅ 自检通过。"
 }
 
 usage() {
@@ -751,16 +1176,35 @@ qr —— 量化探索台账（多 agent 共用，先查重后占坑）
   qr index                               重建 REGISTRY.md
   qr knowledge                           从假设卡重建 KNOWLEDGE.md（唯一写入口，裁决时自动调用）
   qr home                                打印当前台账根目录
-  qr protocol                            打印当前验收协议目录与指纹（裁决时会盖进卡片）
+
+并行与协议版本（多 agent 同时跑时的地基）
+  qr start --agent <名字>                 开工：记基线 + 体检 + 阻塞 + 待重判；退出码 1 就别开始
+  qr selfcheck --agent <名字>             收工自检：只比对「你这一趟改了什么」，不看工作区是否干净
+  qr blocker open "<卡在哪>" --severity <HALT|ASK|WARN> --evidence <路径>
+  qr blocker close <BID> "<怎么解决的>"   关闭阻塞；HALT 未关闭时所有 agent 的 start 都会被挡
+  qr blocker list [open|all]              列出阻塞；有未关闭的 HALT 时退出码 1
+  qr takeover <ID> --expect <原坑主> --agent <你>   接管僵尸占坑（compare-and-swap，防两人同时接）
+  qr protocol                            打印协议目录、指纹与版本
+  qr protocol register v<N> --impact <none|tighten|loosen|breaking> --note "改了什么"
+                                         登记一版协议。修裁判不再等于全局停机，产物是待重判队列
+  qr rejudge                             哪些已裁决的卡在协议改动后需要重判（按改动方向算，不是一刀切）
 USAGE
 }
 
-case "${1:-}" in
+# 写台账的子命令一律串行化：REGISTRY.md / KNOWLEDGE.md 是从卡片整体重建的，
+# 两个 agent 同时收口会互相覆盖。只读命令不加锁，不影响并行盘点。
+SUB="${1:-}"
+case "$SUB" in
+  claim|note|verdict|release|index|knowledge|screen|takeover|blocker) lock_acquire;;
+esac
+
+case "$SUB" in
   search) shift; cmd_search "$@";;
   claim)  shift; cmd_claim "$@";;
   note)   shift; cmd_note "$@";;
   verdict) shift; cmd_verdict "$@";;
   release) shift; cmd_release "$@";;
+  takeover) shift; cmd_takeover "$@";;
   list)   shift; cmd_list "${1:-}";;
   stale)  shift; cmd_stale "${1:-}";;
   coverage|cov) shift; cmd_coverage;;
@@ -769,9 +1213,15 @@ case "${1:-}" in
   scorecard) shift; cmd_scorecard;;
   index)  shift; cmd_index;;
   knowledge) shift; cmd_knowledge;;
-  protocol) shift; cmd_protocol;;
+  protocol)
+    shift
+    if [ "${1:-}" = "register" ]; then shift; lock_acquire; cmd_protocol_register "$@"; else cmd_protocol; fi;;
+  rejudge) shift; cmd_rejudge;;
+  blocker) shift; cmd_blocker "$@";;
+  start) shift; cmd_start "$@";;
+  selfcheck) shift; cmd_selfcheck "$@";;
   screen) shift; cmd_screen "$@";;
   home)   shift; cmd_home;;
   ""|-h|--help|help) usage;;
-  *) die "未知子命令 $1（qr --help）";;
+  *) die "未知子命令 $SUB（qr --help）";;
 esac

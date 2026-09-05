@@ -1,0 +1,106 @@
+#!/usr/bin/env bash
+# 并行基础设施回归测试：阻塞记录 / 接管 CAS / 开工基线与增量自检 / 协议版本与重判队列。
+# 全程在临时 QR_HOME 上跑，不碰真实台账。
+set -uo pipefail
+
+SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+QR_ROOT="$(dirname "$SELF_DIR")"
+QR="$QR_ROOT/qr"
+
+PASS_N=0; FAIL_N=0
+ok()  { PASS_N=$((PASS_N+1)); echo "  ok   $1"; }
+bad() { FAIL_N=$((FAIL_N+1)); echo "  FAIL $1"; }
+expect_ok()   { local d="$1"; shift; if "$@" >/dev/null 2>&1; then ok "$d"; else bad "$d（本应成功却失败）"; fi; }
+expect_fail() { local d="$1"; shift; if "$@" >/dev/null 2>&1; then bad "$d（本应被拒却放行）"; else ok "$d"; fi; }
+expect_eq()   { if [ "$2" = "$3" ]; then ok "$1"; else bad "$1（期望 $3，实际 $2）"; fi; }
+
+TMP="$(mktemp -d /tmp/qr-parallel-test.XXXXXX)"
+PROTO="$TMP/proto"
+trap 'rm -rf "$TMP"' EXIT
+mkdir -p "$TMP/templates" "$TMP/hypotheses" "$TMP/locks" "$PROTO"
+cp "$QR_ROOT/templates/hypothesis.md" "$TMP/templates/hypothesis.md"
+printf '# fake protocol\n' > "$PROTO/SKILL.md"
+printf 'x = 1\n' > "$PROTO/qbt.py"
+cp "$QR_ROOT/qr" "$TMP/qr"; chmod +x "$TMP/qr"
+export QR_HOME="$TMP" QBT_HOME="$PROTO" QR_AGENT="alice"
+QRT="$TMP/qr"
+
+fp() { QR_AGENT=alice "$QRT" protocol | sed -n 's/^指纹: *//p'; }
+
+echo "== 阻塞记录 =="
+expect_ok   "开一条 WARN 阻塞"  "$QRT" blocker open "示例：某个指标口径存疑" --severity WARN
+expect_ok   "WARN 不挡 blocker list" "$QRT" blocker list
+expect_fail "非法严重级被拒"     "$QRT" blocker open "x" --severity URGENT
+expect_ok   "开一条 HALT 阻塞"  "$QRT" blocker open "验收门禁能被绕过" --severity HALT --evidence some/path
+expect_fail "有未关闭 HALT 时 list 退出码 1" "$QRT" blocker list
+expect_fail "关闭阻塞必须写清怎么解决的" "$QRT" blocker close B0002
+expect_ok   "关闭 HALT"          "$QRT" blocker close B0002 "已修复并登记 v2"
+expect_ok   "HALT 关闭后 list 恢复 0" "$QRT" blocker list
+expect_fail "重复关闭被拒"       "$QRT" blocker close B0002 "再关一次"
+
+echo
+echo "== 协议版本与重判队列 =="
+expect_fail "未登记版本时 register 缺 impact 被拒" "$QRT" protocol register v1 --note x
+expect_ok   "登记 v1"  "$QRT" protocol register v1 --impact none --note "起始版本"
+expect_fail "同一指纹重复登记被拒" "$QRT" protocol register v2 --impact none --note "重复"
+expect_eq   "protocol 能把指纹翻成版本" "$("$QRT" protocol | sed -n 's/^版本: *//p')" "v1"
+
+# 造一张判于 v1 的 FAIL 卡
+"$QRT" claim "测试假设一" --family other --market multi --agent alice >/dev/null 2>&1
+"$QRT" verdict H0001 FAIL --cause 信号无增量 "把整个池子买了一遍，什么都没多出来" >/dev/null 2>&1
+expect_eq "卡片盖上了当时的指纹" "$(sed -n 's/^protocol_sha256: *//p' "$TMP"/hypotheses/H0001-*.md)" "$(fp)"
+
+# 协议变更 → 新指纹 → 登记为 tighten
+printf 'x = 2\n' > "$PROTO/qbt.py"
+expect_ok "改协议后能登记 v2" "$QRT" protocol register v2 --impact tighten --note "门槛收紧"
+expect_eq "tighten 不牵连 FAIL 卡" "$("$QRT" rejudge | sed -n 's/.*待重判 \([0-9]*\) 张.*/\1/p')" "0"
+
+# loosen 才会把 FAIL 卡拉进队列
+printf 'x = 3\n' > "$PROTO/qbt.py"
+"$QRT" protocol register v3 --impact loosen --note "门槛放宽" >/dev/null 2>&1
+expect_eq "loosen 把 FAIL 卡拉进待重判" "$("$QRT" rejudge | sed -n 's/.*待重判 \([0-9]*\) 张.*/\1/p')" "1"
+
+echo
+echo "== 开工基线与增量自检 =="
+expect_fail "没有基线就自检会被拒" "$QRT" selfcheck --agent bob
+expect_ok   "开工写基线"           "$QRT" start --agent alice
+expect_ok   "没动任何东西 → 自检通过" "$QRT" selfcheck --agent alice
+
+# 关键回归：开工前就存在的改动不算数，只有开工后的改动才算
+printf 'x = 4\n' > "$PROTO/qbt.py"
+expect_fail "开工后改协议 → 自检不通过" "$QRT" selfcheck --agent alice
+expect_ok   "以新状态重新开工"       "$QRT" start --agent alice
+expect_ok   "同样的脏工作区，重新开工后自检通过（增量为零）" "$QRT" selfcheck --agent alice
+
+# HALT 阻塞挡开工
+"$QRT" blocker open "新发现的门禁漏洞" --severity HALT >/dev/null 2>&1
+expect_fail "有未关闭 HALT 时开工被挡" "$QRT" start --agent alice
+"$QRT" blocker close B0003 "已处理" >/dev/null 2>&1
+expect_ok   "关掉 HALT 后可以开工" "$QRT" start --agent alice
+
+echo
+echo "== 占坑归属与接管 =="
+"$QRT" claim "测试假设二" --family other --market multi --agent alice >/dev/null 2>&1
+expect_fail "非坑主不能裁决" env QR_AGENT=bob "$QRT" verdict H0002 FAIL --cause 强度不足 "太弱了不值得做"
+expect_fail "非坑主不能释放" env QR_AGENT=bob "$QRT" release H0002 "抢一个"
+expect_ok   "非坑主可以留痕" env QR_AGENT=bob "$QRT" note H0002 "我打算接管这张卡"
+expect_ok   "留痕标注了非坑主" grep -q "非坑主，坑主是 alice" "$(ls "$TMP"/hypotheses/H0002-*.md)"
+expect_fail "接管必须写 --expect" env QR_AGENT=bob "$QRT" takeover H0002 --agent bob
+expect_fail "expect 对不上就拒绝接管" env QR_AGENT=bob "$QRT" takeover H0002 --expect carol --agent bob
+expect_fail "没到僵尸线不许接管" env QR_AGENT=bob "$QRT" takeover H0002 --expect alice --agent bob
+expect_ok   "--force 可以接管"   env QR_AGENT=bob "$QRT" takeover H0002 --expect alice --agent bob --force
+expect_eq   "接管后坑主变了" "$(sed -n 's/^agent=//p' "$TMP/locks/H0002/owner")" "bob"
+expect_fail "原坑主接管后不能再裁决" env QR_AGENT=alice "$QRT" verdict H0002 FAIL --cause 强度不足 "太弱了"
+expect_ok   "新坑主可以裁决" env QR_AGENT=bob "$QRT" verdict H0002 FAIL --cause 强度不足 "太弱了不值得做"
+
+echo
+echo "== 台账写锁 =="
+mkdir -p "$TMP/locks/.mutex-ledger"
+QR_LOCK_WAIT_TICKS=3 expect_fail "锁被占用时写命令等待后放弃" env QR_LOCK_WAIT_TICKS=3 "$QRT" note H0001 "抢锁"
+rmdir "$TMP/locks/.mutex-ledger"
+expect_ok "锁释放后恢复正常" "$QRT" note H0001 "锁已释放"
+expect_ok "只读命令不受写锁影响" bash -c 'mkdir -p "$QR_HOME/locks/.mutex-ledger"; "'"$QRT"'" list >/dev/null; rc=$?; rmdir "$QR_HOME/locks/.mutex-ledger"; exit $rc'
+
+echo
+echo "结果：通过 $PASS_N，失败 $FAIL_N"
+[ "$FAIL_N" -eq 0 ]

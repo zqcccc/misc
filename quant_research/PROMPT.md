@@ -40,6 +40,8 @@
 
 ```bash
 cd quant_research
+./qr start --agent <你的名字>   # ⓪ 开工体检：台账 + 未关闭的阻塞 + 协议版本 + 待重判队列
+                                #    退出码非 0 就不要开始研究；之后 export QR_AGENT=<你的名字>
 cat KNOWLEDGE.md      # ① 已固化结论，含所有踩死的路，全文读完
 cat GLOSSARY.md       # ①' 术语表：每个指标在问什么、多少算过线（汇报时按它注解术语）
 ./qr leads            # ②' ★ 上一批研究挖到、但还没人接手的线索——比空白格优先级更高
@@ -47,7 +49,12 @@ cat GLOSSARY.md       # ①' 术语表：每个指标在问什么、多少算过
 ./qr coverage         # ② ★ 覆盖盘点：市场 × 机理族矩阵，告诉你地图上哪里还是白的
 ./qr list             # ③ 谁在探什么
 ./qr stale            # ④ 僵尸占坑（>6h 未更新，可接管，接管前先 qr note 留痕）
+                      #    接管走 ./qr takeover <ID> --expect <原坑主> --agent <你>
+./qr blocker list     # ⑤ 未关闭的阻塞：HALT 会挡住开工，ASK 需要人给一句话决定
 ```
+
+收工（每张卡裁决后）跑 `./qr selfcheck --agent <你的名字>`：它一次性检查你这一趟有没有
+改动受保护文件、台账结构、未关闭的阻塞。退出码非 0 就停下来汇报。
 
 `qr coverage` 的输出是你这一轮的**地图**。零覆盖的市场和零覆盖的机理族，就是优先撒点的地方。
 
