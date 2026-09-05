@@ -1,6 +1,6 @@
 ---
 id: B0001
-title: qbt/qr 三处已知毛病：exploratory 报告混入门禁噪音、置换别名一致性容差过紧、门禁校验清单两处重复
+title: 门禁校验清单在 qbt.py 与 qr 两处各写一份，会漂移（原三项中的前两项已在协议 v5 修掉）
 status: open
 severity: WARN
 scope: protocol
@@ -34,3 +34,19 @@ evidence: DESIGN.md#还没做的
 ## 处理日志
 
 - `2026-09-05T03:24:45Z` claude：开出这条阻塞（WARN）。
+
+- `2026-09-05T06:30:00Z` claude：**第 1、2 项已修，登记为协议 v5（f186e8ce5874ee75，影响 none）。**
+  - 第 1 项：`fails.extend(validate_gate_statistics(rep))` 挪进 `if strict:` 分支。
+    `--exploratory` 的诊断报告不再凭空多出「random_portfolio/selection_adjustment 缺失」两条。
+  - 第 2 项：别名一致性从 `abs_tol=1e-12` 改为**四位小数比较**。
+    `{"percentile": 0.9667, "p_value": 0.033333}` 这种正常文件不再被误判成互相矛盾；
+    判读仍用未取整的原值，`0.94999` 不会被并成 `0.95` 后晋级。
+    只读扫描全工作区 68 份含置换别名的 JSON（其中 5 份同时带 ≥2 个别名，都是 randomport 自产），
+    无一会被原容差误杀，所以历史裁决不受影响，影响登记为 `none`。
+  - 各补 1 条回归，qbt 16 项全过。
+
+- **第 3 项不修，本条阻塞保持 open（WARN）。** 让 `qr` 去 exec `qbt.py` 做校验会把台账 CLI
+  绑死在协议目录可用上——`qr` 现在没有协议目录也能跑 audit/claim/note，绑上之后不能。
+  代价是那份清单仍有两份。缓解措施：`tests/test_qr_gate.sh` 现在在 **qr 这一层**也覆盖了
+  NaN、越界统计值和 execution 角色的载体门禁，任何一侧漂移都会让测试红。
+  这是一个有意接受的欠账，不是忘了；同时记在 `DESIGN.md`「还没做的」。

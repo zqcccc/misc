@@ -37,6 +37,33 @@ class QbtV2Tests(unittest.TestCase):
                         {"percentile_vs_random": .99, "percentile": "NaN"}):
                 path.write_text(json.dumps(obj))
                 self.assertIn("error", qbt.load_permutation_result(str(path)))
+            # 别名只要求四位小数一致：一个存 4 位一个存 6 位是常见写法，不是矛盾
+            path.write_text(json.dumps({"percentile": 0.9667, "p_value": 0.033333}))
+            mixed = qbt.load_permutation_result(str(path))
+            self.assertNotIn("error", mixed)
+            self.assertEqual(mixed["percentile_vs_random"], 0.9667)
+            # 但判读仍用未取整的原值，0.94999 不许被并成 0.95
+            path.write_text(json.dumps({"percentile": 0.94999, "p_value": 0.05}))
+            self.assertEqual(qbt.load_permutation_result(str(path))["percentile_vs_random"], 0.94999)
+
+    def test_exploratory_report_has_no_gate_noise(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            idx = pd.date_range("2019-01-02", periods=400, freq="B")
+            rng = np.random.default_rng(21)
+            bench = rng.normal(0.0001, 0.006, len(idx))
+            pd.DataFrame({"date": idx, "ret": 0.0008 + bench}).to_csv(root / "r.csv", index=False)
+            pd.DataFrame({"date": idx, "ret": bench}).to_csv(root / "b.csv", index=False)
+            out = root / "exp.json"
+            subprocess.run([sys.executable, str(SCRIPT), "report", "--returns", str(root / "r.csv"),
+                            "--bench", str(root / "b.csv"), "--exploratory", "--market", "us_stock",
+                            "--out", str(out), "--iters", "100"], check=True, capture_output=True, text=True)
+            rep = json.loads(out.read_text())
+            self.assertEqual(rep["verdict_code"], "DIAGNOSTIC")
+            # 探索诊断不跑置换/搜索调整层，缺失是正常的，不该混进失败列表
+            self.assertFalse([f for f in rep["falsification_failures"]
+                              if "random_portfolio" in f or "selection_adjustment" in f],
+                             rep["falsification_failures"])
 
     def test_final_gate_rejects_invalid_internal_statistics(self):
         good = {"alpha_beta": {"ann_alpha": .1, "alpha_t": 3},

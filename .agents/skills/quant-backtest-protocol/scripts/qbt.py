@@ -351,7 +351,10 @@ def load_permutation_result(path: str | None) -> dict:
     if not values:
         return {"error": "permutation result 缺 percentile_vs_random/percentile/p_value"}
     pct = next(iter(values.values()))
-    if any(not math.isclose(pct, v, rel_tol=0, abs_tol=1e-12) for v in values.values()):
+    # 别名之间只要求四位小数一致：一个字段存 4 位、另一个存 6 位是常见写法，
+    # 原来的 abs_tol=1e-12 会把 {"percentile": 0.9667, "p_value": 0.033333}
+    # 这种正常文件误判成互相矛盾。判读用的仍是未取整的原值（见下一行）。
+    if any(round(pct, 4) != round(v, 4) for v in values.values()):
         return {"error": "permutation result 多个统计字段互相矛盾"}
     # 保留原始精度，不能把低于门槛的数值四舍五入成通过。
     return {**obj, "percentile_vs_random": pct}
@@ -1068,7 +1071,9 @@ def main():
             for name, result in required.items():
                 if not result or result.get("error"):
                     fails.append(f"{name} 缺失或失败：{result.get('error', '无结果')}")
-        fails.extend(validate_gate_statistics(rep))
+            # 只在严格模式下兜底：探索诊断本来就不跑这几层，缺失是正常的，
+            # 混进 falsification_failures 会让人误以为出了问题。
+            fails.extend(validate_gate_statistics(rep))
         ab = rep.get("alpha_beta", {})
         if ab.get("ann_alpha", 0) <= 0:
             fails.append("alpha ≤ 0：收益不来自选股/择时")
