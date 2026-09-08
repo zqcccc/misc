@@ -134,7 +134,8 @@ def build_smallcap_deliverable(
         name: strategy.masked_rank_score(fp[name], inv_mask)
         for name in weights
     }
-    rb_dates = strategy.rebalance_dates(dates, 10, start="2019-01-02", end=dates[-1])
+    # 2026-09-08: 10 -> 20（月频），与 live_smallcap.REBALANCE_FREQUENCY 保持一致。
+    rb_dates = strategy.rebalance_dates(dates, 20, start="2019-01-02", end=dates[-1])
 
     # 1. 灵敏度矩阵测试: N in [3, 5, 6, 7, 8, 10, 15, 20, 30]
     top_n_eval_list = [3, 5, 6, 7, 8, 10, 15, 20, 30]
@@ -514,7 +515,13 @@ def main():
     parser.add_argument("--notify", action="store_true", help="检查最新一期是否有调仓并发送通知")
     parser.add_argument("--force-notify", action="store_true", help="强制发送当前最新一期的调仓通知(测试联调)")
     parser.add_argument("--out", default="deliverables/smallcap_strategy.json", help="输出路径")
+    parser.add_argument("--no-notify", action="store_true",
+                        help="只重算交付物，不发送调仓通知（重算历史口径时用，避免发出假调仓信号）")
     args = parser.parse_args()
+
+    if args.no_notify:
+        build_smallcap_deliverable(args.out)
+        return
 
     if args.force_notify or args.notify:
         target_abs = os.path.isabs(args.out) and args.out or os.path.join(PROJECT_ROOT, args.out)

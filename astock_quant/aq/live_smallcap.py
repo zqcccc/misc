@@ -20,7 +20,12 @@ from . import factors, panel, strategy, universe
 
 ROLLING_DAYS = 400
 CONFIG_SIZES = (7, 8, 6, 5, 10, 30)
-REBALANCE_FREQUENCY = 10
+# 2026-09-08 由 10 改为 20（月频）。依据 astock_quant/scripts/freq_rigorous_*.py：
+#   · 机理：合成信号主体是 liqsize20 + ivol60 慢变量，rank IC 随持有期单调升至 h≈60~90 才饱和
+#   · 成本：年换手 44.8x -> 23.7x，年成本 6.76% -> 3.57%（确定性省 3.19pp/年）
+#   · 收益：多相位平均后 vs freq=10，TEST 段 -11.87pp(p=0.016)、全段 10.7 年 -4.95pp(p=0.004)，两段显著
+#   · 60（季频）已排除：多相位 + 全段下效应 +0.22pp(p=0.93)，优势是调仓日历运气
+REBALANCE_FREQUENCY = 20
 FACTOR_WEIGHTS = {"liqsize20": 1.0, "rev5": 0.5, "ivol60": 0.5}
 FACTOR_META = {
     "liqsize20": {
