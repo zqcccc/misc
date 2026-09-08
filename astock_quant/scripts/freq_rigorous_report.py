@@ -14,6 +14,7 @@ PROJECT_ROOT = os.path.dirname(AQ_ROOT)
 SRC = os.path.join(PROJECT_ROOT, "deliverables", "smallcap_freq_rigorous.json")
 GATE = os.path.join(PROJECT_ROOT, "deliverables", "smallcap_freq_gate.json")
 ATTRIB = os.path.join(PROJECT_ROOT, "deliverables", "smallcap_freq_attrib.json")
+MULTI = os.path.join(PROJECT_ROOT, "deliverables", "smallcap_freq_multiphase.json")
 AB = os.path.join(PROJECT_ROOT, "deliverables", "smallcap_freq_ab.json")
 OUT = os.path.join(PROJECT_ROOT, "deliverables", "smallcap_freq_rigorous.html")
 
@@ -30,6 +31,9 @@ def load():
     if os.path.exists(AB):
         with open(AB, encoding="utf-8") as f:
             d["ab"] = json.load(f)
+    if os.path.exists(MULTI):
+        with open(MULTI, encoding="utf-8") as f:
+            d["multi"] = json.load(f)
     return d
 
 
@@ -124,6 +128,50 @@ def build(d: dict) -> str:
         f"<td>{'<span class=ok>显著</span>' if abs(c['可投资宇宙等权']['alpha_t(NW)']) >= 1.96 else '<span class=bad>不显著</span>'}</td></tr>"
         for c in at_cases)
 
+    mp = d.get("multi", {})
+    mp_rows, box_test, box_full, diff_rows = "", [], [], []
+    mf = [str(x) for x in mp.get("meta", {}).get("频率", [])]
+    for seg_key, tag in (("TEST", "TEST"), ("全段", "全段")):
+        sg = mp.get("段", {}).get(seg_key, {})
+        if not sg:
+            continue
+        for f in mf:
+            ph = sg.get("相位", {}).get(f, {})
+            av = sg.get("平均组合", {}).get(f, {})
+            cb = sg.get("对比基线", {}).get(f)
+            box = [ph.get("年化min%"), ph.get("年化p25%"), ph.get("年化中位%"),
+                   ph.get("年化p75%"), ph.get("年化max%")]
+            (box_test if seg_key == "TEST" else box_full).append(box)
+            if not ph:
+                continue
+            dcell = (f"{cb['年化差pp']:+.2f}pp<br><span style='color:#888'>"
+                     f"p={cb['p值']:.3f} {'显著' if cb['显著5%'] else '不显著'}</span>") if cb else "—"
+            mp_rows += (f"<tr><td>{tag}</td><td><b>{f}</b></td><td>{ph['相位数']}</td>"
+                        f"<td>{ph['年化均值%']:.2f}%</td><td>{ph['年化中位%']:.2f}%</td>"
+                        f"<td>{ph['年化std']:.2f}</td>"
+                        f"<td>{ph['年化min%']:.2f} ~ {ph['年化max%']:.2f}</td>"
+                        f"<td><b>{ph['极差pp']:.2f}pp</b></td>"
+                        f"<td><b>{av.get('年化%', float('nan')):.2f}%</b></td>"
+                        f"<td>{av.get('夏普', float('nan')):.3f}</td><td>{dcell}</td></tr>")
+        for f in mf:
+            cb = sg.get("对比基线", {}).get(f)
+            if cb:
+                ok = '<span class=\'ok\'>显著</span>' if cb['显著5%'] else '<span class=\'bad\'>不显著</span>'
+                diff_rows += (f"<tr><td>{tag}</td><td><b>{f}</b></td><td>{cb['年化差pp']:+.2f}pp</td>"
+                              f"<td>{cb['自助95区间'][0]:+.2f} ~ {cb['自助95区间'][1]:+.2f}</td>"
+                              f"<td>{cb['p值']:.4f}</td><td>{ok}</td></tr>")
+    diff_test_bar = [0.0] * len(mf)
+    diff_full_bar = [0.0] * len(mf)
+    for seg_key, arr in (("TEST", "test"), ("全段", "full")):
+        sg = mp.get("段", {}).get(seg_key, {})
+        vals = []
+        for f in mf:
+            cb = sg.get("对比基线", {}).get(f)
+            vals.append(round(float(cb["年化差pp"]), 2) if cb else 0.0)
+        if arr == "test":
+            diff_test_bar = vals
+        else:
+            diff_full_bar = vals
     at_note = "".join(f"<dt>{esc(k)}</dt><dd>{esc(v)}</dd>" for k, v in at.get("基准说明", {}).items())
 
     # ---- A/B 诊断
@@ -404,6 +452,37 @@ tr.hl td{{background:#fffbeb}}
 </ul>
 </div>
 
+<h2>L7 · 多相位：把「调仓日历运气」单独抠出来</h2>
+<div class="card">
+<p><b>要解决的问题</b>：freq=60 在 TEST 段只调仓 11 次。早一天晚一天调仓，选中的 7 只票可能完全不同。
+「恰好赶上了好日子」和「60 天这个频率本身更好」是两件事，必须分开——否则就是把日历运气当成策略优势。</p>
+<p><b>做法</b>：freq=f 的周期有 f 个不同的起始偏移。把每个偏移都单独跑一遍（freq=60 就跑 60 条路径，freq=20 跑 20 条）。
+每个频率的<b>调仓事件总数相同</b>（都等于总交易日数），所以跨频率对比是公平的。
+再把同一个频率的所有路径等权平均成一个组合——相当于每天只调 1/f 的仓位（staggered rebalance，本身也可执行），
+它抹掉「调运日历运气」，只留下「信号 + 调仓频率」的真实效应。</p>
+<table>
+<thead><tr><th>段</th><th>freq</th><th>相位数</th><th>相位年化均值</th><th>中位</th><th>相位间 std</th><th>相位区间</th><th>相位极差</th><th>多相位平均年化</th><th>夏普</th><th>vs 20</th></tr></thead>
+<tbody>{mp_rows}</tbody>
+</table>
+<div id="c_phase" style="height:340px;margin-top:10px"></div>
+<div class="note">箱子越高 = 换一批调仓日，年化就能差这么多。freq=60 在 TEST 段相位极差接近 59pp —— 这就是「只调仓 11 次」的代价。</div>
+
+<p style="margin-top:14px"><b>多相位平均组合之间，差距还剩多少</b>（分块自助 2000 次，块长 21 天）</p>
+<table>
+<thead><tr><th>段</th><th>freq</th><th>vs freq=20 年化差</th><th>95% 置信区间</th><th>p 值</th><th>判定</th></tr></thead>
+<tbody>{diff_rows}</tbody>
+</table>
+<div id="c_phase_diff" style="height:300px;margin-top:10px"></div>
+
+<p style="margin-top:14px"><b>读这张表的关键</b></p>
+<ul style="margin:6px 0 0 20px;padding:0">
+<li><b>freq=60 的优势基本是日历运气。</b>单点是 TEST 39.71% vs 20.71%（+19pp）；多相位抹掉日历运气后只剩 <b>+4.35pp</b>（CI −7.59~+12.89，p=0.71）；再放到 2016-2026 全段（10.7 年）更是塌到 <b>+0.22pp</b>（p=0.93）。频率效应≈0。</li>
+<li><b>反而是 10→20 的收益改善被做实了。</b>20 相对 10：TEST 段 Δ−11.87pp（p=0.016）、全段 Δ−4.95pp（p=0.004）——<b>两段都显著</b>。这是全部研究里唯一在完全独立的 OOS 段上站得住的收益差异，不只是省手续费。</li>
+<li><b>freq=5 显著更差</b>（vs 20：全段 Δ−12.71pp，p&lt;0.001）——高频被成本吃光，与 IC 衰减机理一致。</li>
+</ul>
+<div class="note">多相位只能消除<b>调仓日历运气</b>，消除不了<b>期段运气</b>（2024-2026 这段市场恰好怎么走）。后者只能靠拉长样本——本页「全段」一栏就是 10.7 年的口径，用来看结论是否依赖某一段行情。</div>
+</div>
+
 <h2>回答：为什么是两周？以及该不该改</h2>
 <div class="card concl">
 <p><b>① 为什么是两周（10 个交易日）</b></p>
@@ -422,19 +501,22 @@ tr.hl td{{background:#fffbeb}}
 <ul style="margin:6px 0 0 20px;padding:0">
 <li><b>改到 20（月频）是稳的，但别指望它增厚 alpha。</b>它是锁死目标函数在 TRAIN/VALID 上唯一选出的频率；揭盲后 TEST 年化 {te_cagr[freqs.index(10)]}% → {te_cagr[freqs.index(20)]}%，夏普 0.450 → 0.623，回撤 −41.17% → −35.10%，年换手 44.8x → 23.7x（成本 6.76% → 3.57%），一年调仓 25 → 12 次。
 但换成标准基准后，freq=20 对可投资宇宙等权的 alpha 是 8.46%/年、t(NW)=0.77、p=0.44 —— <b>不显著</b>。所以这次改动的价值是<b>少交手续费、少做无意义的换手</b>，不是选股变强了。</li>
-<li><b>60（季频）是唯一「两个独立检验都过线」的频率，但仍不足以直接上线。</b>
-对可投资宇宙等权的 alpha 24.05%/年、<b>t(NW)=2.50、p=0.012</b>；置换检验分位 98%、p=0.025。两条互不相关的证据同时指向它，这比单纯年化高有分量得多。
-可是：TEST 段它<b>只调仓 11 次</b>；整个研究扫了 12 个频率，Bonferroni 折减后 p ≈ 0.14 → 又不显著了；TRAIN/VALID 的目标函数也没选它。</li>
-<li><b>30（一个半月）是折中候选</b>：TEST 年化 27.10%、夏普 0.958、回撤 −24.18%、归因 t=1.58（p=0.115）、置换分位 0.91（p=0.095）——两个检验都卡在边缘，方向一致但都没过线。</li>
+<li><b>60（季频）已经可以排除 —— 多相位实验证明它的优势基本是日历运气。</b>
+它确实是唯一「两个独立检验都过线」的频率（对可投资宇宙等权 alpha 24.05%/年、t(NW)=2.50、p=0.012；置换检验分位 98%、p=0.025），
+但 L7 的多相位实验把这个优势拆穿了：TEST 段单点 +19pp，抹掉调仓日历运气后只剩 <b>+4.35pp（p=0.71）</b>；
+放到 2016-2026 全段 10.7 年，塌到 <b>+0.22pp（p=0.93）</b>。频率效应≈0。<b>不用开纸面跟踪，也不用为它去补历史数据。</b></li>
+<li><b>30（一个半月）边缘，经济意义很小。</b>多相位平均后 vs 20：全段 Δ+1.67pp（p=0.105）、TEST 段 Δ+3.69pp（p=0.379）。方向一致但都不过线。</li>
+<li><b>反而 10→20 的收益改善被做实了。</b>多相位平均下，20 相对 10：TEST 段 Δ−11.87pp（<b>p=0.016</b>）、全段 Δ−4.95pp（<b>p=0.004</b>），两段都显著。
+所以 10→20 不只是省手续费，收益差异本身也是真的——这是全部研究里唯一在完全独立的 OOS 段上站得住的收益差异。</li>
 </ul>
-<p style="margin:10px 0 0"><b>落地建议：freq 10 → 20 直接改；同时把 60 开一路纸面跟踪。</b>20 是三段切分 + 稳健性网格下唯一站得住的改动；60 是唯一在标准基准下有显著 alpha 迹象的频率，值得用未来 12~24 个月的实盘样本去验证，而不是现在就压上去。</p>
+<p style="margin:10px 0 0"><b>落地建议：freq 10 → 20 直接改；60 排除，不用跟踪。</b>20 是三段切分 + 稳健性网格 + 多相位检验下唯一站得住的选择；60 的「优势」已被多相位实验归因于调仓日历运气（全段效应 +0.22pp，p=0.93），再等 12~24 个月实盘也不会改变这个结论——它缺的不是时间，是效应本身。</p>
 
 <p style="margin-top:14px"><b>④ 比频率更该改的：buffer 根本没生效</b></p>
 <p style="margin:6px 0 0">N=7、buffer=2.0 意味着前 14 名不卖。但实测每次调仓变动 <b>约 13 只</b>（≈ 持仓 7 只全进全出），滞后带形同虚设——rev5 让综合排名每天都在跳，14 名的缓冲区兜不住。
 加大 buffer（3.0~4.0）或降低 rev5 权重，能同时拿到「更少换手 + 不损失打分」，这个收益比调频率更确定。</p>
 
 <p style="margin-top:14px"><b>⑤ 一句话</b></p>
-<p style="margin:6px 0 0">两周是模板默认值，不是研究结论；这个信号是慢信号，两周太频繁了。放到 <b>20 个交易日（月频）</b>是本研究唯一在三段切分 + 揭盲 + 稳健性网格下都站得住的改动——它的作用是<b>省钱</b>，不是变聪明：换成标准可交易基准后，这条策略在月频下的选股 alpha 仍然统计上不显著，收益大头是微盘 beta。</p>
+<p style="margin:6px 0 0">两周是模板默认值，不是研究结论；这个信号是慢信号，两周太频繁了。放到 <b>20 个交易日（月频）</b>是本研究唯一在三段切分 + 揭盲 + 稳健性网格 + 多相位检验下都站得住的改动。它的价值有两层：<b>确定了的部分</b>是少交手续费（成本 6.76% → 3.57%）、少做无意义换手；<b>多相位做实的部分</b>是收益差异本身也真实（vs 10 天：TEST p=0.016、全段 p=0.004）。但它仍然不是变聪明——换成标准可交易基准后，月频下的选股 alpha 依然统计上不显著，收益大头仍是微盘 beta。而 60（季频）已被多相位实验排除。</p>
 </div>
 
 <script>
@@ -531,6 +613,30 @@ mk('c_buf', {{
     {{name:'变动只数 freq=20',type:'line',data:{json.dumps(b_churn.get(20, []))},itemStyle:{{color:'#7c3aed'}},lineStyle:{{color:'#7c3aed',width:2}},symbolSize:6}},
     {{name:'TEST 年化% freq=10',type:'bar',yAxisIndex:1,data:{json.dumps(b_cagr.get(10, []))},itemStyle:{{color:'#bfdbfe'}}}},
     {{name:'TEST 年化% freq=20',type:'bar',yAxisIndex:1,data:{json.dumps(b_cagr.get(20, []))},itemStyle:{{color:'#6ee7b7'}}}}
+  ]
+}});
+
+mk('c_phase', {{
+  tooltip:{{trigger:'item'}},legend:{{top:0,data:['TEST 段相位分布','全段(2016-2026)相位分布']}},grid:GRID,
+  xAxis:{{type:'category',data:{json.dumps(mf)},name:'调仓频率(交易日)',nameLocation:'middle',nameGap:28}},
+  yAxis:{{type:'value',name:'年化 %'}},
+  series:[
+    {{name:'TEST 段相位分布',type:'boxplot',data:{json.dumps(box_test)},
+      itemStyle:{{color:'#dbeafe',borderColor:'#1d4ed8',borderWidth:1.5}}}},
+    {{name:'全段(2016-2026)相位分布',type:'boxplot',data:{json.dumps(box_full)},
+      itemStyle:{{color:'#fee2e2',borderColor:'#b91c1c',borderWidth:1.5}}}}
+  ]
+}});
+
+mk('c_phase_diff', {{
+  tooltip:{{trigger:'axis'}},legend:{{top:0}},grid:GRID,
+  xAxis:{{type:'category',data:{json.dumps(mf)},name:'调仓频率(交易日)',nameLocation:'middle',nameGap:28}},
+  yAxis:{{type:'value',name:'vs freq=20 年化差 pp'}},
+  series:[
+    {{name:'TEST 段',type:'bar',data:{json.dumps(diff_test_bar)},itemStyle:{{color:'#93c5fd'}}}},
+    {{name:'全段(2016-2026)',type:'bar',data:{json.dumps(diff_full_bar)},itemStyle:{{color:'#60a5fa'}}}},
+    {{name:'0 参考线',type:'line',data:{json.dumps([0]*len(mf))},
+      itemStyle:{{color:'#d93025'}},lineStyle:{{color:'#d93025',type:'dashed',width:2}},symbol:'none'}}
   ]
 }});
 
