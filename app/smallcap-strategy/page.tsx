@@ -472,6 +472,77 @@ export default function SmallCapStrategyPage() {
         </div>
       </div>
 
+      {/* 调仓频率研究结论（2026-09-08 定稿）：三段切分 + TEST 物理隔离 + 四层证伪 + 多相位检验 */}
+      <div className="rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50/40 dark:bg-amber-950/10 shadow-sm p-5">
+        <div className="flex flex-wrap items-center gap-2 mb-3">
+          <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">调仓频率研究结论</h2>
+          <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300">
+            2026-09-08 定稿
+          </span>
+          <span className="text-xs text-gray-500 dark:text-gray-400">
+            三段切分 · TEST 物理隔离 · 四层证伪 · 多相位检验
+          </span>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-lg bg-white dark:bg-gray-900/60 border dark:border-gray-800 p-3">
+            <div className="text-xs font-semibold text-amber-700 dark:text-amber-400">改了什么</div>
+            <div className="text-sm font-bold text-gray-900 dark:text-gray-100 mt-1">
+              10 日 → 20 日（月频）
+            </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+              年换手 45.8x → 23.4x，年成本 6.76% → 3.57%，<b>确定性省 3.19pp/年</b>。
+              原 10 日是聚宽模板默认值，从未经研究验证。
+            </div>
+          </div>
+
+          <div className="rounded-lg bg-white dark:bg-gray-900/60 border dark:border-gray-800 p-3">
+            <div className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">收益改善是真的</div>
+            <div className="text-sm font-bold text-gray-900 dark:text-gray-100 mt-1">
+              两段检验均显著
+            </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+              多相位平均后 vs 10 日：TEST 段 <b>−11.87pp（p=0.016）</b>、
+              全段 10.7 年 <b>−4.95pp（p=0.004）</b>。不只是省手续费。
+            </div>
+          </div>
+
+          <div className="rounded-lg bg-white dark:bg-gray-900/60 border dark:border-gray-800 p-3">
+            <div className="text-xs font-semibold text-rose-700 dark:text-rose-400">60 日（季频）已排除</div>
+            <div className="text-sm font-bold text-gray-900 dark:text-gray-100 mt-1">
+              效应 ≈ 0
+            </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+              多相位抹掉调仓日历运气后 +4.35pp（p=0.71）→ 全段 <b>+0.22pp（p=0.93）</b>。
+              漂亮数字来自只调仓 11 次的运气，不是频率优势。
+            </div>
+          </div>
+
+          <div className="rounded-lg bg-white dark:bg-gray-900/60 border dark:border-gray-800 p-3">
+            <div className="text-xs font-semibold text-gray-600 dark:text-gray-300">它的局限</div>
+            <div className="text-sm font-bold text-gray-900 dark:text-gray-100 mt-1">
+              选股 alpha 不显著
+            </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+              对可投资宇宙等权 alpha 8.46%/年、<b>p=0.44</b>。收益大头是<b>微盘 beta</b>，
+              调频率解决不了 alpha 薄的问题。
+            </div>
+          </div>
+        </div>
+
+        <div className="text-xs text-gray-500 dark:text-gray-400 mt-3 pt-3 border-t border-amber-200/70 dark:border-amber-900/40 leading-relaxed">
+          <b className="text-gray-700 dark:text-gray-300">机理</b>：合成信号主体是 liqsize20（小盘规模）+ ivol60（低特质波动）两个慢变量，
+          rank IC 随持有期单调上升、到 h≈60~90 个交易日才饱和 —— 提前调仓换不来新信息，只换来换手和成本。
+          <b className="text-gray-700 dark:text-gray-300">缓冲带 buffer</b> 实测形同虚设（N=7 / 池内 2600 只 = 万里挑三，每期仍换约 13 只），
+          加大到 6.0 也只省 9.5% 换手，已验证无需调整。
+        </div>
+
+        <div className="text-xs text-amber-800 dark:text-amber-300 mt-2 leading-relaxed">
+          📌 <b>生效状态</b>：代码已切至 20 日，但本页回测指标仍按旧的 10 日口径算（线上守护进程只做增量更新，不会重算历史回测）。
+          20 日周期自<b>下次调仓日</b>起生效，届时年换手由 45.8x 降至约 23.4x；历史曲线需重跑一次种子数据才会同步。
+        </div>
+      </div>
+
       {/* 核心指标卡片矩阵 (根据选中 N 动态展示) */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <div className="p-4 rounded-xl border bg-white dark:bg-gray-900/60 dark:border-gray-800 shadow-sm">

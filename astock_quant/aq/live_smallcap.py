@@ -61,7 +61,10 @@ def factor_methodology() -> dict[str, Any]:
         ),
         "ranking": "每个交易日只在当日可投资股票池内做截面百分位排名；百分位越高越好",
         "timing": "T 日收盘后计算，T+1 日开盘执行",
-        "selection": "每 10 个交易日调仓；已持仓进入前 2N 名即可保留，再用高分股补足 N 只",
+        "selection": (
+            f"每 {REBALANCE_FREQUENCY} 个交易日调仓；已持仓进入前 2N 名即可保留，"
+            f"再用高分股补足 N 只"
+        ),
         "factors": {
             name: {**FACTOR_META[name], "weight": weight}
             for name, weight in FACTOR_WEIGHTS.items()
