@@ -491,7 +491,7 @@ export default function SmallCapStrategyPage() {
               10 日 → 20 日（月频）
             </div>
             <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
-              年换手 45.8x → 23.4x，年成本 6.76% → 3.57%，<b>确定性省 3.19pp/年</b>。
+              年换手 44.8x → 23.7x，年成本 6.76% → 3.57%，<b>确定性省 3.19pp/年</b>。
               原 10 日是聚宽模板默认值，从未经研究验证。
             </div>
           </div>
@@ -502,8 +502,8 @@ export default function SmallCapStrategyPage() {
               两段检验均显著
             </div>
             <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
-              多相位平均后 vs 10 日：TEST 段 <b>−11.87pp（p=0.016）</b>、
-              全段 10.7 年 <b>−4.95pp（p=0.004）</b>。不只是省手续费。
+              多相位平均后（抹掉调仓日历运气），20 日比 10 日高 <b>11.87pp（p=0.016）</b>、
+              全段 10.7 年高 <b>4.95pp（p=0.004）</b>。同策略对比，非市场 alpha。
             </div>
           </div>
 
@@ -513,7 +513,7 @@ export default function SmallCapStrategyPage() {
               效应 ≈ 0
             </div>
             <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
-              多相位抹掉调仓日历运气后 +4.35pp（p=0.71）→ 全段 <b>+0.22pp（p=0.93）</b>。
+              多相位抹掉调仓日历运气后（vs 20 日）+4.35pp（p=0.71）→ 全段 <b>+0.22pp（p=0.93）</b>。
               漂亮数字来自只调仓 11 次的运气，不是频率优势。
             </div>
           </div>
@@ -539,7 +539,7 @@ export default function SmallCapStrategyPage() {
 
         <div className="text-xs text-amber-800 dark:text-amber-300 mt-2 leading-relaxed">
           📌 <b>生效状态</b>：代码已切至 20 日，但本页回测指标仍按旧的 10 日口径算（线上守护进程只做增量更新，不会重算历史回测）。
-          20 日周期自<b>下次调仓日</b>起生效，届时年换手由 45.8x 降至约 23.4x；历史曲线需重跑一次种子数据才会同步。
+          20 日周期自<b>下次调仓日</b>起生效，届时年换手由约 45x 降至约 23x（线上 2019 起全样本口径 45.8x → 23.4x，与研究口径一致）；历史曲线需重跑一次种子数据才会同步。
         </div>
       </div>
 
