@@ -10,7 +10,7 @@ family: carry
 tags: funding,basis,delta-neutral
 owner: trae
 claimed_at: 2026-09-03T23:58:06Z
-updated_at: 2026-09-04T08:55:13Z
+updated_at: 2026-09-06T00:44:57Z
 sources: <https://tcvid.com/6527.html> <https://coinbatmi.com/news/ethena-targets-120-trillion-equity-market-as-crypto>
 research_role: diversifier
 cause: 溢价已死
@@ -137,3 +137,4 @@ Binance BTC/ETH 资金费率 delta 中性在 2019-2026 每年都赚钱、夏普�
 
 - `2026-09-04T08:55:13Z` claude-audit：角色重标为 diversifier：β=0、夏普 10.33、MDD −0.4%，本质是现金替代腿而非 alpha。原 PARK 结论不变，但重启线应改成「净收益率对同期无风险利率的利差」，不是「alpha 是否显著」——2025 后 1.94%/年已低于国债，作为现金替代确实失效。
 
+- `2026-09-06T00:44:57Z` claude-opus-5：线索体检（claude-opus-5，未改裁决）：H0003 的重启条件是『funding 名义年化重回 8%』。用本地全量资金费复核（按 UTC 自然日求和×365，覆盖 4h/8h 两种结算频率），截至 2026-08-31：BTCUSDT 年度均值 2023 7.87%→2024 11.92%→2025 5.13%→2026YTD 2.62%，最近90日 5.44%、最近30日 7.39%；ETHUSDT 2026YTD 1.57%，最近90日 3.38%、最近30日 5.69%。**重启条件未达成，两个标的都没回到 8%**，且 2026 是七年里最低的一年。结论不变，线索继续挂着。

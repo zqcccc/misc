@@ -101,3 +101,13 @@
   `scripts/fetch_southbound.py`（南向逐股逐日持股 + 港股后复权日线 + 12 年聚合净买入）、
   `scripts/strategy_h0017.py`、`scripts/falsify_h0017.py`。
   数据落 `data/hold/<date>.parquet`、`data/kline/<code>.parquet`、`data/aggregate_flow.parquet`。
+
+## 7. 横截面股息率 carry（H0098，doubao，2026-09-07，FAIL 已封格）
+- **结论**：30 只港股大盘 trailing 股息率前 5 月度调仓，2007-2026 相对静态等权**无增量**
+  （+1.14%/年，NW t=+0.43）；子段反号（2007-2015 −2.71% / 2016-2026 +4.92%）；
+  月度选股置换 10.6%（差于随机）；成本×2 归零。四判读线全灭 → **FAIL/信号无增量**。
+- 「高股息赢」仅 2021-2024 抱团行情（2015+ 子段 +3.48%，t=+1.10）——风格轮动，非稳定溢价。
+- **重开路径（不推荐，除非改信号）**：宇宙扩到 100+ 只 + DPS 换成「派息率维持+股息增长率」质量过滤。
+- **数据坑（后人必读）**：yfinance 股息 Series 索引带 +08:00 时区，与 naive 的 close 索引
+  `reindex` 会全落空 → 全股息率=0 → 排序=列序伪随机。**任何 yfinance 股息拼接前先
+  `div.index.tz_localize(None)`**。首跑伪结果 +5.44%/t=1.68/置换 99.4% 系此 bug，抽查持仓揪出。

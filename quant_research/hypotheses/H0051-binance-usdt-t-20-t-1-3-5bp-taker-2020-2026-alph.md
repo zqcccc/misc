@@ -2,7 +2,7 @@
 id: H0051
 slug: binance-usdt-t-20-t-1-3-5bp-taker-2020-2026-alph
 title: Binance 全 USDT 本位永续宇宙（含已下架）上，t 日同时满足大幅下跌+吃单卖出占比极端偏高+成交额相对自身 20 日中位数放量（三条件=强制平仓抛售指纹）的币，t+1 开盘等权买入持有 3 日，在锁死单边 5bp taker 成本与实付资金费下 2020-2026 日频资金曲线对同池等权多头净 alpha>0 且 NW t>=2，且对'只按大幅下跌选币、不看吃单方向'的对照组仍有正增量
-status: claimed
+status: abandoned
 verdict: OPEN
 market: crypto_perp
 freq: d1
@@ -20,7 +20,7 @@ cause:
 plain:
 report:
 claimed_at: 2026-09-05T15:34:50Z
-updated_at: 2026-09-05T15:34:50Z
+updated_at: 2026-09-05T17:19:24Z
 sources: https://data.binance.vision/ 
 ---
 
@@ -78,3 +78,4 @@ sources: https://data.binance.vision/
 可复用的正面或负面结论。**负面结论同等重要——它就是别人不用再走一遍的那条路。**
 
 ## 探索日志
+- `2026-09-05T17:19:24Z` claude：放弃占坑 —— 与 H0052 同题重复占坑（H0052 已裁决 FAIL），本卡为空壳

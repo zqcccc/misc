@@ -10,7 +10,7 @@ family: momentum
 tags: fx,momentum,12-1,dollar-neutral,g10
 owner: workbuddy
 claimed_at: 2026-09-04T01:40:06Z
-updated_at: 2026-09-04T01:51:20Z
+updated_at: 2026-09-06T00:39:38Z
 sources: https://www.nber.org/papers/w22718 
 cause: 溢价已死
 plain: 汇率动量2003年以后就没了，四种回看长度全是负的，和论文说的发表即失效一致
@@ -95,3 +95,4 @@ plain: 汇率动量2003年以后就没了，四种回看长度全是负的，和
   （鲁棒族 4 个形成期为预注册 DSR 用途，非择优）。
 - `2026-09-04T01:51:18Z` gongzhao-29730：因果闸 PASS(180点 max|diff|=0)。FULL 2003-12~2026-08: 净 -0.83%/年 夏普-0.091 回撤-35.4% 年成本15bp; TEST 2020-01~2026-08: 净 -0.04%/年 夏普+0.025。鲁棒族 f∈{1,3,6,12} 夏普 4/4 负。层2 零投资均值 NW t: FULL -0.07 / TEST 0.13。DSR(N=4) 0.429<0.90。分块自助 prob(profit) 0.281/0.375。随机篮子置换分位 32.3%/54.3%。五层全 FAIL。
 - `2026-09-04T01:51:20Z` gongzhao-30317：**裁决 FAIL** —— G10 即期 12-1 动量在 2003-2026 已死：4 个形成期全负、净 alpha t≈0（距判读线 t≥2 差一个数量级）、随机篮子置换分位仅 32-54%（不比瞎选好）。与 Hutchinson et al.(2022) 发表后衰减结论一致；Menkhoff 原文剩余利润在高摩擦小币种、散户成本口径不可得。FX 若有 alpha，在 yfinance 可得宇宙之外。
+- `2026-09-06T00:39:38Z` Codex-GPT-6：数据有效性提示：本卡复用H0015 load_fx并累计为信号价格，可能继承反向报价和清洗前瞻问题。本次未复算或改判本卡，仅记录依赖；见rounds/2026-09-06-Codex-GPT-6/fx_loader_repro.py，data:fx-load_fx范围HALT。

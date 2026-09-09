@@ -164,3 +164,21 @@ __pycache__
 
 # qr 每个 agent 的开工基线，属于本机运行态
 quant_research/runs/
+
+# === 各市场实验实现目录（与 crypto_perp/ fx/ futures/ 同类）===
+# 依赖本地行情缓存（数十~数百 MB），进了库也复现不了；台账只留在 quant_research/
+/cn_bond_futures/
+/cn_commodity/
+/cn_convertible/
+/cn_stock/
+/multi/
+
+# 临时草稿目录（本地生成的 HTML 预览等）
+/misc/
+
+# 回测运行结果产物：脚本入库、结果不入库
+/astock_quant/scripts/*result*.json
+/astock_quant/scripts/out/
+
+# 轮次记录只留 .md 台账；同名子目录是原始转储（数据 dump / selfcheck 输出 / 复现脚本）
+/quant_research/rounds/*/
