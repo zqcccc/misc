@@ -1,5 +1,13 @@
 {
-  "_comment": "EMA 趋势反手策略监控 - 唯一配置源. 加品种=加一条 strategy. data_source 决定走哪个 adapter.",
+  "_archived": {
+    "status": "ARCHIVED",
+    "date": "2026-09-11",
+    "decided_by": "user",
+    "reason": "EMA 趋势反手策略停止维护，不再拉起 daemon、不再加品种、不再改代码。配置与 caches/ 仅作研究档案保留。",
+    "last_run": "2026-09-03",
+    "_note": "本文件已归档。请不要再 start daemon、追加 strategy 或修改参数。"
+  },
+  "_comment": "EMA 趋势反手策略监控 - 已归档(2026-09-11), 见 _archived. 原用途: 唯一配置源. 加品种=加一条 strategy. data_source 决定走哪个 adapter.",
   "_schema": {
     "name": "唯一短名, 用作 caches/<name>/ 目录名和 CLI 标识",
     "symbol": "传给数据源的标的符号",
