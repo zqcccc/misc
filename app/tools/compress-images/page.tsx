@@ -39,6 +39,45 @@ export default function Page() {
         </ol>
       </section>
 
+      <section className='browser-tool-faq' aria-labelledby='compress-when-title'>
+        <h2 id='compress-when-title'>什么时候该用它，什么时候不该</h2>
+        <div>
+          <h3>适合</h3>
+          <p>
+            网站或文章配图上传前压一压、把手机拍的一批照片压到能发邮件的体积、把一堆截图打包前先瘦身。也适合批量统一图片宽度——比如把一组宽度不一的配图全部限制到 1200px 以内。
+          </p>
+          <h3>不适合</h3>
+          <p>
+            已经压过一次的图再压收益很小，只会继续叠损失。要保留透明通道的图请注意：导出为 JPEG 会丢失透明，透明区域被填成背景色，请留在 PNG 或改用 WebP。另外它不做批量重命名、不做水印、不读取 RAW 格式。
+          </p>
+        </div>
+      </section>
+
+      <section className='browser-tool-faq' aria-labelledby='compress-params-title'>
+        <h2 id='compress-params-title'>怎么压最有效：先缩尺寸，再降质量</h2>
+        <div>
+          <h3>为什么缩尺寸比降质量更管用</h3>
+          <p>
+            图片体积大致与像素数量的平方关系增长：宽度减半，像素数变成四分之一，体积往往也降到四分之一左右。而调低质量只是在已有的每个像素上丢弃细节，压到一定程度就会出现色块和噪点，画面先崩、体积却没小多少。所以<strong>先把尺寸压到实际需要的上限，再微调质量</strong>，通常能得到又小又干净的图。
+          </p>
+          <h3>两种尺寸模式的区别</h3>
+          <p>
+            <strong>按百分比缩放</strong>会对每张图等比缩小，适合一批尺寸相近的图统一瘦身。<strong>限制最大宽度</strong>只处理超过设定值的图，更窄的图保持原样——所以它<strong>不会把小图放大</strong>，适合尺寸参差不齐的一批图，也是配图场景的推荐做法。
+          </p>
+          <h3>质量滑块为什么有时是灰的</h3>
+          <p>
+            导出为 PNG 时质量选项不可用，因为 PNG 是无损格式，只按像素存储、不提供有损质量档位。想让 PNG 变小，请改用缩小尺寸，或导出为 WebP / JPEG。
+          </p>
+          <h3>格式怎么选</h3>
+          <p>
+            <strong>WebP</strong> 在同等观感下通常明显小于 JPEG，现代浏览器与主流 App 都支持，是网页配图的首选。<strong>JPEG</strong> 兼容性最好，适合照片，但不支持透明。<strong>PNG</strong> 无损并支持透明，只留给图标、文字截图和必须透明的图——照片存成 PNG 往往会大得离谱。
+          </p>
+          <p>
+            质量一般从 80 起步：先看实际用途下够不够清晰，还嫌大就往 70 调，不建议低于 60。
+          </p>
+        </div>
+      </section>
+
       <section className='browser-tool-faq' aria-labelledby='compress-faq-title'>
         <h2 id='compress-faq-title'>使用边界</h2>
         <div>
