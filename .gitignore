@@ -1,9 +1,11 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 .claude
 .workbuddy
+.workbuddy-ai
 .codebuddy
 .trae
 .opencode
+.pi/
 AGENTS.md
 CLAUDE.md
 .venv
@@ -28,6 +30,7 @@ __pycache__
 .DS_Store
 *.pem
 /tmp/
+/temp/
 /runtime/
 
 # debug
@@ -56,6 +59,7 @@ next-env.d.ts
 # 与 Next.js 无关的本地研究/回测产物
 /scripts/**/*.py
 /scripts/_*
+/scripts/*probe*
 # TRHRP 部署必需（随 trhrp-data 镜像构建，必须入库）: 对上面的 /scripts/**/*.py 开例外
 !/scripts/trhrp_backtest_live.py
 !/scripts/refresh_trhrp_cache.py
@@ -171,6 +175,7 @@ quant_research/runs/
 /cn_commodity/
 /cn_convertible/
 /cn_stock/
+/cn_equity/
 /multi/
 
 # 临时草稿目录（本地生成的 HTML 预览等）
