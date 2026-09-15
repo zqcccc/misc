@@ -5,6 +5,27 @@ export const SITE_TITLE = 'c9cu · 研究、工程与自用工具'
 export const SITE_DESCRIPTION =
   'c9cu 的个人网站：记录亲自做过的投资研究、工程实践和自用工具，并说明方法、证据与局限。'
 
+// 站点默认分享图。分享卡片(含 X/Twitter)封面靠 og:image / twitter:image 标签决定，
+// 文章没在 frontmatter 里写 cover 时统一回落到这张。
+export const SITE_OG_IMAGE = '/og-default.png'
+
+/**
+ * 解析一篇文章的分享封面。
+ *
+ * 优先级：frontmatter 的 cover > 站点默认图。
+ * 站内绝对路径与完整 URL 都接受，缺协议头的会补成绝对地址，
+ * 因为 og:image 必须是绝对 URL，社交平台抓不到相对路径。
+ */
+export function resolvePostCover(
+  cover: unknown,
+): { url: string; alt?: string } | null {
+  const value = String(cover ?? '').trim()
+  if (!value) return null
+
+  const url = value.startsWith('http') ? value : `${SITE_URL}${value.startsWith('/') ? '' : '/'}${value}`
+  return { url }
+}
+
 type PostLike = {
   path: string
   data: Record<string, unknown>

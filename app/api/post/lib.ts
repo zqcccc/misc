@@ -32,6 +32,7 @@ export type PostFrontmatter = {
   published?: boolean
   draft?: boolean
   archived?: boolean
+  cover?: string
 }
 
 function readFile(

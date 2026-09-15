@@ -13,7 +13,9 @@ import {
   SITE_CATEGORIES,
   SITE_DESCRIPTION,
   SITE_NAME,
+  SITE_OG_IMAGE,
   SITE_URL,
+  resolvePostCover,
   stripDuplicateMarkdownTitle,
 } from '@/lib/site'
 
@@ -161,6 +163,11 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
   const title = postMeta.data.title || '文章'
   const description = postMeta.data.description || SITE_DESCRIPTION
   const url = getPostUrl(id)
+
+  // 分享封面：文章自带 cover 优先，否则退回站点默认图，
+  // 保证任何链接在 X / 微信等社交平台上都有封面图。
+  const cover = resolvePostCover(postMeta.data.cover) ?? { url: SITE_OG_IMAGE, alt: title }
+
   const published = new Date(postMeta.data.date)
   const updated = postMeta.data.updated
     ? new Date(postMeta.data.updated)
@@ -184,11 +191,13 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
         updated && !Number.isNaN(updated.getTime())
           ? updated.toISOString()
           : undefined,
+      images: [cover],
     },
     twitter: {
       card: 'summary_large_image',
       title,
       description,
+      images: [cover.url],
     },
   }
 }

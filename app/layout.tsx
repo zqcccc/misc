@@ -8,6 +8,7 @@ import {
   SITE_DESCRIPTION,
   SITE_EMAIL,
   SITE_NAME,
+  SITE_OG_IMAGE,
   SITE_TITLE,
   SITE_URL,
 } from '@/lib/site'
@@ -31,6 +32,16 @@ export const metadata: Metadata = {
     siteName: SITE_NAME,
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
+    url: SITE_URL,
+    // 各页面没单独声明 images 时，Next 会把 app/opengraph-image.tsx
+    // 生成的地址填进来，社交平台因此总能拿到一张封面。
+    images: [SITE_OG_IMAGE],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    images: [SITE_OG_IMAGE],
   },
   robots: {
     index: true,
