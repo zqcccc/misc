@@ -1,0 +1,6 @@
+agent=claude
+run=claude-1789397240-73445
+claimed_at=2026-09-14T16:03:22Z
+claimed_epoch=1789401802
+file=hypotheses/H0137-usda-wasde-12-00-2012-2026-corn-weat-soyb-etf-5-.md
+title=USDA 月度 WASDE 供需报告发布日（通常美东时间 12:00，2012-2026），当日收盘前买入 CORN/WEAT/SOYB 三只农产品 ETF 等权持有 5 个交易日，在单边 10bp 锁死成本下净增量相对同期 buy&hold >0 且 NW t>=2，且随机同长度日历置换分位>=95%——公告解决不确定性溢价（futures×event 空白格）
