@@ -6,6 +6,7 @@ import SiteFooter from '@/components/site/SiteFooter'
 import SiteHeader from '@/components/site/SiteHeader'
 import {
   SITE_DESCRIPTION,
+  SITE_EMAIL,
   SITE_NAME,
   SITE_TITLE,
   SITE_URL,
@@ -74,6 +75,20 @@ export default function RootLayout({
         </Script>
       </head>
       <body>
+        <script
+          type='application/ld+json'
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'Person',
+              name: SITE_NAME,
+              url: SITE_URL,
+              email: `mailto:${SITE_EMAIL}`,
+              description: SITE_DESCRIPTION,
+              sameAs: [`${SITE_URL}/about`, `${SITE_URL}/contact`],
+            }),
+          }}
+        />
         <div
           hidden
           aria-hidden='true'

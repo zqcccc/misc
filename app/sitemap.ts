@@ -29,7 +29,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       url: `${SITE_URL}${route}`,
       lastModified: now,
       changeFrequency: route === '' ? ('weekly' as const) : ('monthly' as const),
-      priority: route === '' ? 1 : route.startsWith('/tools') ? 0.7 : 0.8,
+      priority: route === ''
+        ? 1
+        : ['/about', '/contact', '/standards', '/privacy'].includes(route)
+          ? 0.9
+          : route.startsWith('/tools')
+            ? 0.7
+            : 0.8,
     })),
     ...posts.map((post) => {
       const candidate = new Date(String(post.data.updated || post.data.date || ''))

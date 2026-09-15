@@ -30,6 +30,7 @@ export function isPublicPost(post: PostLike): boolean {
   const title = String(post.data.title || '')
 
   if (post.data.published === false || post.data.draft === true) return false
+  if (post.data.archived === true) return false
   if (!title) return false
 
   // Production mounts an independently managed plusPosts directory over the

@@ -2,6 +2,7 @@
 title: whistle
 date: "2021-10-15"
 description: "记录一下 whistle 安装和使用的一些小技巧"
+archived: true
 ---
 
 
