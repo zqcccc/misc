@@ -1077,6 +1077,43 @@ body {
   font-size: 0.92em;
 }
 
+/* /pe 与 /ashare-strategy 的服务端说明区块（客户端看板外的静态内容） */
+.trust-page section h3 {
+  grid-column: 2;
+  margin: 0;
+  color: var(--site-ink);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.trust-page section dl,
+.trust-page section > dl {
+  grid-column: 2;
+  margin: 0;
+}
+
+.trust-page section dl > div {
+  padding: 14px 0;
+  border-top: 1px solid var(--site-line);
+}
+
+.trust-page section dl > div:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.trust-page section dt {
+  color: var(--site-ink);
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.trust-page section dd {
+  margin: 6px 0 0;
+  color: var(--site-muted);
+  line-height: 1.8;
+}
+
 .trust-page-links {
   display: flex;
   flex-wrap: wrap;

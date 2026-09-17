@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import FinancialNotice from '@/components/site/FinancialNotice'
+import ProfitLineGuide from '@/components/site/ProfitLineGuide'
 import { SITE_URL } from '@/lib/site'
 
 export const metadata: Metadata = {
@@ -17,6 +18,7 @@ export default function ProfitLineLayout({ children }: { children: React.ReactNo
   return (
     <>
       {children}
+      <ProfitLineGuide />
       <FinancialNotice title='利润线工具的数据边界' />
     </>
   )

@@ -1,5 +1,7 @@
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
+import AShareStrategyGuide from '@/components/site/AShareStrategyGuide'
+import FinancialNotice from '@/components/site/FinancialNotice'
 
 export const metadata: Metadata = {
   title: 'A 股策略信号与回测',
@@ -11,5 +13,11 @@ export const metadata: Metadata = {
 export default function AShareStrategyLayout({
   children,
 }: Readonly<{ children: ReactNode }>) {
-  return children
+  return (
+    <>
+      {children}
+      <AShareStrategyGuide />
+      <FinancialNotice title='A 股策略看板的数据边界' />
+    </>
+  )
 }
