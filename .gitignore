@@ -125,11 +125,13 @@ next-env.d.ts
 *.feather
 
 # 本地 agent 运行产物（handoff / sentinel / skills 快照）默认不入库，
-# 但量化验收协议是所有 PASS 裁决的依据，必须随仓库版本化（见 qr protocol）
+# 但量化工具链必须随仓库版本化：验收协议是所有 PASS 裁决的依据，
+# 信息源地图是写策略前的必走检索流程，两者配对使用（见 qr protocol）
 /.agents/*
 !/.agents/skills/
 /.agents/skills/*
 !/.agents/skills/quant-backtest-protocol/
+!/.agents/skills/ai-quant-sources/
 
 # 跨市场实验沙盒（crypto/US 探索 + 缓存），与 next 项目无关，不入库
 /quant_lab/
