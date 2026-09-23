@@ -38,6 +38,26 @@ const HIDDEN_POST_PATHS = new Set([
 
 const HIDDEN_POST_PREFIXES = ['proxy/', 'dns/']
 
+/**
+ * 按合规风险屏蔽的文章（对所有来源生效，包括 plus 目录）。
+ *
+ * 这几篇讲的是更换机器码重置软件试用状态、以及搭建代理访问受限站点，
+ * 属于 Google AdSense 计划政策里的高风险类别——这类内容的杀伤力远大于
+ * 「内容偏薄」，只要站内还能被抓到，审核基本不可能通过。站内的
+ * /standards 早就写明这类内容不应留在公开文章系统与站点地图里。
+ *
+ * 这里只做下架（导航 / 站点地图 / 列表不再出现，直接访问返回 404），
+ * 不从磁盘删除，需要恢复时把这个集合改回去即可。
+ */
+const COMPLIANCE_BLOCKED_PATHS = new Set([
+  // 更换机器码重置 cursor 试用状态 —— 协助绕过付费限制
+  'cursor/ycursor',
+  // 用 warp 分流访问 Netflix / ChatGPT —— 代理翻墙
+  'cloudflare/warp',
+  // 旁路由透明代理给 PS5 等设备访问 Netflix —— 代理翻墙
+  'v-machine/hyper-v-openwrt',
+])
+
 export function normalizePostPath(value: string): string {
   try {
     return decodeURIComponent(value).replace(/^\/+|\/+$/g, '')
