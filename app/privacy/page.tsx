@@ -4,7 +4,10 @@ import { SITE_EMAIL, SITE_URL } from '@/lib/site'
 export const metadata: Metadata = {
   title: '隐私政策',
   description: 'onlylike.work 实际收集的数据、浏览器本地处理、匿名访问统计和联系信息说明。',
-  alternates: { canonical: '/privacy' },
+  alternates: {
+    canonical: '/privacy',
+    languages: { 'zh-Hans': '/privacy', en: '/en/privacy', 'x-default': '/privacy' },
+  },
   openGraph: {
     title: 'onlylike.work 隐私政策',
     description: '说明网站实际收集的数据以及访客可以怎样选择。',

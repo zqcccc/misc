@@ -14,6 +14,7 @@ export default function SiteFooter() {
           <Link href='/contact'>联系</Link>
           <Link href='/standards'>内容与披露</Link>
           <Link href='/privacy'>隐私</Link>
+          <Link href='/en'>English</Link>
           <a href={`mailto:${SITE_EMAIL}`}>邮件</a>
         </nav>
         <p className='site-footer-meta'>

@@ -5,7 +5,10 @@ export const metadata: Metadata = {
   title: '自用工具',
   description:
     'c9cu 的研究工具与浏览器工具：说明维护状态、数据来源、处理位置和已知局限。',
-  alternates: { canonical: '/tools' },
+  alternates: {
+    canonical: '/tools',
+    languages: { 'zh-Hans': '/tools', en: '/en/tools', 'x-default': '/tools' },
+  },
 }
 
 const tools = [

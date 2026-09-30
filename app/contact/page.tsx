@@ -4,7 +4,10 @@ import { SITE_EMAIL, SITE_URL } from '@/lib/site'
 export const metadata: Metadata = {
   title: '联系 c9cu',
   description: '联系 c9cu，报告事实错误、过期步骤、数据口径问题或网站故障。',
-  alternates: { canonical: '/contact' },
+  alternates: {
+    canonical: '/contact',
+    languages: { 'zh-Hans': '/contact', en: '/en/contact', 'x-default': '/contact' },
+  },
   openGraph: {
     title: '联系 c9cu',
     description: '报告事实错误、过期步骤、数据口径问题或网站故障。',

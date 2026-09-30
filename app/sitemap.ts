@@ -18,6 +18,12 @@ const publicRoutes = [
   '/tools/element-scroll-capture',
   '/pe',
   '/ashare-strategy',
+  '/en',
+  '/en/about',
+  '/en/contact',
+  '/en/standards',
+  '/en/privacy',
+  '/en/tools',
 ]
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

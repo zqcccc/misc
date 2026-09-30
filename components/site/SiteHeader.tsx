@@ -7,6 +7,7 @@ const links = [
   { href: '/#notes', label: '文章' },
   { href: '/tools', label: '工具' },
   { href: '/about', label: '关于' },
+  { href: '/en', label: 'EN' },
 ]
 
 export default function SiteHeader() {

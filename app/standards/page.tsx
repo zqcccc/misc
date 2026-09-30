@@ -5,7 +5,10 @@ import { SITE_EMAIL, SITE_URL } from '@/lib/site'
 export const metadata: Metadata = {
   title: '内容与披露原则',
   description: 'c9cu 对内容来源、更新、更正、金融研究、自动化、联盟链接和广告的公开说明。',
-  alternates: { canonical: '/standards' },
+  alternates: {
+    canonical: '/standards',
+    languages: { 'zh-Hans': '/standards', en: '/en/standards', 'x-default': '/standards' },
+  },
   openGraph: {
     title: '内容与披露原则',
     description: '内容来源、更新、更正、金融研究和商业关系的公开说明。',

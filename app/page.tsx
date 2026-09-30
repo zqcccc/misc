@@ -16,7 +16,10 @@ export const dynamic = 'force-dynamic'
 export const metadata: Metadata = {
   title: { absolute: SITE_TITLE },
   description: SITE_DESCRIPTION,
-  alternates: { canonical: '/' },
+  alternates: {
+    canonical: '/',
+    languages: { 'zh-Hans': '/', en: '/en', 'x-default': '/' },
+  },
   openGraph: {
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,

@@ -5,7 +5,10 @@ import { SITE_DESCRIPTION, SITE_URL } from '@/lib/site'
 export const metadata: Metadata = {
   title: '关于 c9cu',
   description: '了解 c9cu 为什么维护 onlylike.work，以及这个个人网站如何处理研究、工程笔记和自用工具。',
-  alternates: { canonical: '/about' },
+  alternates: {
+    canonical: '/about',
+    languages: { 'zh-Hans': '/about', en: '/en/about', 'x-default': '/about' },
+  },
   openGraph: {
     title: '关于 c9cu',
     description: SITE_DESCRIPTION,
