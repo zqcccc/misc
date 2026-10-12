@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
+import FinancialNotice from '@/components/site/FinancialNotice'
 
 export const metadata: Metadata = {
   title: '聚宽小微盘策略持仓详情与回测看板',
@@ -11,5 +12,10 @@ export const metadata: Metadata = {
 export default function SmallCapStrategyLayout({
   children,
 }: Readonly<{ children: ReactNode }>) {
-  return children
+  return (
+    <>
+      {children}
+      <FinancialNotice title='小微盘策略看板的数据边界' />
+    </>
+  )
 }

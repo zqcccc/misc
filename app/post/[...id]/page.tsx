@@ -51,7 +51,7 @@ export default async function Post(props: PageProps) {
     : published.toISOString()
   const updated = postData.updated ? new Date(postData.updated) : null
   const source = stripDuplicateMarkdownTitle(postData.content, postData.title)
-  const isFinancial = category === 'research'
+  const isFinancial = category === 'research' || category === 'reflection'
 
   const jsonLd = {
     '@context': 'https://schema.org',

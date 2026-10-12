@@ -2,6 +2,7 @@
 title: Gatsby
 date: "2021-07-03"
 description: "学习一下 Gatsby"
+archived: true
 ---
 
 Gatsby 是一个静态站点生成器

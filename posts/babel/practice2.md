@@ -2,6 +2,7 @@
 title: 国际化实践2
 date: "2023-02-28"
 description: "再次代码国际化实践"
+archived: true
 ---
 
 代码：https://github.com/zqcccc/temp/tree/6f116f8d85f7fbdf91d77d36fcc6d413f96560b0/parser

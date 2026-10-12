@@ -2,6 +2,7 @@
 title: k8s安装
 date: "2022-08-28"
 description: "k8s初体验"
+archived: true
 ---
 
 # K8S

@@ -18,6 +18,8 @@ const publicRoutes = [
   '/tools/element-scroll-capture',
   '/pe',
   '/ashare-strategy',
+  '/smallcap-strategy',
+  '/trhrp-backtest',
 ]
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

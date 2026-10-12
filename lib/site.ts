@@ -74,15 +74,14 @@ export function isPublicPost(post: PostLike): boolean {
   if (post.data.archived === true) return false
   if (!title) return false
 
-  // Production mounts an independently managed plusPosts directory over the
-  // sample folder in the image. Its articles must be governed by their own
-  // frontmatter, not by rules written for the repository's legacy posts.
-  if (post.source === 'plus') return true
-
+  // Hidden and compliance blocks apply to all sources (builtin and plus).
+  // Plus articles remain governed by their own frontmatter
+  // (published/draft/archived/title above), but cannot bypass these blocks.
   if (HIDDEN_POST_PATHS.has(postPath)) return false
   if (HIDDEN_POST_PREFIXES.some((prefix) => postPath.startsWith(prefix))) {
     return false
   }
+  if (COMPLIANCE_BLOCKED_PATHS.has(postPath)) return false
 
   return true
 }
