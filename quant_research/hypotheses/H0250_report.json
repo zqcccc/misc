@@ -1,0 +1,96 @@
+{
+  "schema_version": 2,
+  "stage": "candidate",
+  "role": "alpha",
+  "market": "multi",
+  "periods_per_year": 4,
+  "performance": {
+    "T_days": 23,
+    "start": "2020-06-05",
+    "end": "2026-02-10",
+    "total_return": 0.4759,
+    "ann_return": 0.0828,
+    "sharpe_daily_wallet": 2.182,
+    "sortino": 4.061,
+    "max_drawdown": 0.0219,
+    "calmar": 3.786,
+    "ann_vol": 0.0379,
+    "positive_days_pct": 0.913
+  },
+  "window_consistency": {
+    "returns_start": "2020-06-05",
+    "returns_end": "2026-02-10",
+    "benchmark_start": "2020-06-05",
+    "benchmark_end": "2026-02-10",
+    "aligned_days": 23
+  },
+  "alpha_beta": {
+    "error": "重叠样本太短 n=23"
+  },
+  "benchmark": {
+    "T_days": 23,
+    "start": "2020-06-05",
+    "end": "2026-02-10",
+    "total_return": 0.5443,
+    "ann_return": 0.0785,
+    "sharpe_daily_wallet": 1.509,
+    "sortino": 3.156,
+    "max_drawdown": 0.0552,
+    "calmar": 1.424,
+    "ann_vol": 0.0514,
+    "positive_days_pct": 0.826
+  },
+  "selection_adjustment": {
+    "error": "样本太短或无波动 T=23"
+  },
+  "monte_carlo": {
+    "n": 23,
+    "iters": 5000,
+    "block": 10,
+    "original_final": 1.4759,
+    "prob_profit": 1.0,
+    "p5": 1.2336,
+    "p50": 1.3729,
+    "p95": 1.5305,
+    "verdict": "P5 仍盈利 —— 路径稳健",
+    "basis": "daily_returns"
+  },
+  "p_value": {
+    "error": "样本太短 n=23"
+  },
+  "random_portfolio": {
+    "error": "面板太小 T=23 M=800"
+  },
+  "control_shape": {
+    "error": "与宇宙重叠样本太短 n=23"
+  },
+  "execution_check": {
+    "information_time": "A股 d0 15:00 收盘（开收盘价已知）",
+    "decision_time": "d0 收盘后立即",
+    "execution_time": "d0 收盘价成交（下一期收益起点）",
+    "pnl_start": "d0 收盘",
+    "pnl_end": "d1 收盘（d0+20个交易日）",
+    "price_field": "panel/close.parquet 复权收盘",
+    "timezone": "Asia/Shanghai",
+    "pnl_start_not_before_execution": true,
+    "validated": true
+  },
+  "data_provenance": {
+    "source_count": 1,
+    "providers": [
+      "astock_quant 本地面板（baostock 系）"
+    ]
+  },
+  "falsification_failures": [
+    "alpha_beta 缺失或失败：重叠样本太短 n=23",
+    "selection_adjustment 缺失或失败：样本太短或无波动 T=23",
+    "random_portfolio 缺失或失败：面板太小 T=23 M=800",
+    "alpha_beta.ann_alpha 缺失或不是合法有限统计值",
+    "alpha_beta.alpha_t 缺失或不是合法有限统计值",
+    "random_portfolio.percentile_vs_random 缺失或不是合法有限统计值",
+    "selection_adjustment.PSR 缺失或不是合法有限统计值",
+    "alpha ≤ 0：收益不来自选股/择时"
+  ],
+  "verdict_code": "FAIL",
+  "verdict": "未通过：alpha_beta 缺失或失败：重叠样本太短 n=23；selection_adjustment 缺失或失败：样本太短或无波动 T=23；random_portfolio 缺失或失败：面板太小 T=23 M=800；alpha_beta.ann_alpha 缺失或不是合法有限统计值；alpha_beta.alpha_t 缺失或不是合法有限统计值；random_portfolio.percentile_vs_random 缺失或不是合法有限统计值；selection_adjustment.PSR 缺失或不是合法有限统计值；alpha ≤ 0：收益不来自选股/择时"
+}

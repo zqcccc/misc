@@ -1,0 +1,71 @@
+{
+  "schema_version": 2,
+  "stage": "candidate",
+  "role": "alpha",
+  "market": "cn_stock",
+  "periods_per_year": 4,
+  "performance": {
+    "error": "样本太短 T=18，指标不可信"
+  },
+  "window_consistency": {
+    "returns_start": "2022-03-01",
+    "returns_end": "2026-05-19",
+    "benchmark_start": "2022-03-01",
+    "benchmark_end": "2026-05-19",
+    "aligned_days": 18
+  },
+  "alpha_beta": {
+    "error": "重叠样本太短 n=18"
+  },
+  "benchmark": {
+    "error": "样本太短 T=18，指标不可信"
+  },
+  "selection_adjustment": {
+    "error": "样本太短或无波动 T=18"
+  },
+  "monte_carlo": {
+    "error": "样本太少 n=18",
+    "basis": "daily_returns"
+  },
+  "p_value": {
+    "error": "样本太短 n=18"
+  },
+  "random_portfolio": {
+    "error": "面板太小 T=18 M=800"
+  },
+  "control_shape": {
+    "error": "与宇宙重叠样本太短 n=18"
+  },
+  "execution_check": {
+    "information_time": "A股 d0 15:00 收盘（开收盘价已知）",
+    "decision_time": "d0 收盘后立即",
+    "execution_time": "d0 收盘价成交（下一期收益起点）",
+    "pnl_start": "d0 收盘",
+    "pnl_end": "d1 收盘（d0+20个交易日）",
+    "price_field": "panel/close.parquet 复权收盘",
+    "timezone": "Asia/Shanghai",
+    "pnl_start_not_before_execution": true,
+    "validated": true
+  },
+  "data_provenance": {
+    "source_count": 1,
+    "providers": [
+      "astock_quant 本地面板（baostock 系）"
+    ]
+  },
+  "falsification_failures": [
+    "performance 缺失或失败：样本太短 T=18，指标不可信",
+    "alpha_beta 缺失或失败：重叠样本太短 n=18",
+    "selection_adjustment 缺失或失败：样本太短或无波动 T=18",
+    "monte_carlo 缺失或失败：样本太少 n=18",
+    "random_portfolio 缺失或失败：面板太小 T=18 M=800",
+    "alpha_beta.ann_alpha 缺失或不是合法有限统计值",
+    "alpha_beta.alpha_t 缺失或不是合法有限统计值",
+    "monte_carlo.prob_profit 缺失或不是合法有限统计值",
+    "random_portfolio.percentile_vs_random 缺失或不是合法有限统计值",
+    "selection_adjustment.PSR 缺失或不是合法有限统计值",
+    "alpha ≤ 0：收益不来自选股/择时"
+  ],
+  "verdict_code": "FAIL",
+  "verdict": "未通过：performance 缺失或失败：样本太短 T=18，指标不可信；alpha_beta 缺失或失败：重叠样本太短 n=18；selection_adjustment 缺失或失败：样本太短或无波动 T=18；monte_carlo 缺失或失败：样本太少 n=18；random_portfolio 缺失或失败：面板太小 T=18 M=800；alpha_beta.ann_alpha 缺失或不是合法有限统计值；alpha_beta.alpha_t 缺失或不是合法有限统计值；monte_carlo.prob_profit 缺失或不是合法有限统计值；random_portfolio.percentile_vs_random 缺失或不是合法有限统计值；selection_adjustment.PSR 缺失或不是合法有限统计值；alpha ≤ 0：收益不来自选股/择时"
+}

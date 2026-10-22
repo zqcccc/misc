@@ -155,7 +155,13 @@ next-env.d.ts
 !/quant_research/locks/
 !/quant_research/blockers/
 !/quant_research/portfolio/
+!/quant_research/loop/
 /quant_research/portfolio/out/
+# qr 认领卡片时写入的锁归属，运行时状态
+/quant_research/locks/*/owner
+/quant_research/loop/.env-*
+/quant_research/loop/next-scan.txt
+/quant_research/loop/STOP
 /cn_index_futures/
 /multi_carry/
 /multi_tsmom/
@@ -189,3 +195,12 @@ quant_research/runs/
 
 # 轮次记录只留 .md 台账；同名子目录是原始转储（数据 dump / selfcheck 输出 / 复现脚本）
 /quant_research/rounds/*/
+
+# 持续量化探索循环运行态文件（停止哨兵、会话环境变量、节流时间戳）
+/STOP
+/quant_research/loop/STOP
+/quant_research/loop/.env-*
+/quant_research/loop/next-scan.txt
+
+# 量化研究临时探针(不入库)
+quant_research/fx/h0202/probe/

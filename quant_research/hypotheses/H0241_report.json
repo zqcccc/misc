@@ -1,0 +1,131 @@
+{
+  "schema_version": 2,
+  "stage": "candidate",
+  "role": "alpha",
+  "market": "multi",
+  "periods_per_year": 4,
+  "performance": {
+    "T_days": 35,
+    "start": "2017-06-22",
+    "end": "2026-02-10",
+    "total_return": 0.6195,
+    "ann_return": 0.0708,
+    "sharpe_daily_wallet": 2.681,
+    "sortino": 3.242,
+    "max_drawdown": 0.0126,
+    "calmar": 5.608,
+    "ann_vol": 0.0264,
+    "positive_days_pct": 0.943
+  },
+  "window_consistency": {
+    "returns_start": "2017-06-22",
+    "returns_end": "2026-02-10",
+    "benchmark_start": "2017-06-22",
+    "benchmark_end": "2026-02-10",
+    "aligned_days": 35
+  },
+  "alpha_beta": {
+    "n_days": 35,
+    "beta": 0.464,
+    "r_squared": 0.734,
+    "ann_alpha": 0.0213,
+    "alpha_t": 3.86,
+    "alpha_p": 0.0001,
+    "alpha_significant": true,
+    "alpha_se_method": "Newey-West/HAC",
+    "nw_lags": 3,
+    "strategy_total": 0.6195,
+    "benchmark_total": 0.9339,
+    "note": "total/drag/contribution 为日收益加总口径（与日频夏普一致），非复利净值涨跌幅",
+    "beta_drag": 0.4334,
+    "alpha_contribution": 0.1861,
+    "verdict": "正 alpha 且显著：策略本身有效"
+  },
+  "benchmark": {
+    "T_days": 35,
+    "start": "2017-06-22",
+    "end": "2026-02-10",
+    "total_return": 1.4892,
+    "ann_return": 0.1098,
+    "sharpe_daily_wallet": 2.189,
+    "sortino": 2.214,
+    "max_drawdown": 0.056,
+    "calmar": 1.961,
+    "ann_vol": 0.0488,
+    "positive_days_pct": 0.914
+  },
+  "selection_adjustment": {
+    "method": "PSR-single-spec",
+    "observed_sharpe": 2.681,
+    "benchmark_sharpe": 0.0,
+    "T_days": 35,
+    "PSR": 1.0,
+    "warning": "只适用于真正事前锁死的单一规格；同题尝试过的任何变体都必须改用 DSR"
+  },
+  "monte_carlo": {
+    "n": 35,
+    "iters": 5000,
+    "block": 10,
+    "original_final": 1.6195,
+    "prob_profit": 1.0,
+    "p5": 1.4327,
+    "p50": 1.5693,
+    "p95": 1.7079,
+    "verdict": "P5 仍盈利 —— 路径稳健",
+    "basis": "daily_returns"
+  },
+  "p_value": {
+    "observed_daily_mean": 0.017701,
+    "p_value": 0.0,
+    "significant": true,
+    "verdict": "显著盈利"
+  },
+  "random_portfolio": {
+    "iters": 2000,
+    "n_long": 40,
+    "n_short": 40,
+    "rebalance_bars": 60,
+    "universe_size": 800,
+    "null_beta_p50": 0.0038,
+    "null_beta_p05": -0.1938,
+    "null_beta_p95": 0.191,
+    "random_sharpe_mean": 0.002,
+    "random_sharpe_p50": 0.004,
+    "random_sharpe_p95": 0.63,
+    "random_sharpe_max": 1.365,
+    "actual_sharpe": 2.681,
+    "percentile_vs_random": 1.0,
+    "p_value": 0.0,
+    "verdict": "跑赢 95% 随机组合，因子有信息"
+  },
+  "control_shape": {
+    "beta_real": -0.1404,
+    "null_beta_p50": 0.0038,
+    "null_beta_p05": -0.1938,
+    "null_beta_p95": 0.191,
+    "gap": 0.1442,
+    "tolerance": 0.7,
+    "same_shape": true,
+    "说人话": "对照组和真策略的市场暴露差不多，置换分位可以照读"
+  },
+  "execution_check": {
+    "information_time": "A股 d0 15:00 收盘（开收盘价已知）",
+    "decision_time": "d0 收盘后立即",
+    "execution_time": "d0 收盘价成交（下一期收益起点）",
+    "pnl_start": "d0 收盘",
+    "pnl_end": "d1 收盘（d0+20个交易日）",
+    "price_field": "panel/close.parquet 复权收盘",
+    "timezone": "Asia/Shanghai",
+    "pnl_start_not_before_execution": true,
+    "validated": true
+  },
+  "data_provenance": {
+    "source_count": 1,
+    "providers": [
+      "astock_quant 本地面板（baostock 系）"
+    ]
+  },
+  "falsification_failures": [],
+  "verdict_code": "PASS",
+  "verdict": "候选验收通过 —— 下一步是实时 paper trading，不等于可直接上仓位"
+}

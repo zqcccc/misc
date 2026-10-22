@@ -1,0 +1,1 @@
+qbt: report 子命令的随机分位门禁口径不一致——load_permutation_result 把 percentile_vs_random 归一化为 [0,1]（1.0=100分位），而 --min-random-percentile 默认 95 是百分位，第 1157 行直接比较导致 percentile_vs_random=1.0 被判 "1.0 < 95.0" 恒失败。修复方向：把门槛除以 100 或把 percentile 乘 100，二者统一。附带：内置 random_portfolio 路径（第 858 行 round(pct,4)）产出的是 [0,1] 概率值，同样受影响。

@@ -1,0 +1,15 @@
+{
+  "schema_version": 2,
+  "stage": "screen",
+  "gross_annual": 0.0717,
+  "turnover_per_year": 15.76,
+  "cost_bps_per_side": 17.6,
+  "funding_annual": 0.0,
+  "trade_cost_annual": 0.027737600000000005,
+  "cost_annual": 0.027737600000000005,
+  "edge_cost_ratio": 2.585,
+  "stress_multiple": 2.0,
+  "edge_cost_ratio_stressed": 1.292,
+  "screen_verdict": "THIN",
+  "说人话": "毛收益只有成本的 2.6 倍，余量很薄，成本估错一点就归零"
+}

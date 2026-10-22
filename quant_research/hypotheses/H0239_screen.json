@@ -1,0 +1,15 @@
+{
+  "schema_version": 2,
+  "stage": "screen",
+  "gross_annual": 0.1898,
+  "turnover_per_year": 8.4,
+  "cost_bps_per_side": 17.6,
+  "funding_annual": 0.0,
+  "trade_cost_annual": 0.014784000000000004,
+  "cost_annual": 0.014784000000000004,
+  "edge_cost_ratio": 12.838,
+  "stress_multiple": 2.0,
+  "edge_cost_ratio_stressed": 6.419,
+  "screen_verdict": "GO",
+  "说人话": "毛收益是成本的 12.8 倍，值得往下做"
+}

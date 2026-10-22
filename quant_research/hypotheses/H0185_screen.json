@@ -1,0 +1,15 @@
+{
+  "schema_version": 2,
+  "stage": "screen",
+  "gross_annual": -0.002,
+  "turnover_per_year": 11.69,
+  "cost_bps_per_side": 15.0,
+  "funding_annual": 0.0,
+  "trade_cost_annual": 0.017535,
+  "cost_annual": 0.017535,
+  "edge_cost_ratio": -0.114,
+  "stress_multiple": 2.0,
+  "edge_cost_ratio_stressed": -0.057,
+  "screen_verdict": "STOP",
+  "说人话": "毛收益只有成本的 -0.1 倍，交易费就把它吃光了，不值得写回测"
+}

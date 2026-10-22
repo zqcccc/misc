@@ -1,0 +1,16 @@
+power:
+  sleepPrevention: system
+
+retry:
+  waitForUsageReset: true
+  maxRetries: 10
+
+tools:
+  approvalMode: yolo
+
+ask:
+  timeout: 60
+
+compaction:
+  enabled: true
+  autoContinue: true
