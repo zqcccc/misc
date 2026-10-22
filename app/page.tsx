@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { getCachedAllPost } from './api/post/lib'
+import AdSlot from '@/components/site/AdSlot'
+import { AD_SLOT } from '@/lib/ads'
 import {
   formatPostDate,
   getPostCategory,
@@ -116,6 +118,8 @@ export default async function Home() {
         </div>
       </section>
 
+      <AdSlot slot={AD_SLOT.HOME_MIDDLE} />
+
       <section id='notes' className='home-section home-notes' aria-labelledby='notes-title'>
         <div className='home-section-heading'>
           <h2 id='notes-title'>最近的文章与记录</h2>
@@ -150,6 +154,8 @@ export default async function Home() {
           })}
         </div>
       </section>
+
+      <AdSlot slot={AD_SLOT.HOME_BOTTOM} />
 
       <section className='home-section home-about' aria-labelledby='home-about-title'>
         <h2 id='home-about-title'>为什么保留一个个人网站</h2>

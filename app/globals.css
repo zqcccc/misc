@@ -909,6 +909,49 @@ body {
   line-height: 1.82;
 }
 
+/* 广告位：首页和文章页共用，横幅按容器宽度选尺寸后居中 */
+.ad-slot {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 16px 0;
+  border-top: 1px solid var(--site-line);
+  border-bottom: 1px solid var(--site-line);
+}
+
+.ad-slot-label {
+  justify-self: start;
+  color: var(--site-muted);
+  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    'Noto Sans SC', 'PingFang SC', sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+
+.ad-slot-frame {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.ad-slot-frame iframe {
+  display: block;
+  border: 0;
+  overflow: hidden;
+}
+
+.ad-slot-frame img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+/* 首页分区自带底部分隔线，广告带只补下边线，避免出现双线 */
+.home-page > .ad-slot {
+  padding: 28px 0 32px;
+  border-top: 0;
+}
+
 @media (max-width: 900px) {
   .home-hero {
     min-height: 0;

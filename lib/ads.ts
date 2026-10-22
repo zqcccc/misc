@@ -8,6 +8,8 @@ export const AD_PROVIDER = {
 } as const
 
 export const AD_SLOT = {
+  HOME_MIDDLE: 'home-middle',
+  HOME_BOTTOM: 'home-bottom',
   POST_TOP: 'post-top',
   POST_BOTTOM: 'post-bottom',
 } as const
@@ -65,6 +67,8 @@ const ADSTERRA_BANNERS: AdsterraUnit[] = [
 
 // 每个广告位填一个来源，null 表示不展示
 export const AD_SLOTS: Record<AdSlotId, AdSlotConfig | null> = {
+  [AD_SLOT.HOME_MIDDLE]: { provider: AD_PROVIDER.ADSTERRA, units: ADSTERRA_BANNERS },
+  [AD_SLOT.HOME_BOTTOM]: { provider: AD_PROVIDER.ADSTERRA, units: ADSTERRA_BANNERS },
   [AD_SLOT.POST_TOP]: { provider: AD_PROVIDER.ADSTERRA, units: ADSTERRA_BANNERS },
   [AD_SLOT.POST_BOTTOM]: { provider: AD_PROVIDER.ADSTERRA, units: ADSTERRA_BANNERS },
 }
