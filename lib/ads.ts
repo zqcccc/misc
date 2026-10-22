@@ -47,10 +47,26 @@ export const ADS_TXT_LINES = [
   'google.com, pub-6426066570730708, DIRECT, f08c47fec0942fa0',
 ]
 
+// Adsterra 后台 onlylike.work 站点下的 Banner 单元（728x90_1、300x250_1）
+const ADSTERRA_BANNERS: AdsterraUnit[] = [
+  {
+    width: 728,
+    height: 90,
+    key: 'eb331ea66fa90da37a32077a95932036',
+    scriptSrc: 'https://www.highrevenueformat.com/eb331ea66fa90da37a32077a95932036/invoke.js',
+  },
+  {
+    width: 300,
+    height: 250,
+    key: 'aa61b1461b1b2af60f0e7601f4b66f3c',
+    scriptSrc: 'https://www.highrevenueformat.com/aa61b1461b1b2af60f0e7601f4b66f3c/invoke.js',
+  },
+]
+
 // 每个广告位填一个来源，null 表示不展示
 export const AD_SLOTS: Record<AdSlotId, AdSlotConfig | null> = {
-  [AD_SLOT.POST_TOP]: null,
-  [AD_SLOT.POST_BOTTOM]: null,
+  [AD_SLOT.POST_TOP]: { provider: AD_PROVIDER.ADSTERRA, units: ADSTERRA_BANNERS },
+  [AD_SLOT.POST_BOTTOM]: { provider: AD_PROVIDER.ADSTERRA, units: ADSTERRA_BANNERS },
 }
 
 const PROVIDER_NAME: Record<AdSlotConfig['provider'], string> = {
