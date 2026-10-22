@@ -2,8 +2,10 @@ import Script from 'next/script'
 import type { Metadata } from 'next'
 import { Toaster } from 'sonner'
 import AnalyticsConsent from '@/components/site/AnalyticsConsent'
+import EzoicRouteHandler from '@/components/site/EzoicRouteHandler'
 import SiteFooter from '@/components/site/SiteFooter'
 import SiteHeader from '@/components/site/SiteHeader'
+import { EZOIC_ENABLED } from '@/lib/ads'
 import {
   SITE_DESCRIPTION,
   SITE_EMAIL,
@@ -84,6 +86,25 @@ export default function RootLayout({
             })();
           `}
         </Script>
+        {EZOIC_ENABLED && (
+          <>
+            {/* Ezoic 要求同意管理平台(CMP)先于广告脚本加载 */}
+            <Script
+              id='ezoic-cmp'
+              src='https://cmp.gatekeeperconsent.com/min.js'
+              strategy='beforeInteractive'
+              data-cfasync='false'
+            />
+            <Script
+              id='ezoic-cmp-2'
+              src='https://the.gatekeeperconsent.com/cmp.min.js'
+              strategy='beforeInteractive'
+              data-cfasync='false'
+            />
+            <script async src='//www.ezojs.com/ezoic/sa.min.js' />
+            <script async src='//ezoicanalytics.com/analytics.js' />
+          </>
+        )}
       </head>
       <body>
         <script
@@ -121,6 +142,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
         <SiteFooter />
         <Toaster richColors position='top-center' />
         <AnalyticsConsent />
+        {EZOIC_ENABLED && <EzoicRouteHandler />}
       </body>
     </html>
   )

@@ -4,6 +4,8 @@ import { notFound } from 'next/navigation'
 import { getAllPostIds, getPostData, getPostMeta } from '../../api/post/lib'
 import Content from './content'
 import ReactCusdis from './Cusdis'
+import AdSlot from '@/components/site/AdSlot'
+import { AD_SLOT } from '@/lib/ads'
 import {
   formatPostDate,
   getPostCategory,
@@ -125,9 +127,13 @@ export default async function Post(props: PageProps) {
         </aside>
       )}
 
+      <AdSlot slot={AD_SLOT.POST_TOP} />
+
       <div className='article-prose'>
         <Content source={source} />
       </div>
+
+      <AdSlot slot={AD_SLOT.POST_BOTTOM} />
 
       <footer className='article-footer'>
         <div>

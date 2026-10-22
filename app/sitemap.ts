@@ -12,6 +12,7 @@ const publicRoutes = [
   '/contact',
   '/standards',
   '/privacy',
+  '/advertise',
   '/tools',
   '/tools/merge-images',
   '/tools/compress-images',

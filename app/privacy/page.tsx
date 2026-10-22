@@ -1,9 +1,11 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
+import { EZOIC_ENABLED, getActiveAdProviders } from '@/lib/ads'
 import { SITE_EMAIL, SITE_URL } from '@/lib/site'
 
 export const metadata: Metadata = {
   title: '隐私政策',
-  description: 'onlylike.work 实际收集的数据、浏览器本地处理、匿名访问统计和联系信息说明。',
+  description: 'onlylike.work 实际收集的数据、浏览器本地处理、匿名访问统计、广告和联系信息说明。',
   alternates: { canonical: '/privacy' },
   openGraph: {
     title: 'onlylike.work 隐私政策',
@@ -13,11 +15,13 @@ export const metadata: Metadata = {
 }
 
 export default function PrivacyPage() {
+  const adProviders = getActiveAdProviders()
+
   return (
     <main className='trust-page'>
       <header>
         <h1>隐私政策</h1>
-        <p>生效日期：2026 年 9 月 1 日。这里只描述 onlylike.work 目前实际发生的数据处理。</p>
+        <p>生效日期：2026 年 10 月 23 日。这里只描述 onlylike.work 目前实际发生的数据处理。</p>
       </header>
 
       <section>
@@ -48,6 +52,21 @@ export default function PrivacyPage() {
         <h2>浏览器本地数据</h2>
         <p>
           深浅主题偏好保存在浏览器的 <code>theme</code> 键中。图片合并、压缩等工具在浏览器本地处理你选择的文件；这些图片不会为了完成工具功能而上传到 onlylike.work 服务器。
+        </p>
+      </section>
+
+      <section id='advertising'>
+        <h2>广告</h2>
+        {adProviders.length > 0 ? (
+          <p>
+            文章页的广告位由第三方广告服务提供：{adProviders.join('、')}。这些服务可能使用 Cookie、设备标识或类似技术来展示广告、限制重复展示和统计效果，并适用各自的隐私政策。广告位都标有“广告”字样。
+            {EZOIC_ENABLED && '从欧洲经济区、英国等地区访问时，网站会先请你选择是否同意个性化广告。'}
+          </p>
+        ) : (
+          <p>网站目前没有加载第三方广告服务。</p>
+        )}
+        <p>
+          标有“赞助”的广告位是直接与赞助商合作的图片链接，点击前不会向赞助商发送你的任何数据。合作方式见<Link href='/advertise'>广告合作</Link>。
         </p>
       </section>
 
