@@ -17,7 +17,7 @@ export default function ContactPage() {
     <main className='trust-page'>
       <header>
         <h1>联系 c9cu</h1>
-        <p>最有价值的来信，通常不是“写得不错”，而是指出哪里已经不对了。</p>
+        <p>报告事实错误、过期步骤、数据口径问题或网站故障，请发送电子邮件。</p>
       </header>
 
       <section>

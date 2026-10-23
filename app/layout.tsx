@@ -121,20 +121,6 @@ export default function RootLayout({
             }),
           }}
         />
-        <div
-          hidden
-          aria-hidden='true'
-          dangerouslySetInnerHTML={{
-            __html: `<!--
-THESIS: c9cu 是第一手实践的个人档案，拒绝无作者、无上下文的模板文章列表。
-OWN-WORLD: 冷白纸面、石墨文字、深蓝链接和琥珀状态标记；以细规则线和开放列表组织内容。
-STORY: 访客先认识作者与写作原则，再查看代表作品、最近记录和自用工具，最后获得方法与责任说明。
-FIRST VIEWPORT: 左侧是 c9cu 的身份与说明，右侧用一项大型代表作品证明研究与工具来自真实实践。
-FORM: 个人档案索引，结构候选 6，seed 6398bd69。
-FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
--->`,
-          }}
-        />
         <SiteHeader />
         <div id='main-content' tabIndex={-1}>
           {children}

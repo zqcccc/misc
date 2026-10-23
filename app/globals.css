@@ -438,14 +438,8 @@ body {
   padding: 48px 0 38px;
 }
 
-.site-footer-statement strong {
+.site-footer-name {
   font-size: 20px;
-}
-
-.site-footer-statement p {
-  max-width: 38rem;
-  margin: 8px 0 0;
-  color: var(--site-muted);
 }
 
 .site-footer nav {
@@ -586,327 +580,111 @@ body {
   }
 }
 
+/* 首页只放两份列表；分节写法与 /tools 相同：粗线分节、细线分行 */
 .home-page {
-  width: min(1180px, calc(100% - 40px));
+  width: min(1100px, calc(100% - 40px));
   margin: 0 auto;
+  padding: 64px 0 20px;
 }
 
-.home-hero {
-  min-height: 620px;
-  display: grid;
-  grid-template-columns: minmax(0, 0.88fr) minmax(0, 1.12fr);
-  gap: clamp(54px, 8vw, 118px);
-  align-items: center;
-  padding: 88px 0 94px;
-  border-bottom: 1px solid var(--site-line);
-}
-
-.home-intro h1,
-.home-lead-work h2,
-.home-section h2,
-.home-section h3 {
-  margin: 0;
-  color: var(--site-ink);
-  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI',
-    'Noto Sans SC', 'PingFang SC', sans-serif;
-}
-
-.home-intro h1 {
-  max-width: 10ch;
-  font-family: var(--site-display);
-  font-size: clamp(3.15rem, 6.6vw, 5.9rem);
-  line-height: 0.98;
-  letter-spacing: -0.04em;
-  text-wrap: balance;
-}
-
-.home-intro-lead {
-  max-width: 34rem;
-  margin: 30px 0 0;
-  color: var(--site-muted);
-  font-size: clamp(1.05rem, 1.7vw, 1.22rem);
-  line-height: 1.8;
-}
-
-.home-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px 22px;
-  margin-top: 30px;
-}
-
-.home-actions a {
-  color: var(--site-link);
-  font-weight: 750;
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 6px;
-}
-
-.home-actions a:first-child {
-  color: var(--site-link-strong);
-}
-
-.home-principles {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 18px;
-  margin-top: 54px;
-  padding-top: 18px;
-  border-top: 1px solid var(--site-line);
-}
-
-.home-principles dt {
-  margin-bottom: 5px;
-  color: var(--site-muted);
-  font-size: 12px;
-  font-weight: 750;
-}
-
-.home-principles dd {
-  margin: 0;
-  color: var(--site-ink);
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-.home-lead-work {
-  position: relative;
-  min-height: 420px;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  padding: clamp(30px, 5vw, 60px);
-  overflow: hidden;
-  border-radius: 16px;
-  background: #075a9c;
-  color: #ffffff;
-  box-shadow: 0 24px 70px rgba(4, 48, 82, 0.22);
-}
-
-.home-lead-work::before {
-  content: '';
+/* h1 只给读屏软件和搜索引擎，页头字标已经标明站点身份 */
+.home-title {
   position: absolute;
-  inset: 0;
-  opacity: 0.23;
-  background:
-    radial-gradient(circle at 78% 18%, transparent 0 52px, #ffffff 53px 54px, transparent 55px),
-    linear-gradient(145deg, transparent 0 58%, rgba(255, 255, 255, 0.34) 58.2% 58.5%, transparent 58.7%);
-  pointer-events: none;
-}
-
-.home-lead-work > * {
-  position: relative;
-}
-
-.home-lead-meta {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: auto;
-  color: rgba(255, 255, 255, 0.76);
-  font-size: 12px;
-  font-weight: 750;
-}
-
-.home-lead-work h2 {
-  max-width: 13ch;
-  margin-top: 88px;
-  color: #ffffff;
-  font-family: var(--site-display);
-  font-size: clamp(2.1rem, 4.4vw, 4.15rem);
-  line-height: 1.03;
-  letter-spacing: -0.035em;
-  text-wrap: balance;
-}
-
-.home-lead-work h2 a,
-.home-lead-work .home-text-link {
-  color: #ffffff;
-}
-
-.home-lead-work h2 a:hover {
-  text-decoration: none;
-}
-
-.home-lead-work > p {
-  max-width: 44rem;
-  margin: 24px 0 0;
-  color: rgba(255, 255, 255, 0.82);
-  font-size: 15px;
-  line-height: 1.75;
-}
-
-.home-text-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  width: fit-content;
-  margin-top: 26px;
-  color: var(--site-link);
-  font-weight: 750;
-  text-decoration: none;
-}
-
-.home-text-link span {
-  transition: transform 180ms ease-out;
-}
-
-.home-text-link:hover span {
-  transform: translateX(4px);
-}
-
-.home-section {
-  display: grid;
-  grid-template-columns: minmax(220px, 0.72fr) minmax(0, 1.28fr);
-  gap: clamp(52px, 9vw, 140px);
-  padding: 96px 0;
-  border-bottom: 1px solid var(--site-line);
-}
-
-.home-section-heading h2,
-.home-about h2 {
-  font-size: clamp(2rem, 3.6vw, 3.35rem);
-  line-height: 1.08;
-  letter-spacing: -0.035em;
-  text-wrap: balance;
-}
-
-.home-section-heading > p {
-  max-width: 25rem;
-  margin: 20px 0 0;
-  color: var(--site-muted);
-  line-height: 1.75;
-}
-
-.home-tool-list {
-  border-top: 1px solid var(--site-line);
-}
-
-.home-tool-list article {
-  display: grid;
-  grid-template-columns: minmax(138px, 0.5fr) minmax(150px, 0.72fr) minmax(0, 1.25fr) auto;
-  gap: 22px;
-  align-items: start;
-  padding: 30px 0;
-  border-bottom: 1px solid var(--site-line);
-}
-
-.home-tool-list article:last-child {
-  border-bottom: 0;
-}
-
-.home-tool-meta {
-  margin: 3px 0 0;
-  color: var(--site-signal);
-  font-size: 12px;
-  font-weight: 750;
-  line-height: 1.55;
-}
-
-.home-tool-list h3 {
-  font-size: 20px;
-  line-height: 1.35;
-}
-
-.home-tool-list h3 a {
-  color: var(--site-ink);
-}
-
-.home-tool-list article > p:not(.home-tool-meta) {
-  margin: 0;
-  color: var(--site-muted);
-  line-height: 1.7;
-}
-
-.home-tool-list .home-text-link {
-  margin: 0;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
   white-space: nowrap;
 }
 
-.home-note-groups {
-  display: grid;
-  gap: 58px;
+/* 广告位未配置时会返回 null，间距写在"前一块之后"，相邻块无论是谁都保持同样距离 */
+.home-page > .home-section + *,
+.home-page > .ad-slot + * {
+  margin-top: 64px;
 }
 
-.home-note-group-heading {
-  display: grid;
-  grid-template-columns: minmax(100px, 0.45fr) minmax(0, 1fr);
-  gap: 24px;
+.home-section-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 20px;
   padding-bottom: 16px;
-  border-bottom: 1px solid var(--site-line);
+  border-bottom: 2px solid var(--site-ink);
 }
 
-.home-note-group-heading h3 {
-  color: var(--site-signal);
-  font-size: 14px;
-  font-weight: 750;
-  line-height: 1.5;
-  letter-spacing: 0.06em;
-}
-
-.home-note-group-heading p {
+.home-section-heading h2 {
   margin: 0;
-  color: var(--site-muted);
-  font-size: 14px;
-  line-height: 1.6;
+  color: var(--site-ink);
+  font-size: 19px;
+  letter-spacing: -0.02em;
 }
 
-.home-note-groups ol {
+.home-section-heading > a,
+.home-section-heading > span {
+  color: var(--site-muted);
+  font-size: 13px;
+}
+
+.home-section-heading > a {
+  color: var(--site-link);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.home-list {
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.home-note-groups li {
-  padding: 22px 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--site-line) 72%, transparent);
-}
-
-.home-note-groups li > a {
+.home-list li {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 20px;
-  align-items: baseline;
-  color: var(--site-ink);
-  font-size: 19px;
-  font-weight: 750;
-  line-height: 1.45;
-  text-decoration: none;
+  gap: 6px 32px;
+  padding: 22px 0;
+  border-bottom: 1px solid var(--site-line);
 }
 
-.home-note-groups li > a:hover span {
-  color: var(--site-link);
-  text-decoration: underline;
+.home-list h3 {
+  grid-column: 1;
+  margin: 0;
+  font-size: 18px;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
+.home-list h3 a {
+  color: var(--site-ink);
+  text-decoration-thickness: 1px;
   text-underline-offset: 5px;
 }
 
-.home-note-groups time {
+.home-list h3 a:hover,
+.home-list h3 a:focus-visible {
+  color: var(--site-link);
+  text-decoration: underline;
+}
+
+.home-list li > p {
+  grid-column: 1;
+  max-width: 46rem;
+  margin: 0;
   color: var(--site-muted);
-  font-size: 12px;
-  font-weight: 550;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.home-list-aside {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  gap: 12px;
+  padding-top: 3px;
+  color: var(--site-muted);
+  font-size: 13px;
   font-variant-numeric: tabular-nums;
-}
-
-.home-note-groups li > p {
-  max-width: 48rem;
-  margin: 8px 0 0;
-  color: var(--site-muted);
-  font-size: 14px;
-  line-height: 1.65;
-}
-
-.home-about {
-  padding-bottom: 24px;
-  border-bottom: 0;
-}
-
-.home-about > div > p {
-  max-width: 50rem;
-  margin: 0 0 18px;
-  color: var(--site-muted);
-  font-size: 17px;
-  line-height: 1.82;
+  white-space: nowrap;
 }
 
 /* 广告位：首页和文章页共用，横幅按容器宽度选尺寸后居中 */
@@ -946,90 +724,20 @@ body {
   height: auto;
 }
 
-/* 首页分区自带底部分隔线，广告带只补下边线，避免出现双线 */
-.home-page > .ad-slot {
-  padding: 28px 0 32px;
-  border-top: 0;
-}
-
-@media (max-width: 900px) {
-  .home-hero {
-    min-height: 0;
-    grid-template-columns: 1fr;
-    gap: 58px;
-    padding: 66px 0 72px;
-  }
-
-  .home-intro h1 {
-    max-width: 12ch;
-  }
-
-  .home-section {
-    grid-template-columns: 1fr;
-    gap: 48px;
-    padding: 74px 0;
-  }
-
-  .home-tool-list article {
-    grid-template-columns: minmax(120px, 0.5fr) minmax(150px, 0.8fr) minmax(0, 1fr);
-  }
-
-  .home-tool-list .home-text-link {
-    grid-column: 2;
-  }
-}
-
 @media (max-width: 640px) {
   .home-page {
-    width: min(100% - 28px, 1180px);
+    width: min(100% - 28px, 1100px);
+    padding-top: 40px;
   }
 
-  .home-hero {
-    padding-top: 48px;
-  }
-
-  .home-intro h1 {
-    font-size: clamp(3rem, 15vw, 4.5rem);
-  }
-
-  .home-principles {
+  .home-list li {
     grid-template-columns: 1fr;
-    gap: 15px;
   }
 
-  .home-principles > div {
-    display: grid;
-    grid-template-columns: 74px 1fr;
-  }
-
-  .home-lead-work {
-    min-height: 420px;
-    padding: 26px;
-  }
-
-  .home-lead-work h2 {
-    font-size: clamp(2.35rem, 11vw, 3.2rem);
-  }
-
-  .home-tool-list article {
-    grid-template-columns: 1fr;
-    gap: 10px;
-    padding: 25px 0;
-  }
-
-  .home-tool-list .home-text-link {
-    grid-column: auto;
-    margin-top: 6px;
-  }
-
-  .home-note-group-heading {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
-
-  .home-note-groups li > a {
-    grid-template-columns: 1fr;
-    gap: 5px;
+  .home-list-aside {
+    grid-column: 1;
+    grid-row: auto;
+    padding-top: 2px;
   }
 }
 
@@ -1286,7 +994,6 @@ body {
   letter-spacing: -0.055em;
 }
 
-.tools-index > header > p:last-child,
 .browser-tool-page > header > p {
   max-width: 700px;
   margin: 28px 0 0;
@@ -1385,13 +1092,6 @@ body {
   margin-top: 76px;
   padding-top: 32px;
   border-top: 1px solid var(--site-line);
-}
-
-.tools-index-note > p {
-  max-width: 670px;
-  margin: 0;
-  color: var(--site-muted);
-  line-height: 1.8;
 }
 
 .tools-index-note > div {

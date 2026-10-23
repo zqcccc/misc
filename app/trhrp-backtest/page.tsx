@@ -1603,7 +1603,7 @@ export default function TrhrpBacktestPage() {
               </li>
               <li>
                 <b>risk-on满仓（余皆现金）</b>：二元择时——仅 risk_on 时满仓进标的，moderate /
-                risk_off 全部现金。最简单粗暴的「该不该在场内」判断。图中青虚线。
+                risk_off 全部现金。图中青虚线。
               </li>
             </ul>
           </div>

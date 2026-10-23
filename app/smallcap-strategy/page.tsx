@@ -387,11 +387,9 @@ export default function SmallCapStrategyPage() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b pb-6 dark:border-gray-800">
         <div>
           <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 mb-2 border border-amber-200 dark:border-amber-800">
-            <span>⚡ 聚宽 (JoinQuant) 顶流小市值微利轮动</span>
+            <span>⚡ 聚宽 (JoinQuant) 小市值微利轮动</span>
             <span>•</span>
-            <span>实操持仓宽度实测</span>
-            <span>•</span>
-            <span>严格 T+1 撮合</span>
+            <span>T+1 撮合</span>
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100 flex items-center gap-2">
             <span>📦</span> {data.strategy_name}
@@ -414,7 +412,7 @@ export default function SmallCapStrategyPage() {
               }`}
             >
               <span>⭐ 7 只</span>
-              <span className="text-[10px] font-normal opacity-90">(首推·收益最高)</span>
+              <span className="text-[10px] font-normal opacity-90">(收益最高)</span>
             </button>
             <button
               onClick={() => setActiveN('8')}
@@ -497,7 +495,7 @@ export default function SmallCapStrategyPage() {
           </div>
 
           <div className="rounded-lg bg-white dark:bg-gray-900/60 border dark:border-gray-800 p-3">
-            <div className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">收益改善是真的</div>
+            <div className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">收益改善</div>
             <div className="text-sm font-bold text-gray-900 dark:text-gray-100 mt-1">
               两段检验均显著
             </div>
@@ -514,12 +512,12 @@ export default function SmallCapStrategyPage() {
             </div>
             <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
               多相位抹掉调仓日历运气后（vs 20 日）+4.35pp（p=0.71）→ 全段 <b>+0.22pp（p=0.93）</b>。
-              漂亮数字来自只调仓 11 次的运气，不是频率优势。
+              季频的高收益来自只调仓 11 次的运气。
             </div>
           </div>
 
           <div className="rounded-lg bg-white dark:bg-gray-900/60 border dark:border-gray-800 p-3">
-            <div className="text-xs font-semibold text-gray-600 dark:text-gray-300">它的局限</div>
+            <div className="text-xs font-semibold text-gray-600 dark:text-gray-300">局限</div>
             <div className="text-sm font-bold text-gray-900 dark:text-gray-100 mt-1">
               选股 alpha 不显著
             </div>
@@ -533,7 +531,7 @@ export default function SmallCapStrategyPage() {
         <div className="text-xs text-gray-500 dark:text-gray-400 mt-3 pt-3 border-t border-amber-200/70 dark:border-amber-900/40 leading-relaxed">
           <b className="text-gray-700 dark:text-gray-300">机理</b>：合成信号主体是 liqsize20（小盘规模）+ ivol60（低特质波动）两个慢变量，
           rank IC 随持有期单调上升、到 h≈60~90 个交易日才饱和 —— 提前调仓换不来新信息，只换来换手和成本。
-          <b className="text-gray-700 dark:text-gray-300">缓冲带 buffer</b> 实测形同虚设（N=7 / 池内 2600 只 = 万里挑三，每期仍换约 13 只），
+          <b className="text-gray-700 dark:text-gray-300">缓冲带 buffer</b> 实测基本不起作用（N=7，池内 2600 只，每期仍换约 13 只），
           加大到 6.0 也只省 9.5% 换手，已验证无需调整。
         </div>
 
@@ -566,7 +564,6 @@ export default function SmallCapStrategyPage() {
           <div className="text-xl font-bold text-rose-600 dark:text-rose-400 mt-1">
             {fmtPct(m.max_drawdown_pct)}
           </div>
-          <div className="text-xs text-gray-400 mt-1">历史最深下潜</div>
         </div>
 
         <div className="p-4 rounded-xl border border-rose-200 dark:border-rose-900/40 bg-rose-50/30 dark:bg-rose-950/10 shadow-sm">
@@ -599,16 +596,11 @@ export default function SmallCapStrategyPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b pb-3 dark:border-gray-800">
           <div>
             <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-              <span>🔬</span> 持仓数量 N 敏感性对比与实操选型矩阵 (严谨回测)
+              <span>🔬</span> 持仓数量 N 敏感性对比
             </h2>
             <p className="text-xs text-gray-500 mt-0.5">
-              回测覆盖 2019-2026 全时段，内生印花税、佣金与滑点，特别考核 2024 年初极端踩踏抗击力（点击任意行可直接切换看板）
+              回测覆盖 2019-2026，计入印花税、佣金与滑点，单列 2024 年初踩踏期回撤（点击任意行切换看板）
             </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs px-2.5 py-1 rounded bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300 font-medium">
-              推荐配置: ⭐ 7 只 (默认首推·全场收益最高) 或 8 只 (防守回撤最佳)
-            </span>
           </div>
         </div>
 
@@ -705,16 +697,16 @@ export default function SmallCapStrategyPage() {
         {/* 选型依据说明 */}
         <div className="p-3.5 rounded-lg bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 text-xs text-amber-900 dark:text-amber-200 leading-relaxed space-y-1.5">
           <div className="font-bold flex items-center gap-1.5">
-            <span>💡</span> 实操选型建议：6 只、7 只 还是 8 只？
+            <span>💡</span> 6 只、7 只、8 只怎么选
           </div>
           <div>
-            • <strong>如果您最看重绝对年化收益与爆发力</strong>：选 <strong>7 只 (N=7)</strong>。年化复合收益达 <strong>21.01%</strong> 为全场最高峰，纯 Alpha 达 10.32% (NW t=1.79)，蒙卡 P5 达 1.12；
+            • <strong>7 只 (N=7)</strong>：年化复合收益 <strong>21.01%</strong>，各配置中最高；纯 Alpha 10.32% (NW t=1.79)，蒙卡 P5 1.12；
           </div>
           <div>
-            • <strong>如果您更看重在极端黑天鹅行情下的回撤控制</strong>：选 <strong>8 只 (N=8)</strong>。年化收益保持 20.65% 的同时，将 2024 年初极端踩踏回撤从 7 只的 -47.43% 进一步压低至 <strong>-44.61%</strong>，夏普最高 (0.831)；
+            • <strong>8 只 (N=8)</strong>：年化收益 20.65%，2024 年初踩踏回撤从 7 只的 -47.43% 降至 <strong>-44.61%</strong>，夏普最高 (0.831)；
           </div>
           <div>
-            • <strong>6 只 (N=6)</strong> 虽然年化高达 20.99%，但 2024 初踩踏下杀达 <strong>-49.44%</strong>（全期回撤 -52.04%），性价比略逊于 7 只。
+            • <strong>6 只 (N=6)</strong>：年化 20.99%，但 2024 初踩踏回撤 <strong>-49.44%</strong>（全期回撤 -52.04%），收益和回撤都不如 7 只。
           </div>
         </div>
       </div>
@@ -723,10 +715,10 @@ export default function SmallCapStrategyPage() {
       <div className="rounded-xl border border-indigo-100 dark:border-indigo-900/40 bg-indigo-50/30 dark:bg-indigo-950/10 p-5 space-y-3">
         <div className="flex items-center gap-2 border-b pb-2 border-indigo-100 dark:border-indigo-900/40">
           <span className="text-base font-bold text-indigo-950 dark:text-indigo-200">
-            ⏰ 实操指南：这个调仓到底是什么时候操作？怎么执行？
+            ⏰ 调仓执行时间与方式
           </span>
           <span className="text-xs px-2 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300">
-            双周轮动 · 极低换手
+            双周轮动
           </span>
         </div>
 
@@ -736,19 +728,19 @@ export default function SmallCapStrategyPage() {
               <span>方案 A (最贴合回测)：T+1 日早盘集合竞价 (09:15 ~ 09:25)</span>
             </div>
             <div>
-              1. <strong>T 日收盘后 (15:10)</strong>：系统自动根据收盘 K 线计算完成，生成最新持仓。若有调仓提示，您可在晚上或早晨看好买卖清单；
+              1. <strong>T 日收盘后 (15:10)</strong>：根据收盘 K 线计算并生成最新持仓。有调仓时，可在当晚或次日早晨查看买卖清单；
             </div>
             <div>
               2. <strong>T+1 日早盘 09:15~09:25</strong>：在交易软件中直接挂出<strong>集合竞价委托</strong>（调出的股票挂跌停价卖出，调入的股票挂涨停价买入）；
             </div>
             <div>
-              3. <strong>09:25 统一成交</strong>：沪深撮合机制保证买卖全部以<strong>当日唯一起始开盘价 (Open)</strong> 成交，与回测假定 100% 吻合！
+              3. <strong>09:25 统一成交</strong>：集合竞价以当日开盘价 (Open) 成交，与回测假设一致。
             </div>
           </div>
 
           <div className="p-3.5 bg-white dark:bg-gray-900 rounded-lg border dark:border-gray-800 space-y-1.5">
             <div className="font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
-              <span>方案 B (最稳健从容)：T+1 日开盘后分批 (09:35 ~ 09:45)</span>
+              <span>方案 B：T+1 日开盘后分批 (09:35 ~ 09:45)</span>
             </div>
             <div>
               1. <strong>避开开盘前 5 分钟波动</strong>：09:30~09:35 小微盘股容易受情绪脉冲影响，建议等待 5 分钟盘面平稳；
@@ -757,7 +749,7 @@ export default function SmallCapStrategyPage() {
               2. <strong>先卖后买</strong>：09:35 先按买一价将调出标的卖出，资金实时可用；
             </div>
             <div>
-              3. <strong>再买入调入标的</strong>：对照下方表格里的<strong>建议股数/手数</strong>挂单买入。因有 2.0x 滞后带缓冲，双周调仓通常<strong>平均每次只变动 1~2 只股票</strong>，其余继续持有不动，手动极轻松！
+              3. <strong>再买入调入标的</strong>：对照下方表格里的<strong>建议股数/手数</strong>挂单买入。因有 2.0x 滞后带缓冲，双周调仓平均每次只变动 1~2 只股票，其余继续持有。
             </div>
           </div>
         </div>
@@ -833,13 +825,13 @@ export default function SmallCapStrategyPage() {
         {/* 科创板与主板交易规则精准说明框 */}
         <div className="p-3 rounded-lg bg-sky-50/60 dark:bg-sky-950/20 border border-sky-100 dark:border-sky-900/40 text-xs text-sky-950 dark:text-sky-200 space-y-1 leading-relaxed">
           <div className="font-bold flex items-center gap-1">
-            <span>⚖️</span> A 股各板块真实买入规则已自动适配：
+            <span>⚖️</span> A 股各板块买入规则：
           </div>
           <div>
             1. <strong>主板 (60/00开头) & 创业板 (30开头)</strong>：单笔买入必须是 <strong>100 股 (1 手) 的整数倍</strong>；
           </div>
           <div>
-            2. <strong>科创板 (688开头) 特别规定</strong>：上交所规定单笔申报<strong>起购不小于 200 股，超过 200 股后可以以 1 股为单位递增</strong>（例如 201 股、327 股均合规有效）。表格中已自动为您按此规则精确折算！
+            2. <strong>科创板 (688开头)</strong>：上交所规定单笔申报<strong>起购不小于 200 股，超过 200 股后可以以 1 股为单位递增</strong>（例如 201 股、327 股）。表格已按此规则折算。
           </div>
         </div>
 

@@ -4,7 +4,7 @@ import Link from 'next/link'
 export const metadata: Metadata = {
   title: '自用工具',
   description:
-    'c9cu 的研究工具与浏览器工具：说明维护状态、数据来源、处理位置和已知局限。',
+    'c9cu 的研究工具与浏览器工具：A 股策略信号与回测、小微盘持仓与回测、利润线与估值，以及在本地浏览器处理的图片合并、图片压缩和元素滚动截图扩展。',
   alternates: { canonical: '/tools' },
 }
 
@@ -18,17 +18,17 @@ const tools = [
   },
   {
     name: '聚宽小微盘量化持仓与回测',
-    desc: '聚宽顶流小市值微利轮动策略：30 只股票最新持仓明细、市值分布、调仓历史及严谨因果回测。',
+    desc: '聚宽小市值微利轮动策略：30 只股票的最新持仓明细、市值分布、调仓历史及因果回测。',
     href: '/smallcap-strategy',
     kind: '研究工具',
-    detail: '严格 T+1 撮合与历史真实摩擦；包含 2024 年初流动性挤兑压力测试。',
+    detail: 'T+1 撮合，计入历史真实摩擦；包含 2024 年初流动性挤兑压力测试。',
   },
   {
     name: '利润线与估值',
     desc: '把股价、TTM EPS、利润线、估值区间与分红记录放进同一时间轴。',
     href: '/pe',
     kind: '研究工具',
-    detail: '使用公开市场数据；页面标注更新时间与研究边界。',
+    detail: '使用公开市场数据，页面标注更新时间。',
   },
   {
     name: '图片合并',
@@ -46,10 +46,10 @@ const tools = [
   },
   {
     name: '元素滚动截图 (Element Scroll Capture)',
-    desc: '选定页面中任意带滚动条的内部容器（聊天记录、后台表格、代码框），自动逐屏滚动并无缝拼接为完整长图。',
+    desc: '选定页面中任意带滚动条的内部容器（聊天记录、后台表格、代码框），自动逐屏滚动并拼接为完整长图。',
     href: '/tools/element-scroll-capture',
     kind: 'Chrome 扩展',
-    detail: '纯前端 Manifest V3 架构，图像仅在本地内存与 IndexedDB 处理，不上传服务器；已上架 Chrome 商店。',
+    detail: 'Manifest V3 扩展，图像只在本地内存与 IndexedDB 处理，不上传服务器；已上架 Chrome 商店。',
   },
 ]
 
@@ -57,10 +57,7 @@ export default function ToolsHome() {
   return (
     <main className='tools-index'>
       <header>
-        <h1>解决我自己反复遇到的问题。</h1>
-        <p>
-          这里不是随手堆出来的工具导航。每个页面都说明它在处理什么、数据从哪里来，以及哪些结论不能从结果中推出。
-        </p>
+        <h1>工具</h1>
       </header>
 
       <section aria-labelledby='tools-list-title'>
@@ -91,10 +88,7 @@ export default function ToolsHome() {
       </section>
 
       <aside className='tools-index-note'>
-        <h2>隐私与责任</h2>
-        <p>
-          图片工具使用浏览器能力在本地完成计算；研究工具的数据和算法有明确边界。本站不会把“免费”包装成无条件保证，也不会隐藏金融工具的风险提示。
-        </p>
+        <h2>相关说明</h2>
         <div>
           <Link href='/privacy'>隐私说明</Link>
           <Link href='/standards'>内容与披露原则</Link>

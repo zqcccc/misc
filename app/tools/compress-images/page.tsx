@@ -34,17 +34,17 @@ export default function Page() {
         <h2 id='compress-guide-title'>怎么用</h2>
         <ol>
           <li><strong>加入图片。</strong><span>可拖放、点击选择或直接粘贴，多张图片会逐项处理。</span></li>
-          <li><strong>设置目标。</strong><span>选择尺寸、格式和质量；降低尺寸通常比一味降低质量更有效。</span></li>
+          <li><strong>设置目标。</strong><span>选择尺寸、格式和质量。</span></li>
           <li><strong>检查并下载。</strong><span>对比输出体积，单独下载或打包为 ZIP。</span></li>
         </ol>
       </section>
 
       <section className='browser-tool-faq' aria-labelledby='compress-when-title'>
-        <h2 id='compress-when-title'>什么时候该用它，什么时候不该</h2>
+        <h2 id='compress-when-title'>适合与不适合</h2>
         <div>
           <h3>适合</h3>
           <p>
-            网站或文章配图上传前压一压、把手机拍的一批照片压到能发邮件的体积、把一堆截图打包前先瘦身。也适合批量统一图片宽度——比如把一组宽度不一的配图全部限制到 1200px 以内。
+            网站或文章配图上传前压缩、把手机拍的一批照片压到能发邮件的体积、把一堆截图打包前先缩小。也适合批量统一图片宽度，比如把一组宽度不一的配图全部限制到 1200px 以内。
           </p>
           <h3>不适合</h3>
           <p>
@@ -54,11 +54,11 @@ export default function Page() {
       </section>
 
       <section className='browser-tool-faq' aria-labelledby='compress-params-title'>
-        <h2 id='compress-params-title'>怎么压最有效：先缩尺寸，再降质量</h2>
+        <h2 id='compress-params-title'>先缩尺寸，再降质量</h2>
         <div>
           <h3>为什么缩尺寸比降质量更管用</h3>
           <p>
-            图片体积大致与像素数量的平方关系增长：宽度减半，像素数变成四分之一，体积往往也降到四分之一左右。而调低质量只是在已有的每个像素上丢弃细节，压到一定程度就会出现色块和噪点，画面先崩、体积却没小多少。所以<strong>先把尺寸压到实际需要的上限，再微调质量</strong>，通常能得到又小又干净的图。
+            图片体积大致随像素数量增长：宽度减半，像素数变成四分之一，体积往往也降到四分之一左右。而调低质量只是在已有的每个像素上丢弃细节，压到一定程度就会出现色块和噪点，画面先变差，体积却没小多少。所以<strong>先把尺寸压到实际需要的上限，再微调质量</strong>。
           </p>
           <h3>两种尺寸模式的区别</h3>
           <p>
@@ -70,7 +70,7 @@ export default function Page() {
           </p>
           <h3>格式怎么选</h3>
           <p>
-            <strong>WebP</strong> 在同等观感下通常明显小于 JPEG，现代浏览器与主流 App 都支持，是网页配图的首选。<strong>JPEG</strong> 兼容性最好，适合照片，但不支持透明。<strong>PNG</strong> 无损并支持透明，只留给图标、文字截图和必须透明的图——照片存成 PNG 往往会大得离谱。
+            <strong>WebP</strong> 在同等观感下通常明显小于 JPEG，现代浏览器与主流 App 都支持，适合网页配图。<strong>JPEG</strong> 兼容性最好，适合照片，但不支持透明。<strong>PNG</strong> 无损并支持透明，适合图标、文字截图和必须透明的图；照片存成 PNG 体积往往很大。
           </p>
           <p>
             质量一般从 80 起步：先看实际用途下够不够清晰，还嫌大就往 70 调，不建议低于 60。
@@ -81,8 +81,6 @@ export default function Page() {
       <section className='browser-tool-faq' aria-labelledby='compress-faq-title'>
         <h2 id='compress-faq-title'>使用边界</h2>
         <div>
-          <h3>PNG 为什么可能压不小？</h3>
-          <p>PNG 是无损格式，照片类内容转为 WebP 或 JPEG 通常更省空间；图标、透明图和文字截图则更适合保留 PNG。</p>
           <h3>压缩是否会损失画质？</h3>
           <p>缩小尺寸或降低有损格式质量都会减少细节。建议先用默认值导出，查看实际用途下是否清晰。</p>
         </div>

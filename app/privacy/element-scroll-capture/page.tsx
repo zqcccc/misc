@@ -67,7 +67,7 @@ const SECTIONS_ZH: Section[] = [
       },
       {
         term: 'scripting',
-        desc: '把扩展自带的本地脚本注入当前标签页，用于探测可滚动元素、控制滚动、测量元素几何位置。本扩展刻意没有声明常驻 content_scripts，就是为了避免在你不使用时在所有网页上运行。',
+        desc: '把扩展自带的本地脚本注入当前标签页，用于探测可滚动元素、控制滚动、测量元素几何位置。本扩展没有声明常驻 content_scripts，你不使用时它不会在任何网页上运行。',
       },
       {
         term: 'storage',
@@ -82,7 +82,7 @@ const SECTIONS_ZH: Section[] = [
   {
     title: '六、数据共享',
     paragraphs: [
-      '本扩展不向任何第三方出售、转让或披露任何数据——因为根本不存在被收集的数据。',
+      '本扩展不收集数据，也不向任何第三方出售、转让或披露数据。',
     ],
   },
   {
@@ -161,7 +161,7 @@ const SECTIONS_EN: Section[] = [
       },
       {
         term: 'scripting',
-        desc: 'Injects the extension’s own bundled local scripts into the current tab to detect scrollable elements, control scrolling, and measure element geometry. This extension deliberately declares no persistent content_scripts, precisely so that it does not run on every web page when you are not using it.',
+        desc: 'Injects the extension’s own bundled local scripts into the current tab to detect scrollable elements, control scrolling, and measure element geometry. This extension declares no persistent content_scripts, so it does not run on any web page when you are not using it.',
       },
       {
         term: 'storage',
@@ -176,7 +176,7 @@ const SECTIONS_EN: Section[] = [
   {
     title: '6. Data sharing',
     paragraphs: [
-      'This extension does not sell, transfer, or disclose any data to any third party — because no data is collected in the first place.',
+      'This extension collects no data, and does not sell, transfer, or disclose any data to any third party.',
     ],
   },
   {
@@ -273,10 +273,9 @@ export default function ElementScrollCapturePrivacyPage() {
             生效日期：{EFFECTIVE_DATE}
           </p>
           <p className='mt-1 text-sm text-gray-600 dark:text-gray-400'>
-            本页为 Chrome 扩展「{EXTENSION_NAME_ZH}」的隐私政策。
             <Link
               href='/tools/element-scroll-capture'
-              className='ml-2 underline underline-offset-2 font-medium hover:text-gray-900 dark:hover:text-gray-100'
+              className='underline underline-offset-2 font-medium hover:text-gray-900 dark:hover:text-gray-100'
             >
               查看扩展详情与安装 →
             </Link>
@@ -303,11 +302,9 @@ export default function ElementScrollCapturePrivacyPage() {
             Effective date: {EFFECTIVE_DATE}
           </p>
           <p className='mt-1 text-sm text-gray-600 dark:text-gray-400'>
-            This is the privacy policy of the Chrome extension
-            {` “${EXTENSION_NAME_EN}”`}.
             <Link
               href='/tools/element-scroll-capture'
-              className='ml-2 underline underline-offset-2 font-medium hover:text-gray-900 dark:hover:text-gray-100'
+              className='underline underline-offset-2 font-medium hover:text-gray-900 dark:hover:text-gray-100'
             >
               View Extension Details & Install →
             </Link>

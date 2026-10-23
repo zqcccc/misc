@@ -3,7 +3,7 @@ export const SITE_URL = 'https://onlylike.work'
 export const SITE_EMAIL = 'zhao172232502@gmail.com'
 export const SITE_TITLE = 'c9cu · 研究、工程与自用工具'
 export const SITE_DESCRIPTION =
-  'c9cu 的个人网站：记录亲自做过的投资研究、工程实践和自用工具，并说明方法、证据与局限。'
+  'c9cu 的个人网站：投资研究、工程实践和自用工具。'
 
 // 站点默认分享图。分享卡片(含 X/Twitter)封面靠 og:image / twitter:image 标签决定，
 // 文章没在 frontmatter 里写 cover 时统一回落到这张。
@@ -88,22 +88,10 @@ export function isPublicPost(post: PostLike): boolean {
 
 export type SiteCategory = 'research' | 'engineering' | 'reflection'
 
-export const SITE_CATEGORIES: Record<
-  SiteCategory,
-  { label: string; description: string }
-> = {
-  research: {
-    label: '研究',
-    description: '投资、估值与策略实验，保留数据口径和方法局限。',
-  },
-  engineering: {
-    label: '工程',
-    description: '来自真实项目的实现记录、踩坑和可复现步骤。',
-  },
-  reflection: {
-    label: '记录',
-    description: '个人观察、年度回顾，以及对工具变化的判断。',
-  },
+export const SITE_CATEGORIES: Record<SiteCategory, { label: string }> = {
+  research: { label: '研究' },
+  engineering: { label: '工程' },
+  reflection: { label: '记录' },
 }
 
 export function getPostCategory(post: PostLike): SiteCategory {

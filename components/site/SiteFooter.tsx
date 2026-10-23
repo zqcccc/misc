@@ -5,10 +5,7 @@ export default function SiteFooter() {
   return (
     <footer className='site-footer'>
       <div className='site-footer-inner'>
-        <div className='site-footer-statement'>
-          <strong>c9cu</strong>
-          <p>只公开亲自做过、愿意解释过程，也愿意承认局限的东西。</p>
-        </div>
+        <strong className='site-footer-name'>c9cu</strong>
         <nav aria-label='页脚导航'>
           <Link href='/about'>关于</Link>
           <Link href='/contact'>联系</Link>

@@ -63,7 +63,7 @@ export default function AShareStrategyPage() {
         }
         const tabTitles = {
           full: '策略累计净值走势 (全样本 2019 ~ 2026.09 最新)',
-          recent: '最新绝密盲测段净值走势 (2026.03 ~ 2026.09 最新)',
+          recent: '最新盲测段净值走势 (2026.03 ~ 2026.09)',
           oos: '前瞻样本外净值走势 (2024 ~ 2026.02)',
         }
         const option1 = {
@@ -216,11 +216,9 @@ export default function AShareStrategyPage() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b pb-6 dark:border-gray-800">
         <div>
           <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 mb-2">
-            <span>🟢 数据已更新至最新: {latestDate}</span>
+            <span>🟢 数据更新至 {latestDate}</span>
             <span>•</span>
-            <span>EP004 因果因果检验 100% PASS</span>
-            <span>•</span>
-            <span>绝无未来函数</span>
+            <span>EP004 因果检验 100% PASS</span>
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
             A 股核心赛道龙头相对强弱 Alpha 策略 (精选 2~3 只股)
@@ -253,7 +251,7 @@ export default function AShareStrategyPage() {
                 : 'text-gray-500 hover:text-gray-900 dark:text-gray-400'
             }`}
           >
-            最新绝密盲测 (2026.03~09)
+            最新盲测 (2026.03~09)
           </button>
           <button
             onClick={() => setActiveTab('oos')}
@@ -299,9 +297,7 @@ export default function AShareStrategyPage() {
           <div className="text-xl font-bold text-sky-600 dark:text-sky-400 mt-1">
             {fmtPct(alphaDecomp.annual_alpha)}
           </div>
-          <div className="text-xs text-emerald-600 dark:text-emerald-400 mt-1 font-medium">
-            p = {fmtNum(alphaDecomp.p_value, 4)} 显著!
-          </div>
+          <div className="text-xs text-gray-400 mt-1">p = {fmtNum(alphaDecomp.p_value, 4)}</div>
         </div>
 
         <div className="p-4 rounded-xl border bg-white dark:bg-gray-900/60 dark:border-gray-800 shadow-sm">
@@ -317,7 +313,7 @@ export default function AShareStrategyPage() {
           <div className="text-xl font-bold text-gray-800 dark:text-gray-200 mt-1">
             {fmtNum(metrics.annual_turnover, 1)}x
           </div>
-          <div className="text-xs text-gray-400 mt-1">月度低换手稳健轮动</div>
+          <div className="text-xs text-gray-400 mt-1">月度调仓</div>
         </div>
       </div>
 
@@ -326,13 +322,12 @@ export default function AShareStrategyPage() {
         <div className="flex items-center justify-between border-b pb-3 border-sky-100 dark:border-sky-900/40">
           <div className="flex items-center gap-2">
             <span className="text-base font-bold text-sky-950 dark:text-sky-200">
-              🔥 最新绝密测试段验证 (2026-03-01 ~ {latestDate} 今日)
+              最新盲测段 (2026-03-01 ~ {latestDate})
             </span>
             <span className="text-xs px-2 py-0.5 rounded bg-sky-100 dark:bg-sky-900/60 text-sky-700 dark:text-sky-300">
-              真实盲测无参数泄露
+              无参数泄露
             </span>
           </div>
-          <span className="text-xs text-gray-500">大盘震荡下跌 -2.51% 环境实测</span>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
@@ -348,21 +343,19 @@ export default function AShareStrategyPage() {
             <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
               {fmtPct((recentOOS?.metrics?.total_return || 0) - (recentOOS?.metrics?.benchmark_total_return || 0))}
             </div>
-            <div className="text-gray-400">弱势震荡成功取得正超额</div>
           </div>
           <div className="p-3 bg-white dark:bg-gray-900 rounded-lg border dark:border-gray-800">
             <div className="text-gray-500">区间胜率 / 盈亏比</div>
             <div className="text-lg font-bold text-indigo-600 dark:text-indigo-400 mt-0.5">
               {fmtPct(recentOOS?.metrics?.win_rate, 1)} / {fmtNum(recentOOS?.metrics?.profit_loss_ratio)}
             </div>
-            <div className="text-gray-400">严格止损防范深跌</div>
           </div>
           <div className="p-3 bg-white dark:bg-gray-900 rounded-lg border dark:border-gray-800">
-            <div className="text-gray-500">防未来函数双盲因果审计</div>
+            <div className="text-gray-500">未来函数检验</div>
             <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
               100% PASS
             </div>
-            <div className="text-gray-400">全量 vs 截断 21个交易日零偏差</div>
+            <div className="text-gray-400">全量 vs 截断 21 个交易日零偏差</div>
           </div>
         </div>
       </div>
@@ -417,7 +410,7 @@ export default function AShareStrategyPage() {
                 <div className="font-bold text-sm mb-1 flex items-center gap-1.5">
                   <span>🛡️</span> 触发宏观避险过滤: 100% 现金空仓避险
                 </div>
-                当前沪深300指数（510300）跌破 60 日均线且 20 日均线下行，系统判定处于弱势防守期，坚决拒绝逆势加仓，保持 100% 现金储备，等待大盘右侧信号。
+                当前沪深300指数（510300）跌破 60 日均线且 20 日均线下行，判定为弱势防守期，不逆势加仓，保持 100% 现金，等待大盘右侧信号。
               </div>
             )}
 

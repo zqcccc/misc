@@ -114,7 +114,7 @@ export default async function Post(props: PageProps) {
         <aside className='article-disclosure'>
           <strong>研究边界</strong>
           <p>
-            本文记录个人研究过程，不构成投资建议或收益承诺。历史数据与回测不能保证未来结果；请结合数据截至日、方法局限和独立资料判断。
+            本文不构成投资建议或收益承诺。历史数据与回测不能保证未来结果；请结合数据截至日、方法局限和独立资料判断。
           </p>
           <Link href='/standards#financial'>查看完整披露</Link>
         </aside>
@@ -123,7 +123,7 @@ export default async function Post(props: PageProps) {
       {archived && (
         <aside className='article-archive-notice'>
           <strong>这是一份历史研究档案</strong>
-          <p>相关实时监控与定时数据服务已经下线，文中的规则和历史结果保留作研究记录，不代表当前仍在运行。</p>
+          <p>相关实时监控与定时数据服务已经下线，文中的规则和历史结果仅作研究记录保留。</p>
         </aside>
       )}
 
@@ -136,10 +136,6 @@ export default async function Post(props: PageProps) {
       <AdSlot slot={AD_SLOT.POST_BOTTOM} />
 
       <footer className='article-footer'>
-        <div>
-          <strong>关于作者</strong>
-          <p>c9cu 在这里记录亲自做过的研究、工程实践和自用工具，并尽量保留方法、证据与局限。</p>
-        </div>
         <nav aria-label='文章相关链接'>
           <Link href='/about'>关于 c9cu</Link>
           <Link href='/contact'>报告错误</Link>

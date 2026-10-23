@@ -21,7 +21,7 @@ export default function PrivacyPage() {
     <main className='trust-page'>
       <header>
         <h1>隐私政策</h1>
-        <p>生效日期：2026 年 10 月 23 日。这里只描述 onlylike.work 目前实际发生的数据处理。</p>
+        <p>生效日期：2026 年 10 月 23 日。</p>
       </header>
 
       <section>

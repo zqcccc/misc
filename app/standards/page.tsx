@@ -18,7 +18,6 @@ export default function StandardsPage() {
     <main className='trust-page'>
       <header>
         <h1>内容与披露原则</h1>
-        <p>这不是一份漂亮话清单，而是 onlylike.work 判断一项内容是否应该继续公开的最低标准。</p>
       </header>
 
       <section>

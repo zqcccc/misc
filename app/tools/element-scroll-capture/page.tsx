@@ -8,12 +8,12 @@ const CHROME_STORE_URL =
 export const metadata: Metadata = {
   title: '元素滚动截图 · Element Scroll Capture (Chrome 扩展)',
   description:
-    '选定页面中任意带滚动条的局部容器（后台表格、聊天记录、代码框），自动逐屏滚动并无缝拼接成高清长图。纯前端 Manifest V3 架构，图像仅在本地内存与 IndexedDB 处理，不上传服务器。',
+    '选定页面中任意带滚动条的局部容器（后台表格、聊天记录、代码框），自动逐屏滚动并拼接成长图。Manifest V3 扩展，图像只在本地内存与 IndexedDB 处理，不上传服务器。',
   alternates: { canonical: '/tools/element-scroll-capture' },
   openGraph: {
     title: '元素滚动截图 · Element Scroll Capture',
     description:
-      '选定任意内部滚动元素，自动逐屏滚动拼接为完整长图。纯本地处理，零数据收集。',
+      '选定任意内部滚动元素，自动逐屏滚动拼接为完整长图。图像在本地处理，不收集数据。',
     url: '/tools/element-scroll-capture',
     type: 'website',
   },
@@ -28,22 +28,22 @@ const screenshots = [
   {
     src: '/images/element-scroll-capture/preview-2.png',
     title: '自定义参数面板',
-    caption: '自由配置滚动等待间隔、重叠容错、输出格式（PNG/JPEG）及图片尺寸上限。',
+    caption: '配置滚动等待间隔、重叠容错、输出格式（PNG/JPEG）及图片尺寸上限。',
   },
   {
     src: '/images/element-scroll-capture/preview-3.png',
     title: '自动步进与拼接',
-    caption: '扩展平滑驱动容器向下滚动，实时显示捕获进度，随时可暂停或中止。',
+    caption: '扩展驱动容器向下滚动，显示捕获进度，可暂停或中止。',
   },
   {
     src: '/images/element-scroll-capture/preview-4.png',
     title: '本地历史管理',
-    caption: '结果暂存于本地 IndexedDB，保留最近 5 张便于反复查看，用完即删。',
+    caption: '结果暂存于本地 IndexedDB，只保留最近 5 张。',
   },
   {
     src: '/images/element-scroll-capture/preview-5.png',
-    title: '超长完整长图导出',
-    caption: '支持新标签页大图全屏缩放检查，提供一键下载与快速复制到剪贴板。',
+    title: '长图导出',
+    caption: '在新标签页全屏缩放查看，可下载或复制到剪贴板。',
   },
 ]
 
@@ -51,22 +51,17 @@ const features = [
   {
     tag: '精准锁定',
     title: '内部容器级滚动截取',
-    desc: '常规长截图工具只认 window/body；本扩展通过 DOM 树递归检索，无论嵌套多少层 div，只要存在 overflow 滚动条均可精准选中截取。',
+    desc: '常规长截图工具只滚动 window/body，遇到后台表格、聊天弹窗等局部滚动区域只能截到当前显示的第一屏；本扩展递归检索 DOM 树，任意嵌套层级中带 overflow 滚动条的元素都能选中截取。',
   },
   {
-    tag: '智能规避',
+    tag: '遮挡处理',
     title: '浮动元素防重复遮挡',
-    desc: '针对现代 Web 应用常见的 fixed / sticky 吸顶表头或悬浮按钮，支持滚动时智能处理，杜绝拼接长图中反复出现横条或残影。',
+    desc: '滚动时处理 fixed / sticky 吸顶表头和悬浮按钮，避免它们在拼接长图中反复出现横条或残影。',
   },
   {
-    tag: '隐私承诺',
-    title: '100% 本地处理，零网络请求',
-    desc: '基于 Manifest V3 标准，无需常驻后台。仅在主动点击时获取 activeTab 视口，拼接运算全在本地 Canvas 完成，无任何后端与遥测数据。',
-  },
-  {
-    tag: '灵活导出',
-    title: '轻量高效，参数自由调节',
-    desc: '扩展安装包仅 40KB，支持根据网速调节滚动等待时间以保证懒加载图片完全渲染，支持导出高保真 PNG 或紧凑 JPEG。',
+    tag: '参数与格式',
+    title: '可调参数与导出格式',
+    desc: '安装包 40KB。可按网速调节滚动等待时间，让懒加载图片渲染完成；导出 PNG 或 JPEG。',
   },
 ]
 
@@ -89,7 +84,7 @@ export default function ElementScrollCapturePage() {
               <span className='text-xs px-2 py-0.5 rounded bg-[color-mix(in_srgb,var(--site-signal)_14%,transparent)] text-[var(--site-signal)] font-mono font-bold'>
                 v0.2.0
               </span>
-              <span className='text-xs text-[var(--site-muted)]'>本地纯算 · 40KB</span>
+              <span className='text-xs text-[var(--site-muted)]'>本地处理 · 40KB</span>
             </div>
             <p className='text-xs text-[var(--site-muted)] mt-1'>适用于 Chrome、Edge、Brave、Arc 等 Chromium 浏览器</p>
           </div>
@@ -101,7 +96,7 @@ export default function ElementScrollCapturePage() {
         </p>
 
         <p>
-          选定页面中任意带滚动条的内部元素，自动逐屏滚动并拼接成一张完整长图。专门解决常规长截图截不全后台数据表格、聊天记录、侧边栏抽屉与代码框的痛点。
+          选定页面中任意带滚动条的内部元素，自动逐屏滚动并拼接成一张完整长图，用于截取常规长截图截不全的后台数据表格、聊天记录、侧边栏抽屉和代码框。
         </p>
 
         <div className='mt-6 flex flex-wrap items-center gap-4'>
@@ -135,37 +130,8 @@ export default function ElementScrollCapturePage() {
         </strong>
       </header>
 
-      {/* 工作区：痛点剖析、核心特性与实机图集 */}
+      {/* 工作区：核心特性与运行截图 */}
       <section className='browser-tool-workspace' aria-label='功能详解与截图预览'>
-        {/* 痛点对比 */}
-        <div className='mb-10 rounded-xl border border-[var(--site-line)] bg-[color-mix(in_srgb,var(--site-panel)_70%,var(--site-paper))] p-6'>
-          <h2 className='text-lg font-bold text-[var(--site-ink)] mb-3'>
-            为什么常规长截图总是截不全？
-          </h2>
-          <div className='grid gap-6 md:grid-cols-2 text-sm leading-relaxed text-[var(--site-muted)]'>
-            <div className='rounded-lg border border-[var(--site-line)] bg-[var(--site-panel)] p-4'>
-              <div className='font-bold text-[var(--site-signal)] mb-2 flex items-center gap-1.5'>
-                <span>✕</span> 常规截图工具的痛点
-              </div>
-              <ul className='space-y-1.5 list-disc list-inside'>
-                <li>只针对整个 <code>window</code> 或全局页面滚屏。</li>
-                <li>遇到后台表格、聊天弹窗等局部滚动区域，只能截到当前显示的第一屏。</li>
-                <li>自动滚动容易导致吸顶导航、悬浮工具栏在拼接图中反复出现并遮挡内容。</li>
-              </ul>
-            </div>
-            <div className='rounded-lg border border-[color-mix(in_srgb,var(--site-link)_40%,var(--site-line))] bg-[var(--site-panel)] p-4'>
-              <div className='font-bold text-[var(--site-link)] mb-2 flex items-center gap-1.5'>
-                <span>✓</span> 元素滚动截图的解法
-              </div>
-              <ul className='space-y-1.5 list-disc list-inside'>
-                <li>光标直接锁定需要截取的特定容器，不受页面其他区域干扰。</li>
-                <li>程序驱动该容器自身精准向下滚动，逐屏捕获并自动无损拼合。</li>
-                <li>智能识别 fixed 与 sticky 元素，消除长图重叠残影。</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
         {/* 核心特性网格 */}
         <div className='mb-12'>
           <h2 className='text-xl font-bold text-[var(--site-ink)] mb-6'>
@@ -197,11 +163,8 @@ export default function ElementScrollCapturePage() {
         <div>
           <div className='flex items-baseline justify-between mb-6'>
             <h2 className='text-xl font-bold text-[var(--site-ink)]'>
-              运行界面实测
+              运行截图
             </h2>
-            <span className='text-xs text-[var(--site-muted)]'>
-              真实扩展运行捕获（5 阶段流程）
-            </span>
           </div>
 
           <div className='grid gap-6 sm:grid-cols-2 lg:grid-cols-3'>
@@ -265,30 +228,30 @@ export default function ElementScrollCapturePage() {
           <li>
             <strong>3. 自动步进滚动</strong>
             <span>
-              扩展将自动接管该容器并匀速逐屏向下滚动截图。若页面包含懒加载，可在设置中适当增加滚动等待时间以保障完全加载。
+              扩展会接管该容器并逐屏向下滚动截图。若页面包含懒加载，可在设置中增加滚动等待时间。
             </span>
           </li>
           <li>
-            <strong>4. 预览与一键导出</strong>
+            <strong>4. 预览与导出</strong>
             <span>
-              捕获完成后自动打开结果页，支持全尺寸长图清晰度核对，可一键下载为 PNG 或 JPEG，或直接复制图片到系统剪贴板。
+              捕获完成后自动打开结果页，可全尺寸查看长图，下载为 PNG 或 JPEG，或复制到系统剪贴板。
             </span>
           </li>
         </ol>
       </section>
 
-      {/* 边界与常见问题 */}
+      {/* 常见问题 */}
       <section className='browser-tool-faq' aria-labelledby='extension-faq-title'>
-        <h2 id='extension-faq-title'>设计与隐私边界</h2>
+        <h2 id='extension-faq-title'>常见问题</h2>
         <div>
-          <h3>为什么不设计成全自动整页推断？</h3>
+          <h3>为什么要手动指定容器，而不是自动整页推断？</h3>
           <p>
-            复杂的前端后台、文档系统（如 Notion、飞书、微信读书、各云平台控制台）往往由多层嵌套的 <code>flex</code> 或 <code>grid</code> 布局构成，存在多个平行的滚动区域。由用户主动点击指定目标容器，能够确保截取结果 100% 符合预期，杜绝误判。
+            复杂的前端后台、文档系统（如 Notion、飞书、微信读书、各云平台控制台）往往由多层嵌套的 <code>flex</code> 或 <code>grid</code> 布局构成，存在多个平行的滚动区域。由你点击指定目标容器，可以避免选错滚动区域。
           </p>
 
           <h3>扩展申请了哪些权限？会不会泄露网页隐私？</h3>
           <p>
-            扩展仅申请了 <code>activeTab</code>、<code>scripting</code>、<code>storage</code> 和 <code>downloads</code> 四项最小权限。扩展没有常驻脚本，只有在你主动点击扩展时才对当前标签页生效；所有画面在内存 Canvas 中拼接，绝不向任何远程服务器回传数据。详情可参阅
+            扩展申请 <code>activeTab</code>、<code>scripting</code>、<code>storage</code> 和 <code>downloads</code> 四项权限。扩展没有常驻脚本，只在你点击扩展时对当前标签页生效；画面在内存 Canvas 中拼接，不向任何远程服务器发送数据。详见
             <Link href='/privacy/element-scroll-capture' className='text-[var(--site-link)] underline ml-1'>
               隐私政策声明
             </Link>。
@@ -296,12 +259,12 @@ export default function ElementScrollCapturePage() {
 
           <h3>生成的长图存储在哪里？</h3>
           <p>
-            拼接好的图片仅保存在浏览器本地的 IndexedDB 中，用于在结果页面预览和再次下载。最多仅保留最近 5 张记录，超出后自动循环覆盖，不会长期占用磁盘空间。
+            拼接好的图片只保存在浏览器本地的 IndexedDB 中，用于在结果页预览和再次下载。最多保留最近 5 张，超出后自动删除旧图。
           </p>
 
           <h3>支持哪些浏览器？</h3>
           <p>
-            所有基于 Chromium 内核的现代浏览器均可完美安装和使用，包括 Google Chrome、Microsoft Edge、Brave、Arc、Vivaldi 以及各类国内双核浏览器。
+            基于 Chromium 内核的浏览器都可以安装使用，包括 Google Chrome、Microsoft Edge、Brave、Arc、Vivaldi 以及国内双核浏览器。
           </p>
         </div>
       </section>

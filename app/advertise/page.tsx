@@ -27,8 +27,8 @@ export default function AdvertisePage() {
       <section>
         <h2>广告位</h2>
         <ul>
-          <li>文章页正文上方：读者打开文章后首先看到的位置；</li>
-          <li>文章页正文下方：读完全文后、评论区之前的位置。</li>
+          <li>文章页正文上方；</li>
+          <li>文章页正文下方，评论区之前。</li>
         </ul>
         <p>
           广告以图片加链接的形式展示，统一标注“赞助”和赞助商名称，链接带 <code>rel=&quot;sponsored&quot;</code>。投研看板和工具页面不放广告。
@@ -47,7 +47,7 @@ export default function AdvertisePage() {
       <section>
         <h2>不接受的广告</h2>
         <p>
-          荐股、代客理财、收益承诺、博彩、无牌照金融业务、网络代理与规避类工具，以及任何我自己不会推荐给朋友的产品。
+          荐股、代客理财、收益承诺、博彩、无牌照金融业务、网络代理与规避类工具。
         </p>
       </section>
 
