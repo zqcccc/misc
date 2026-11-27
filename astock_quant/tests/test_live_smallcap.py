@@ -119,6 +119,20 @@ def test_merge_overwrites_recent_corrections():
     assert merged["close"].at[dates[2], "a"] == pytest.approx(3.0)
 
 
+def test_merge_allows_float64_updates_into_float32_cache():
+    dates = pd.bdate_range("2026-01-01", periods=3)
+    old_close = pd.DataFrame({"a": np.array([1.0, 2.0], dtype=np.float32)}, index=dates[:2])
+    old = {"close": old_close, "amount": old_close.copy(), "close_raw": old_close.copy()}
+    new_close = pd.DataFrame({"a": np.array([2.2, 3.0], dtype=np.float64)}, index=dates[1:])
+
+    merged = live_smallcap.merge_market_rows(old, new_close, new_close, new_close)
+
+    assert merged["close"].at[dates[0], "a"] == pytest.approx(1.0)
+    assert merged["close"].at[dates[1], "a"] == pytest.approx(2.2)
+    assert merged["close"].at[dates[2], "a"] == pytest.approx(3.0)
+    assert merged["close"].dtypes["a"] == np.float32
+
+
 def test_coverage_gate_rejects_partial_cross_section():
     dates = pd.bdate_range("2026-01-01", periods=2)
     codes = [f"c{i}" for i in range(100)]
@@ -290,18 +304,22 @@ def test_state_frequency_field_is_authoritative():
     )
 
 
-def test_initial_state_directly_uses_twenty_day_phase():
-    """新建状态（种子重建）直接按 20 日相位，并写入 rebalance_frequency 字段。"""
+def _import_live_service():
+    """导入生产服务模块；smallcap_service 会安装真实告警钩子，导入后立刻还原。"""
     scripts_dir = Path(__file__).resolve().parents[1] / "scripts"
     if str(scripts_dir) not in sys.path:
         sys.path.insert(0, str(scripts_dir))
-    # smallcap_service 在导入时会安装进程级崩溃告警钩子（真实通知渠道），
-    # 测试进程导入后必须立刻还原，避免任何后续异常被当成生产崩溃外发。
     saved_hook = sys.excepthook
     try:
         import smallcap_live_service as svc  # noqa: PLC0415
     finally:
         sys.excepthook = saved_hook
+    return svc
+
+
+def test_initial_state_directly_uses_twenty_day_phase():
+    """新建状态（种子重建）直接按 20 日相位，并写入 rebalance_frequency 字段。"""
+    svc = _import_live_service()
 
     dates = pd.bdate_range("2026-01-01", periods=40)
     panels = {"close": pd.DataFrame({"a": range(40)}, index=dates, dtype=float)}
@@ -519,3 +537,97 @@ def test_tradability_fails_closed_without_raw_price_panels():
 
     with pytest.raises(KeyError, match="不复权价面板"):
         rules.tradability(panels, price="open")
+
+
+# ---------------------------------------------------------------- 增量抓取根数（bars 上限估计）
+
+
+def _cached_up_to(last_date: str) -> dict:
+    index = pd.DatetimeIndex([pd.Timestamp("2026-01-05"), pd.Timestamp(last_date)])
+    close = pd.DataFrame({"a": [1.0, 2.0]}, index=index)
+    return {"close": close, "amount": close.copy(), "close_raw": close.copy()}
+
+
+def test_fetch_bars_needed_bootstraps_full_window():
+    assert live_smallcap.fetch_bars_needed(None, "2026-11-27") == live_smallcap.ROLLING_DAYS
+
+
+def test_fetch_bars_needed_covers_long_gap():
+    """9-02→11-27 长停更：按工作日跨度放大根数（62 个工作日），不能只抓 8 根留洞。"""
+    bars = live_smallcap.fetch_bars_needed(_cached_up_to("2026-09-02"), "2026-11-27")
+
+    assert bars == 62
+    assert bars < live_smallcap.ROLLING_DAYS
+
+
+def test_fetch_bars_needed_caps_at_rolling_window():
+    bars = live_smallcap.fetch_bars_needed(_cached_up_to("2024-01-02"), "2026-11-27")
+
+    assert bars == live_smallcap.ROLLING_DAYS
+
+
+def test_fetch_bars_needed_keeps_monday_and_weekday_minimums():
+    monday = live_smallcap.fetch_bars_needed(_cached_up_to("2026-11-20"), "2026-11-23")
+    weekday = live_smallcap.fetch_bars_needed(_cached_up_to("2026-11-24"), "2026-11-25")
+    same_day = live_smallcap.fetch_bars_needed(_cached_up_to("2026-11-25"), "2026-11-25")
+
+    assert monday == 20
+    assert weekday == 8
+    assert same_day == 8
+
+
+# ---------------------------------------------------------------- 交易日历缺口校验
+
+
+def test_missing_trading_days_flags_gap_inside_window():
+    calendar = pd.bdate_range("2026-11-23", "2026-11-27")
+    merged = calendar.delete(calendar.get_loc(pd.Timestamp("2026-11-25")))
+
+    missing = live_smallcap.missing_trading_days(merged, calendar, "2026-11-20", "2026-11-27")
+
+    assert missing == [pd.Timestamp("2026-11-25")]
+
+
+def test_missing_trading_days_ignores_days_before_cache_end():
+    """缓存末端当天的历史日期不在校验范围内，只查 (缓存末端, 目标日]。"""
+    calendar = pd.bdate_range("2026-11-20", "2026-11-27")
+    merged = calendar.delete(calendar.get_loc(pd.Timestamp("2026-11-20")))
+
+    missing = live_smallcap.missing_trading_days(merged, calendar, "2026-11-20", "2026-11-27")
+
+    assert missing == []
+
+
+def test_assert_trading_calendar_complete_rejects_gap():
+    calendar = pd.bdate_range("2026-11-23", "2026-11-27")
+    merged = calendar.delete(calendar.get_loc(pd.Timestamp("2026-11-24")))
+
+    with pytest.raises(ValueError, match="行情缺口"):
+        live_smallcap.assert_trading_calendar_complete(
+            merged, calendar, "2026-11-20", "2026-11-27"
+        )
+
+
+def test_assert_trading_calendar_complete_accepts_full_window():
+    calendar = pd.bdate_range("2026-11-23", "2026-11-27")
+
+    live_smallcap.assert_trading_calendar_complete(
+        calendar, calendar, "2026-11-20", "2026-11-27"
+    )
+
+
+# ---------------------------------------------------------------- staging 目录按 bars 隔离
+
+
+def test_fetch_market_rows_staging_path_includes_bars(tmp_path):
+    """断点目录必须带 bars，避免长停更重抓时复用当天早先的 8 根残缺文件。"""
+    svc = _import_live_service()
+    expected = pd.Timestamp("2026-11-27")
+
+    result = svc.fetch_market_rows(
+        codes=[], expected=expected, cache_dir=tmp_path, bars=62, workers=1
+    )
+
+    assert result["stage_dir"] == tmp_path / "staging" / "2026-11-27-62"
+    assert result["stage_dir"].is_dir()
+    assert result["close"].empty

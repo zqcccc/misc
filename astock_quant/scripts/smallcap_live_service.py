@@ -45,13 +45,18 @@ def _bars_frame(bars: list) -> pd.DataFrame:
     return frame.drop_duplicates("date").sort_values("date").set_index("date")
 
 
-def expected_trading_date(end: str | None = None) -> pd.Timestamp:
+def index_trading_days(end: str | None, count: int) -> pd.DatetimeIndex:
+    """按同一抓取根数取上证指数的真实交易日序列（交易日历的唯一事实来源）。"""
     end = end or datetime.now().strftime("%Y-%m-%d")
-    bars, _ = ds.fetch_chunk("sh000001", end=end, count=10, fq="hfq")
+    bars, _ = ds.fetch_chunk("sh000001", end=end, count=count, fq="hfq")
     frame = _bars_frame(bars)
     if frame.empty:
-        raise RuntimeError("无法从上证指数行情确认最新交易日")
-    return pd.Timestamp(frame.index[-1])
+        raise RuntimeError("无法从上证指数行情获取交易日历")
+    return pd.DatetimeIndex(frame.index)
+
+
+def expected_trading_date(end: str | None = None) -> pd.Timestamp:
+    return pd.Timestamp(index_trading_days(end, 10)[-1])
 
 
 def load_codes(meta_path: str | Path, universe_path: str | Path) -> list[str]:
@@ -162,12 +167,11 @@ def fetch_market_rows(
     codes: list[str],
     expected: pd.Timestamp,
     cache_dir: str | Path,
-    bootstrap: bool,
+    bars: int,
     workers: int,
 ) -> dict:
-    # 周一多回补一些交易日，自动修复上周可能迟到的历史修订。
-    count = live.ROLLING_DAYS if bootstrap else (20 if expected.weekday() == 0 else 8)
-    stage_dir = Path(cache_dir) / "staging" / str(expected.date())
+    """按显式给定的抓取根数拉取全市场日线；断点目录带 bars，避免复用更小批次的残缺文件。"""
+    stage_dir = Path(cache_dir) / "staging" / f"{expected.date()}-{bars}"
     stage_dir.mkdir(parents=True, exist_ok=True)
 
     close_series: dict[str, pd.Series] = {}
@@ -178,7 +182,7 @@ def fetch_market_rows(
     names: dict[str, str] = {}
     failed: list[tuple[str, str]] = []
     print(
-        f"[smallcap-live] 拉取 {len(codes)} 只股票最近 {count} 根日线，"
+        f"[smallcap-live] 拉取 {len(codes)} 只股票最近 {bars} 根日线，"
         f"workers={workers}，已完成文件会断点复用",
         flush=True,
     )
@@ -191,7 +195,7 @@ def fetch_market_rows(
         for start in range(0, len(codes), batch_size):
             batch = codes[start : start + batch_size]
             futures = {
-                executor.submit(_fetch_code, code, str(expected.date()), count, stage_dir): code
+                executor.submit(_fetch_code, code, str(expected.date()), bars, stage_dir): code
                 for code in batch
             }
             for future in as_completed(futures):
@@ -470,11 +474,14 @@ def run_once(args: argparse.Namespace) -> dict:
         flush=True,
     )
 
+    # 抓取根数按缓存末端到目标日的工作日跨度估计（长停更时放大，首次灌种取满 400）：
+    # 否则 9-02→11-27 这类场景只抓 8 根，合并面板会留出数据洞。
+    fetch_bars = live.fetch_bars_needed(cached, expected)
     fetched = fetch_market_rows(
         codes=codes,
         expected=expected,
         cache_dir=args.cache_dir,
-        bootstrap=cached is None,
+        bars=fetch_bars,
         workers=args.workers,
     )
     merged = live.merge_market_rows(
@@ -490,6 +497,20 @@ def run_once(args: argparse.Namespace) -> dict:
         cached, cleaned, expected, min_coverage=args.min_coverage
     )
     validation["bad_ticks_masked"] = int(bad_ticks)
+    # 交易日历对账：用同一根数取上证指数真实交易日，缓存末端到目标日之间的每个交易日
+    # 都必须出现在合并面板里；任何缺失 fail-closed，绝不带着数据洞 save/发布。
+    calendar = index_trading_days(str(expected.date()), fetch_bars)
+    cached_end = cached["close"].index[-1] if cached is not None else None
+    live.assert_trading_calendar_complete(
+        pd.DatetimeIndex(cleaned["close"].index),
+        calendar,
+        start_after=cached_end,
+        through=expected,
+    )
+    window = calendar[calendar <= expected]
+    if cached_end is not None:
+        window = window[window > cached_end]
+    validation["trading_days_checked"] = int(len(window))
     live.save_market_cache(
         args.cache_dir,
         cleaned["close"],

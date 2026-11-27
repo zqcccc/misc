@@ -315,8 +315,8 @@ def merge_market_rows(
         new = news[key].reindex(columns=columns)
         dates = old.index.union(new.index).sort_values()
         base = old.reindex(index=dates, columns=columns).copy()
-        base.update(new.reindex(index=dates, columns=columns))
-        merged[key] = base
+        aligned_new = new.reindex(index=dates, columns=columns)
+        merged[key] = aligned_new.combine_first(base)
     span = (
         merged["close"].index.union(merged["amount"].index)
         .union(merged["close_raw"].index).sort_values()[-rolling_days:]
@@ -365,6 +365,68 @@ def validate_latest_cross_section(
         "baseline_stocks": baseline,
         "coverage": round(coverage, 6),
     }
+
+
+def fetch_bars_needed(
+    cached: dict[str, pd.DataFrame | None] | None,
+    expected: str | pd.Timestamp,
+    cap: int = ROLLING_DAYS,
+) -> int:
+    """本次增量抓取的根数（上限估计）：覆盖缓存末端到目标日的全部工作日。
+
+    工作日数只是交易日数的上限（法定假日会高估），取 min(cap, max(基数, 跨度))。
+    这样 9-02→11-27 这类长停更不会只抓 8 根、在合并面板里留出数据洞；
+    首次灌种（cached=None）取满 cap。基数沿用旧行为：周一补 20 根（修复上周
+    迟到的历史修订），其余 8 根。
+    """
+    if cached is None:
+        return cap
+    expected_ts = pd.Timestamp(expected)
+    last = pd.Timestamp(cached["close"].index[-1])
+    base = 20 if expected_ts.weekday() == 0 else 8
+    if expected_ts <= last:
+        return min(cap, base)
+    span = int(
+        np.busday_count(
+            (last + pd.Timedelta(days=1)).date(),
+            (expected_ts + pd.Timedelta(days=1)).date(),
+        )
+    )
+    return min(cap, max(base, span))
+
+
+def missing_trading_days(
+    merged_index: pd.DatetimeIndex,
+    calendar: pd.DatetimeIndex,
+    start_after: str | pd.Timestamp | None,
+    through: str | pd.Timestamp,
+) -> list[pd.Timestamp]:
+    """(start_after, through] 区间内、交易所交易日历里有但合并行情缺失的交易日。"""
+    window = pd.DatetimeIndex(calendar)
+    window = window[window <= pd.Timestamp(through)]
+    if start_after is not None:
+        window = window[window > pd.Timestamp(start_after)]
+    present = set(pd.DatetimeIndex(merged_index))
+    return [pd.Timestamp(day) for day in window if day not in present]
+
+
+def assert_trading_calendar_complete(
+    merged_index: pd.DatetimeIndex,
+    calendar: pd.DatetimeIndex,
+    start_after: str | pd.Timestamp | None,
+    through: str | pd.Timestamp,
+) -> None:
+    """上证指数交易日历对账：区间内任何真实交易日缺失即 fail-closed，拒绝发布。"""
+    missing = missing_trading_days(merged_index, calendar, start_after, through)
+    if not missing:
+        return
+    preview = "、".join(str(day.date()) for day in missing[:8])
+    suffix = "…" if len(missing) > 8 else ""
+    raise ValueError(
+        f"行情缺口：上证指数交易日历显示 {preview}{suffix} 缺失"
+        f"（共 {len(missing)} 个交易日），合并面板不连续，拒绝发布；"
+        "请提高抓取根数（bars）重抓缺失区间"
+    )
 
 
 def production_score_breakdown(
