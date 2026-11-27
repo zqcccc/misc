@@ -55,15 +55,17 @@ def _http_json(path_qs: str, retries: int = 8, timeout: int = 20):
     raise RuntimeError(f"request failed: {path_qs} ({last})")
 
 
-def fetch_chunk(code: str, end: str, count: int = MAX_BARS, fq: str = "hfq"):
+def fetch_chunk(code: str, end: str, count: int = MAX_BARS, fq: str = "hfq",
+                retries: int = 8, timeout: int = 20):
     """取 code 在 end 之前（含）最多 count 根日线。返回 (bars, name)。
 
     腾讯的语义是"以 end 为右端点往前取 count 根"，start 参数几乎不起作用，
     所以历史要靠不断把 end 往前挪来分段拼接。
+    retries/timeout 透传给 _http_json：生产增量按单代码给紧上限，研究默认 8/20 不变。
     """
     qs = (f"?param={code},day,{config.DATA_START},{end},{count},{fq}"
           f"&_var=&r={random.random():.6f}")
-    data = _http_json(qs)
+    data = _http_json(qs, retries=retries, timeout=timeout)
     node = (data or {}).get("data", {}).get(code)
     if not isinstance(node, dict):
         return [], None

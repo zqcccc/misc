@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import sys
+import time
 from pathlib import Path
 
 import numpy as np
@@ -636,3 +637,106 @@ def test_fetch_market_rows_staging_path_includes_bars(tmp_path):
     assert result["stage_dir"] == tmp_path / "staging" / "2026-11-27-62"
     assert result["stage_dir"].is_dir()
     assert result["close"].empty
+
+
+# ---------------------------------------------------------------- 单代码抓取冷却与失败标记
+
+
+def _valid_rows_payload(code: str) -> dict:
+    return {
+        "code": code,
+        "name": "示例",
+        "rows": [{
+            "date": "2026-11-27",
+            "open": 10.0,
+            "close": 10.1,
+            "open_raw": 9.9,
+            "close_raw": 10.0,
+            "amount": 1e8,
+        }],
+    }
+
+
+def test_fetch_code_reuses_valid_rows_without_cooldown(tmp_path, monkeypatch):
+    """已有带 open 的有效 rows：直接复用，绝不发起网络请求。"""
+    svc = _import_live_service()
+    stage_dir = tmp_path / "staging" / "2026-11-27-62"
+    stage_dir.mkdir(parents=True)
+    payload = _valid_rows_payload("sh600001")
+    (stage_dir / "sh600001.json").write_text(json.dumps(payload), encoding="utf-8")
+
+    def _must_not_fetch(*args, **kwargs):
+        raise AssertionError("有效 rows 存在时不应发起网络请求")
+
+    monkeypatch.setattr(svc.ds, "fetch_chunk", _must_not_fetch)
+
+    result = svc._fetch_code("sh600001", "2026-11-27", 62, stage_dir)
+
+    assert result["rows"] == payload["rows"]
+
+
+def test_fetch_code_skips_within_failure_cooldown(tmp_path, monkeypatch):
+    """失败标记未过期（<3600s）：立即抛错跳过，不发起网络请求。"""
+    svc = _import_live_service()
+    stage_dir = tmp_path / "staging" / "2026-11-27-62"
+    stage_dir.mkdir(parents=True)
+    marker = {"code": "sh600001", "error": "timeout", "failed_at": time.time() - 60}
+    (stage_dir / "sh600001.json").write_text(json.dumps(marker), encoding="utf-8")
+
+    def _must_not_fetch(*args, **kwargs):
+        raise AssertionError("冷却期内不应发起网络请求")
+
+    monkeypatch.setattr(svc.ds, "fetch_chunk", _must_not_fetch)
+
+    with pytest.raises(RuntimeError, match="冷却"):
+        svc._fetch_code("sh600001", "2026-11-27", 62, stage_dir)
+
+
+def test_fetch_code_retries_after_cooldown_expires(tmp_path, monkeypatch):
+    """失败标记过期：允许重试并覆盖为有效 rows。"""
+    svc = _import_live_service()
+    stage_dir = tmp_path / "staging" / "2026-11-27-62"
+    stage_dir.mkdir(parents=True)
+    marker = {
+        "code": "sh600001",
+        "error": "timeout",
+        "failed_at": time.time() - svc.FETCH_FAILURE_COOLDOWN - 5,
+    }
+    (stage_dir / "sh600001.json").write_text(json.dumps(marker), encoding="utf-8")
+
+    def _fake_fetch(code, end, count, fq="hfq", retries=8, timeout=20):
+        rows = [
+            ["2026-11-26", "9.9", "10.0", "10.1", "9.8", "1000"],
+            ["2026-11-27", "10.0", "10.1", "10.2", "9.9", "1100"],
+        ]
+        return rows, "示例"
+
+    monkeypatch.setattr(svc.ds, "fetch_chunk", _fake_fetch)
+
+    result = svc._fetch_code("sh600001", "2026-11-27", 62, stage_dir)
+
+    assert [row["date"] for row in result["rows"]] == ["2026-11-26", "2026-11-27"]
+    saved = json.loads((stage_dir / "sh600001.json").read_text(encoding="utf-8"))
+    assert "failed_at" not in saved
+    assert saved["rows"] == result["rows"]
+
+
+def test_fetch_code_writes_failure_marker(tmp_path, monkeypatch):
+    """网络异常：写入 {code, error, failed_at} 标记后上抛，下次同 staging 冷却跳过。"""
+    svc = _import_live_service()
+    stage_dir = tmp_path / "staging" / "2026-11-27-62"
+    stage_dir.mkdir(parents=True)
+
+    def _boom(code, end, count, fq="hfq", retries=8, timeout=20):
+        raise ConnectionError("connection reset")
+
+    monkeypatch.setattr(svc.ds, "fetch_chunk", _boom)
+    before = time.time()
+
+    with pytest.raises(ConnectionError):
+        svc._fetch_code("sh600001", "2026-11-27", 62, stage_dir)
+
+    marker = json.loads((stage_dir / "sh600001.json").read_text(encoding="utf-8"))
+    assert marker["code"] == "sh600001"
+    assert "connection reset" in marker["error"]
+    assert before <= marker["failed_at"] <= time.time()

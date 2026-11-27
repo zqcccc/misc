@@ -127,42 +127,83 @@ def _stage_path(stage_dir: Path, code: str) -> Path:
     return stage_dir / f"{code}.json"
 
 
-def _fetch_code(code: str, end: str, count: int, stage_dir: Path) -> dict:
+FETCH_RETRIES = 2               # 单代码单次请求的尝试次数（生产增量给紧上限）
+FETCH_TIMEOUT = 8               # 单次请求超时秒数
+FETCH_FAILURE_COOLDOWN = 3600   # 失败标记冷却秒数：冷却内同代码直接跳过，过期重试
+
+
+def _fetch_code(
+    code: str,
+    end: str,
+    count: int,
+    stage_dir: Path,
+    retries: int = FETCH_RETRIES,
+    timeout: int = FETCH_TIMEOUT,
+) -> dict:
+    """抓取单只代码并写断点；每代码有明确的时间上限（retries×timeout）。
+
+    - 已有带 open 的有效 rows：直接复用，不受失败冷却影响；
+    - 存在失败标记且未过期（failed_at 距今 < FETCH_FAILURE_COOLDOWN）：立即抛错跳过，
+      避免单只坏代码把整批拖住；
+    - 失败标记过期或格式过旧：删掉重试；再次失败时覆盖写新的失败标记。
+    """
     target = _stage_path(stage_dir, code)
     if target.exists():
+        saved = None
         try:
             saved = json.loads(target.read_text(encoding="utf-8"))
+        except Exception:  # noqa: BLE001 - 损坏的断点文件直接丢弃
+            target.unlink(missing_ok=True)
+        if saved is not None:
             rows = saved.get("rows") or []
             if rows and "open" in rows[0] and "open_raw" in rows[0]:
                 return saved
-            # 旧格式断点文件没有开盘价：删掉重抓，缺 open 会让本期收益降级
-            target.unlink()
-        except Exception:
+            failed_at = saved.get("failed_at")
+            if failed_at and time.time() - float(failed_at) < FETCH_FAILURE_COOLDOWN:
+                raise RuntimeError(
+                    f"{code} 上次抓取失败（{saved.get('error', '未知错误')}），"
+                    f"{FETCH_FAILURE_COOLDOWN}s 冷却内跳过"
+                )
+            # 冷却已过期或旧格式断点：重抓
             target.unlink(missing_ok=True)
 
-    hfq_bars, name = ds.fetch_chunk(code, end=end, count=count, fq="hfq")
-    raw_bars, raw_name = ds.fetch_chunk(code, end=end, count=count, fq="")
-    hfq = _bars_frame(hfq_bars)
-    raw = _bars_frame(raw_bars)
-    common = hfq.index.intersection(raw.index).sort_values()
-    if len(common) == 0:
-        raise RuntimeError(f"{code} 没有可合并的后复权/原始日线")
+    try:
+        hfq_bars, name = ds.fetch_chunk(
+            code, end=end, count=count, fq="hfq", retries=retries, timeout=timeout
+        )
+        raw_bars, raw_name = ds.fetch_chunk(
+            code, end=end, count=count, fq="", retries=retries, timeout=timeout
+        )
+        hfq = _bars_frame(hfq_bars)
+        raw = _bars_frame(raw_bars)
+        common = hfq.index.intersection(raw.index).sort_values()
+        if len(common) == 0:
+            raise RuntimeError(f"{code} 没有可合并的后复权/原始日线")
 
-    volume = live.normalise_volume(code, raw.loc[common, "volume"])
-    rows = []
-    for date in common:
-        raw_close = float(raw.at[date, "close"])
-        rows.append({
-            "date": str(date.date()),
-            "open": float(hfq.at[date, "open"]),
-            "close": float(hfq.at[date, "close"]),
-            "open_raw": float(raw.at[date, "open"]),
-            "close_raw": raw_close,
-            "amount": float(volume.at[date] * 100.0 * raw_close),
-        })
-    result = {"code": code, "name": name or raw_name or "", "rows": rows}
-    live.atomic_write_json(target, result)
-    return result
+        volume = live.normalise_volume(code, raw.loc[common, "volume"])
+        rows = []
+        for date in common:
+            raw_close = float(raw.at[date, "close"])
+            rows.append({
+                "date": str(date.date()),
+                "open": float(hfq.at[date, "open"]),
+                "close": float(hfq.at[date, "close"]),
+                "open_raw": float(raw.at[date, "open"]),
+                "close_raw": raw_close,
+                "amount": float(volume.at[date] * 100.0 * raw_close),
+            })
+        result = {"code": code, "name": name or raw_name or "", "rows": rows}
+        live.atomic_write_json(target, result)
+        return result
+    except Exception as exc:  # noqa: BLE001 - 任何失败都写冷却标记后上抛
+        try:
+            live.atomic_write_json(
+                target,
+                {"code": code, "error": str(exc), "failed_at": time.time()},
+            )
+        except Exception as mark_error:  # noqa: BLE001
+            print(f"[WARN] {code} 失败标记写入失败: {mark_error}", flush=True)
+        raise
 
 
 def fetch_market_rows(
