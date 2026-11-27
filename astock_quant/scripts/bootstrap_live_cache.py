@@ -20,13 +20,14 @@ def main() -> None:
     args = parser.parse_args()
 
     print("[bootstrap] 加载完整研究面板...", flush=True)
-    full = panel.load_panels(fields=["close", "amount", "close_raw"])
+    full = panel.load_panels(fields=["close", "amount", "close_raw", "open", "open_raw"])
     cache = live_smallcap.bootstrap_from_full_panels(
         full, args.out_dir, rolling_days=args.days
     )
     print(
         f"[bootstrap] 完成: {len(cache['close'])} 天 × "
-        f"{len(cache['close'].columns)} 只股票 -> {args.out_dir}",
+        f"{len(cache['close'].columns)} 只股票 -> {args.out_dir}"
+        "（close/amount/close_raw/open/open_raw 同代落盘）",
         flush=True,
     )
 

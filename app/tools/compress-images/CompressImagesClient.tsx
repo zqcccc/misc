@@ -76,16 +76,32 @@ function baseName(name: string): string {
   return idx > 0 ? name.slice(0, idx) : name;
 }
 
+function readAsDataUrl(file: File): Promise<string> {
+  const { promise, resolve, reject } = Promise.withResolvers<string>();
+  const reader = new FileReader();
+  reader.onload = () => resolve(reader.result as string);
+  reader.onerror = reject;
+  reader.readAsDataURL(file);
+  return promise;
+}
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  const { promise, resolve, reject } = Promise.withResolvers<HTMLImageElement>();
+  const im = new window.Image();
+  im.onload = () => resolve(im);
+  im.onerror = reject;
+  im.src = src;
+  return promise;
+}
+
 async function compressOne(
   file: File,
   dataUrl: string,
   opts: { exportType: ExportType; sizeMode: SizeMode; percent: number; maxWidth: number; quality: number },
 ): Promise<{ blob: Blob; mime: string; name: string }> {
-  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-    const im = new window.Image();
-    im.onload = () => resolve(im);
-    im.onerror = () => reject(new Error('图片解析失败'));
-    im.src = dataUrl;
+  // 解码失败统一映射为原有错误信息
+  const img = await loadImage(dataUrl).catch(() => {
+    throw new Error('图片解析失败');
   });
 
   let newW = img.width;
@@ -119,13 +135,13 @@ async function compressOne(
 
   const quality = mime === 'image/png' ? undefined : opts.quality / 100;
 
-  const blob: Blob = await new Promise((resolve, reject) => {
-    canvas.toBlob(
-      (b) => (b ? resolve(b) : reject(new Error('压缩失败'))),
-      mime,
-      quality,
-    );
-  });
+  const { promise: blobPromise, resolve: resolveBlob, reject: rejectBlob } = Promise.withResolvers<Blob>();
+  canvas.toBlob(
+    (b) => (b ? resolveBlob(b) : rejectBlob(new Error('压缩失败'))),
+    mime,
+    quality,
+  );
+  const blob = await blobPromise;
 
   const name = `${baseName(file.name)}.${extForMime(mime)}`;
   return { blob, mime, name };
@@ -140,14 +156,49 @@ export default function CompressImagesClient() {
   const [quality, setQuality] = useState(80);
   const [dragOver, setDragOver] = useState(false);
   const [compressing, setCompressing] = useState(false);
-
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCounter = useRef(0);
+
+  // 压缩批次号：设置/文件变化启动新一批后，旧批次的异步结果整体作废
+  const runIdRef = useRef(0);
+  // 组件存活标记：卸载后到达的异步结果不再生成/保留 objectURL
+  const mountedRef = useRef(true);
+  // 当前所有存活的 objectURL；卸载时整体 revoke，避免无主 URL
+  const urlsRef = useRef<Set<string>>(new Set());
+
+  const trackUrl = useCallback((url: string) => {
+    urlsRef.current.add(url);
+    return url;
+  }, []);
+
+  // 幂等释放：对同一 URL 的重复释放是 no-op
+  const releaseUrl = useCallback((url?: string) => {
+    if (!url) return;
+    if (urlsRef.current.delete(url)) URL.revokeObjectURL(url);
+  }, []);
+
+  // 设置变更统一入口：值确实变化时先落新值，再立即作废旧结果（释放旧 objectURL、标记 pending），
+  // 随后由既有 debounce effect 自动重压
+  const changeSetting = useCallback((changed: boolean, apply: () => void) => {
+    if (!changed) return;
+    apply();
+    setItems((prev) => {
+      if (!prev.some((it) => it.resultUrl)) return prev;
+      for (const it of prev) releaseUrl(it.resultUrl);
+      return prev.map((it) =>
+        it.resultUrl
+          ? { ...it, status: 'pending' as const, resultUrl: undefined, resultSize: undefined, resultType: undefined, resultName: undefined }
+          : it,
+      );
+    });
+  }, [releaseUrl]);
 
   const opts = useMemo(
     () => ({ exportType, sizeMode, percent, maxWidth, quality }),
     [exportType, sizeMode, percent, maxWidth, quality],
   );
+  // 最近一次计划运行的设置；运行完成时设置已变则本轮结果作废
+  const scheduledOptsRef = useRef(opts);
 
   // 添加文件
   const addFiles = useCallback(async (files: FileList | File[]) => {
@@ -159,19 +210,15 @@ export default function CompressImagesClient() {
     const newItems: ImgItem[] = [];
     for (const f of arr) {
       const id = getFileId(f);
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(f);
-      });
-      // 读取原始尺寸
-      const dims = await new Promise<{ w: number; h: number }>((resolve) => {
-        const im = new window.Image();
-        im.onload = () => resolve({ w: im.width, h: im.height });
-        im.onerror = () => resolve({ w: 0, h: 0 });
-        im.src = dataUrl;
-      });
+      const dataUrl = await readAsDataUrl(f);
+      // 读取原始尺寸；解码失败按未知尺寸处理
+      let dims = { w: 0, h: 0 };
+      try {
+        const im = await loadImage(dataUrl);
+        dims = { w: im.width, h: im.height };
+      } catch {
+        // 保持与原行为一致：尺寸记为 0，条目仍加入列表
+      }
       newItems.push({
         id,
         file: f,
@@ -184,63 +231,86 @@ export default function CompressImagesClient() {
     }
     setItems((prev) => {
       const map = new Map(prev.map((it) => [it.id, it]));
-      for (const ni of newItems) map.set(ni.id, ni);
+      for (const ni of newItems) {
+        // 重复添加同一文件：先释放被替换条目的旧结果 URL
+        const old = map.get(ni.id);
+        if (old?.resultUrl) releaseUrl(old.resultUrl);
+        map.set(ni.id, ni);
+      }
       return Array.from(map.values());
     });
-  }, []);
+  }, [releaseUrl]);
 
   // 压缩全部（设置变化或新增文件后自动触发）
   const runCompress = useCallback(
     async (list: ImgItem[], options: typeof opts) => {
+      const myRun = ++runIdRef.current;
       setCompressing(true);
       // 标记 processing
       setItems((prev) => prev.map((it) => ({ ...it, status: it.status === 'error' ? 'pending' : it.status === 'done' ? 'processing' : it.status })));
       const results = await Promise.all(
-        list.map(async (it): Promise<{ id: string } & Partial<ImgItem>> => {
+        list.map(async (it): Promise<{ id: string; patch?: Partial<ImgItem> }> => {
           try {
             const { blob, mime, name } = await compressOne(it.file, it.preview, options);
-            const url = URL.createObjectURL(blob);
+            // 已被新一批压缩取代、组件已卸载或设置已变：本轮结果作废，不生成 objectURL
+            if (!mountedRef.current || runIdRef.current !== myRun || scheduledOptsRef.current !== options) return { id: it.id };
             return {
               id: it.id,
-              status: 'done' as const,
-              resultUrl: url,
-              resultSize: blob.size,
-              resultType: mime,
-              resultName: name,
-              errorMsg: undefined,
+              patch: {
+                status: 'done',
+                resultUrl: trackUrl(URL.createObjectURL(blob)),
+                resultSize: blob.size,
+                resultType: mime,
+                resultName: name,
+                errorMsg: undefined,
+              },
             };
-          } catch (e: any) {
+          } catch (e: unknown) {
+            if (!mountedRef.current || runIdRef.current !== myRun || scheduledOptsRef.current !== options) return { id: it.id };
             return {
               id: it.id,
-              status: 'error' as const,
-              errorMsg: e?.message || '压缩失败',
-              resultUrl: undefined,
-              resultSize: undefined,
+              patch: {
+                status: 'error',
+                errorMsg: e instanceof Error && e.message ? e.message : '压缩失败',
+                resultUrl: undefined,
+                resultSize: undefined,
+                resultType: undefined,
+                resultName: undefined,
+              },
             };
           }
         }),
       );
-      const byId = new Map(results.map((r) => [r.id, r]));
-      setItems((prev) =>
-        prev.map((it) => {
-          const r = byId.get(it.id);
-          if (!r) return it;
-          // 释放旧的 objectURL 避免内存泄漏
-          if (r.resultUrl && it.resultUrl) {
-            URL.revokeObjectURL(it.resultUrl);
-          }
-          const { id: _id, ...rest } = r;
-          return { ...it, ...rest };
-        }),
-      );
+      // 本轮已被取代/卸载/设置已变：撤销已生成、尚未写入 state 的 URL
+      if (!mountedRef.current || runIdRef.current !== myRun || scheduledOptsRef.current !== options) {
+        for (const r of results) if (r.patch?.resultUrl) releaseUrl(r.patch.resultUrl);
+        return;
+      }
+      const patches = new Map<string, Partial<ImgItem>>();
+      for (const r of results) if (r.patch) patches.set(r.id, r.patch);
+      setItems((prev) => {
+        const present = new Set(prev.map((p) => p.id));
+        // 压缩期间被移除/清空的文件：其结果 URL 不得成为无主对象
+        for (const r of results) {
+          if (r.patch?.resultUrl && !present.has(r.id)) releaseUrl(r.patch.resultUrl);
+        }
+        return prev.map((it) => {
+          const patch = patches.get(it.id);
+          if (!patch) return it;
+          // 新结果替换旧结果（含转为 error）时释放旧 objectURL
+          if (it.resultUrl && it.resultUrl !== patch.resultUrl) releaseUrl(it.resultUrl);
+          return { ...it, ...patch };
+        });
+      });
       setCompressing(false);
     },
-    [],
+    [releaseUrl, trackUrl],
   );
 
   // 设置变化或文件增减 → 重新压缩（debounce）
   useEffect(() => {
     if (items.length === 0) return;
+    scheduledOptsRef.current = opts;
     const t = setTimeout(() => {
       runCompress(items, opts);
     }, 250);
@@ -265,14 +335,14 @@ export default function CompressImagesClient() {
     return () => window.removeEventListener('paste', onPaste);
   }, [addFiles]);
 
-  // 卸载时释放 objectURL
+  // 卸载时按 ref 追踪的最新集合整体 revoke（覆盖异步任务已生成、尚未写入 state 的 URL）
   useEffect(() => {
+    mountedRef.current = true;
     return () => {
-      items.forEach((it) => {
-        if (it.resultUrl) URL.revokeObjectURL(it.resultUrl);
-      });
+      mountedRef.current = false;
+      urlsRef.current.forEach((u) => URL.revokeObjectURL(u));
+      urlsRef.current.clear();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -311,16 +381,16 @@ export default function CompressImagesClient() {
   const removeItem = (id: string) => {
     setItems((prev) => {
       const target = prev.find((it) => it.id === id);
-      if (target?.resultUrl) URL.revokeObjectURL(target.resultUrl);
+      if (target?.resultUrl) releaseUrl(target.resultUrl);
       return prev.filter((it) => it.id !== id);
     });
   };
 
   const clearAll = () => {
-    items.forEach((it) => {
-      if (it.resultUrl) URL.revokeObjectURL(it.resultUrl);
+    setItems((prev) => {
+      for (const it of prev) releaseUrl(it.resultUrl);
+      return [];
     });
-    setItems([]);
   };
 
   const downloadOne = (it: ImgItem) => {
@@ -372,8 +442,8 @@ export default function CompressImagesClient() {
       a.remove();
       URL.revokeObjectURL(url);
       toast.success(`已打包 ${done.length} 张图片`);
-    } catch (e: any) {
-      toast.error('打包下载失败: ' + (e?.message || ''));
+    } catch (e: unknown) {
+      toast.error('打包下载失败: ' + (e instanceof Error && e.message ? e.message : ''));
     }
   };
 
@@ -395,22 +465,26 @@ export default function CompressImagesClient() {
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        onClick={() => fileInputRef.current?.click()}
-        className={`relative cursor-pointer rounded-2xl border-2 border-dashed transition-all duration-200 ${
+        className={`relative rounded-2xl border-2 border-dashed transition-all duration-200 ${
           dragOver
             ? 'border-blue-500 bg-blue-50/80 dark:bg-blue-900/20 scale-[1.01]'
             : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-gray-50 dark:hover:bg-[#363c48]'
-        } ${items.length === 0 ? 'p-14' : 'p-6'}`}
+        }`}
       >
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          multiple
-          onChange={handleFileChange}
-          className="hidden"
-        />
-        <div className="flex flex-col items-center text-center pointer-events-none">
+        <label
+          className={`block cursor-pointer rounded-2xl focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500 focus-within:bg-blue-50/80 dark:focus-within:bg-blue-900/20 ${
+            items.length === 0 ? 'p-14' : 'p-6'
+          }`}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleFileChange}
+            className="sr-only"
+          />
+          <div className="flex flex-col items-center text-center pointer-events-none">
           <div className={`mb-3 flex items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 text-white shadow-lg ${items.length === 0 ? 'w-16 h-16' : 'w-12 h-12'} transition-all`}>
             <svg className={items.length === 0 ? 'w-8 h-8' : 'w-6 h-6'} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.9A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
@@ -430,7 +504,8 @@ export default function CompressImagesClient() {
               + 继续添加图片（拖拽 / 粘贴 / 点击）
             </p>
           )}
-        </div>
+          </div>
+        </label>
       </div>
 
       {/* 设置面板 */}
@@ -446,7 +521,7 @@ export default function CompressImagesClient() {
                 {EXPORT_OPTIONS.map((opt) => (
                   <button
                     key={opt.value}
-                    onClick={() => setExportType(opt.value)}
+                    onClick={() => changeSetting(exportType !== opt.value, () => setExportType(opt.value))}
                     className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
                       exportType === opt.value
                         ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
@@ -467,13 +542,13 @@ export default function CompressImagesClient() {
               <div className="flex items-center gap-3">
                 <div className="flex rounded-lg overflow-hidden border border-gray-300 dark:border-gray-600">
                   <button
-                    onClick={() => setSizeMode('percent')}
+                    onClick={() => changeSetting(sizeMode !== 'percent', () => setSizeMode('percent'))}
                     className={`px-3 py-1.5 text-sm ${sizeMode === 'percent' ? 'bg-blue-600 text-white' : 'bg-white dark:bg-[#282c35] text-gray-700 dark:text-gray-200'}`}
                   >
                     百分比
                   </button>
                   <button
-                    onClick={() => setSizeMode('maxWidth')}
+                    onClick={() => changeSetting(sizeMode !== 'maxWidth', () => setSizeMode('maxWidth'))}
                     className={`px-3 py-1.5 text-sm border-l border-gray-300 dark:border-gray-600 ${sizeMode === 'maxWidth' ? 'bg-blue-600 text-white' : 'bg-white dark:bg-[#282c35] text-gray-700 dark:text-gray-200'}`}
                   >
                     最大宽度
@@ -486,7 +561,7 @@ export default function CompressImagesClient() {
                       min={1}
                       max={100}
                       value={percent}
-                      onChange={(e) => setPercent(Math.max(1, Math.min(100, Number(e.target.value) || 100)))}
+                      onChange={(e) => { const v = Math.max(1, Math.min(100, Number(e.target.value) || 100)); changeSetting(v !== percent, () => setPercent(v)); }}
                       className="w-20 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#282c35] text-gray-900 dark:text-gray-100 text-sm"
                     />
                     <span className="text-gray-500 dark:text-gray-400 text-sm">%</span>
@@ -497,7 +572,7 @@ export default function CompressImagesClient() {
                       type="number"
                       min={1}
                       value={maxWidth}
-                      onChange={(e) => setMaxWidth(Math.max(1, Number(e.target.value) || 1920))}
+                      onChange={(e) => { const v = Math.max(1, Number(e.target.value) || 1920); changeSetting(v !== maxWidth, () => setMaxWidth(v)); }}
                       className="w-24 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#282c35] text-gray-900 dark:text-gray-100 text-sm"
                     />
                     <span className="text-gray-500 dark:text-gray-400 text-sm">px</span>
@@ -520,7 +595,7 @@ export default function CompressImagesClient() {
                   min={1}
                   max={100}
                   value={quality}
-                  onChange={(e) => setQuality(Number(e.target.value))}
+                  onChange={(e) => changeSetting(quality !== Number(e.target.value), () => setQuality(Number(e.target.value)))}
                   className="w-full accent-blue-600"
                 />
               </div>

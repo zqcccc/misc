@@ -32,15 +32,29 @@ function EzoicPlaceholder({ id }: { id: number }) {
   return <div id={`ezoic-pub-ad-placeholder-${id}`} />
 }
 
-// 按容器宽度选最宽且放得下的尺寸，手机上就不会出现横向溢出
+// 按容器实际宽度选最宽且放得下的尺寸，手机上就不会出现横向溢出。
+// ResizeObserver 监听容器尺寸变化后重选，卸载时断开；无 DOM 环境不执行。
 function useFittingUnit<T extends { width: number }>(units: T[]) {
   const ref = useRef<HTMLDivElement>(null)
   const [unit, setUnit] = useState<T | null>(null)
 
   useEffect(() => {
-    const available = ref.current!.clientWidth
+    const el = ref.current
+    if (!el) return
     const sorted = [...units].sort((a, b) => b.width - a.width)
-    setUnit(sorted.find((item) => item.width <= available) ?? null)
+    const pick = (width: number) => {
+      const next = sorted.find((item) => item.width <= width) ?? null
+      // 单元对象来自模块级常量，先比对再写，避免无谓的重渲染
+      setUnit((prev) => (prev === next ? prev : next))
+    }
+    pick(el.clientWidth)
+    if (typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0]
+      if (entry) pick(entry.contentRect.width)
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
   }, [units])
 
   return { ref, unit }

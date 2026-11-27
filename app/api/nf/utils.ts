@@ -1,3 +1,48 @@
+export const settles: [number, string][] = [
+  [70143836, '解锁非自制剧'],
+  [80197526, '解锁自制剧'],
+  [80018499, '解锁少量剧集'],
+]
+
+function checkNetflix(movieId: number, msg: string) {
+  const { promise, resolve } = Promise.withResolvers<[boolean, string]>()
+  const url = `https://www.netflix.com/title/${movieId}`
+  console.log('checkNetflix url:', url)
+  fetch(url, {
+    // next: { revalidate: 5 },
+    cache: 'no-store',
+    headers: {
+      'User-Agent':
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
+    },
+    redirect: 'manual',
+  }).then(
+    (res) => {
+      let country = '未知国家'
+      const headers = res.headers.get('location')
+      if (headers) {
+        const p = headers.split('/')
+        country = countryMap[p[3]] || '未知国家：' + p[3]
+      }
+      if (res.status < 400) {
+        resolve([true, `${msg} ${country}`])
+      } else {
+        resolve([false, `不${msg}`])
+      }
+    },
+    (error) => {
+      console.log('request error: ', error)
+      resolve([false, `不${msg}, 网络错误，可能是无法访问Netflix`])
+    }
+  )
+  return promise
+}
+
+// 服务端检查函数: API 路由与 /nf 页面共用, 不经过内部 HTTP 自请求.
+export async function checkNetflixStatus(): Promise<[boolean, string][]> {
+  return Promise.all(settles.map((params) => checkNetflix(...params)))
+}
+
 export const countryMap: Record<string, string> = {
   us: '美国',
   af: '阿富汗',

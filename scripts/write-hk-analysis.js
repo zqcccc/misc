@@ -1,103 +1,143 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+// 港股分析写入：统一走 lib/market-analysis 的幂等写入管道
+// （唯一键 upsert + 事务写入 + 摘要刷新 + 缓存失效 + run 状态），失败非零退出。
 const fs = require('fs');
+const path = require('path');
+
+require('ts-node').register({
+  project: path.join(__dirname, '..', 'tsconfig-debug.json'),
+});
+
+const {
+  writeMarketAnalysisIdempotent,
+  disconnectMarketAnalysisClient,
+} = require('../lib/market-analysis');
+
+const CONFIDENCE_BY_LABEL = { low: 30, medium: 60, high: 85 };
+
+function normalizeConfidence(value) {
+  if (typeof value === 'string') {
+    return CONFIDENCE_BY_LABEL[value.toLowerCase()] || 60;
+  }
+  return value;
+}
+
+function stringifyIfNeeded(value) {
+  if (value === undefined || value === null) return null;
+  return typeof value === 'string' ? value : JSON.stringify(value);
+}
+
+function normalizeTags(value) {
+  if (value === undefined || value === null) return undefined;
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    return value.split(',').map((tag) => tag.trim()).filter(Boolean);
+  }
+  return [String(value)];
+}
+
+function normalizeVisibility(value) {
+  if (typeof value === 'number') return 'published';
+  return value || 'published';
+}
+
+function buildPayload(raw) {
+  if (!raw.company?.market || !raw.company?.symbol || !raw.company?.name) {
+    throw new Error('payload.company.market/symbol/name 必填');
+  }
+  if (!raw.runId || typeof raw.runId !== 'string' || !raw.runId.trim()) {
+    throw new Error('payload.runId 必填：幂等写入需要唯一的 run 标识');
+  }
+
+  const payload = {
+    runId: raw.runId.trim(),
+    company: raw.company,
+  };
+
+  if (raw.pageEntry) {
+    payload.pageEntry = {
+      entryType: raw.pageEntry.entryType || 'ai-generated',
+      note: raw.pageEntry.note,
+      visible: true,
+    };
+  }
+
+  if (raw.exploration) {
+    payload.exploration = {
+      title: raw.exploration.title,
+      summary: raw.exploration.summary,
+      thesis: raw.exploration.thesis,
+      catalysts: stringifyIfNeeded(raw.exploration.catalysts),
+      risks: stringifyIfNeeded(raw.exploration.risks),
+      tags: normalizeTags(raw.exploration.tags),
+      score: raw.exploration.score,
+      confidence: normalizeConfidence(raw.exploration.confidence),
+      visibility: normalizeVisibility(raw.exploration.visibility),
+    };
+  }
+
+  if (raw.valuation) {
+    payload.valuation = {
+      asOfDate: raw.valuation.asOfDate,
+      price: raw.valuation.price,
+      marketCap: raw.valuation.marketCap,
+      ttmEps: raw.valuation.EPS ?? raw.valuation.ttmEps,
+      normalizedTtmEps: raw.valuation.normalizedTtmEps,
+      ttmPe: raw.valuation.PE ?? raw.valuation.ttmPe,
+      normalizedTtmPe: raw.valuation.normalizedTtmPe,
+      revenueTtm: raw.valuation.revenueTtm,
+      profitTtm: raw.valuation.profitTtm,
+      normalizedProfitTtm: raw.valuation.normalizedProfitTtm,
+      profitMultiple: raw.valuation.profitMultiple ? Math.round(raw.valuation.profitMultiple) : undefined,
+      referenceMultiple: raw.valuation.referenceMultiple ? Math.round(raw.valuation.referenceMultiple) : undefined,
+      profitLinePrice: raw.valuation.profitLinePrice,
+      referenceLinePrice: raw.valuation.referenceLinePrice,
+      upsideToProfitLine: raw.valuation.upside ?? raw.valuation.upsideToProfitLine,
+      upsideToReferenceLine: raw.valuation.upsideToReferenceLine,
+      profitQualityScore: raw.valuation.profitQualityScore,
+      profitQualitySummary: raw.valuation.profitQualitySummary,
+    };
+
+    if (raw.explanations) {
+      payload.explanations = raw.explanations.map((exp) => ({
+        explanationType: exp.explanationType || 'valuation_factor',
+        title: exp.title,
+        body: exp.body || exp.content,
+        impactDirection: exp.impactDirection,
+        isRecurring: exp.isRecurring,
+        confidence: normalizeConfidence(exp.confidence),
+      }));
+    }
+  }
+
+  return payload;
+}
 
 async function writeAnalysis(filePath) {
-  const payload = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-  console.log('Processing:', payload.company.name);
-  
-  let company = await prisma.company.findUnique({
-    where: { market_symbol: { market: payload.company.market, symbol: payload.company.symbol } }
-  });
-  
-  if (!company) {
-    company = await prisma.company.create({
-      data: {
-        symbol: payload.company.symbol, market: payload.company.market, exchange: payload.company.exchange,
-        name: payload.company.name, currency: payload.company.currency, sector: payload.company.sector,
-        industry: payload.company.industry, country: payload.company.country, website: payload.company.website,
-        status: 'active', entryType: payload.pageEntry?.entryType || 'ai-generated',
-        entryNote: payload.pageEntry?.note, visible: true,
-      }
-    });
-    console.log('Created company:', company.id);
-  } else {
-    company = await prisma.company.update({
-      where: { id: company.id },
-      data: { name: payload.company.name, sector: payload.company.sector, industry: payload.company.industry, country: payload.company.country, website: payload.company.website }
-    });
-    console.log('Updated company:', company.id);
-  }
-  
-  const run = await prisma.companyExplorationRun.create({
-    data: {
-      name: payload.runId,
-      marketScope: payload.company.market,
-      prompt: '港股高分红小公司系列分析 - ' + payload.company.name,
-      model: 'ai-analysis',
-      status: 'completed',
-      startedAt: new Date(),
-      finishedAt: new Date(),
-    }
-  });
-  console.log('Created run:', run.id);
-  
-  if (payload.exploration) {
-    const exploration = await prisma.companyExploration.create({
-      data: {
-        companyId: company.id, runId: run.id, title: payload.exploration.title,
-        summary: payload.exploration.summary, thesis: payload.exploration.thesis,
-        catalysts: payload.exploration.catalysts ? (typeof payload.exploration.catalysts === 'string' ? payload.exploration.catalysts : JSON.stringify(payload.exploration.catalysts)) : null,
-        risks: payload.exploration.risks ? (typeof payload.exploration.risks === 'string' ? payload.exploration.risks : JSON.stringify(payload.exploration.risks)) : null,
-        tags: payload.exploration.tags ? (typeof payload.exploration.tags === 'string' ? payload.exploration.tags : JSON.stringify(payload.exploration.tags)) : null,
-        score: payload.exploration.score, confidence: typeof payload.exploration.confidence === 'string' ? { low: 30, medium: 60, high: 85 }[payload.exploration.confidence] || 60 : payload.exploration.confidence,
-        visibility: typeof payload.exploration.visibility === 'number' ? 'published' : (payload.exploration.visibility || 'published'),
-      }
-    });
-    console.log('Created exploration:', exploration.id);
-  }
-  
-  if (payload.valuation) {
-    const valuation = await prisma.companyValuationSnapshot.create({
-      data: {
-        companyId: company.id, runId: run.id, asOfDate: new Date(payload.valuation.asOfDate),
-        price: payload.valuation.price, marketCap: payload.valuation.marketCap,
-        ttmEps: payload.valuation.EPS || payload.valuation.ttmEps,
-        normalizedTtmEps: payload.valuation.normalizedTtmEps,
-        ttmPe: payload.valuation.PE || payload.valuation.ttmPe,
-        normalizedTtmPe: payload.valuation.normalizedTtmPe,
-        revenueTtm: payload.valuation.revenueTtm, profitTtm: payload.valuation.profitTtm,
-        normalizedProfitTtm: payload.valuation.normalizedProfitTtm,
-        profitMultiple: payload.valuation.profitMultiple ? Math.round(payload.valuation.profitMultiple) : null,
-        referenceMultiple: payload.valuation.referenceMultiple ? Math.round(payload.valuation.referenceMultiple) : null,
-        profitLinePrice: payload.valuation.profitLinePrice, referenceLinePrice: payload.valuation.referenceLinePrice,
-        upsideToProfitLine: payload.valuation.upside || payload.valuation.upsideToProfitLine,
-        upsideToReferenceLine: payload.valuation.upsideToReferenceLine,
-        profitQualityScore: payload.valuation.profitQualityScore, profitQualitySummary: payload.valuation.profitQualitySummary,
-      }
-    });
-    console.log('Created valuation:', valuation.id);
-    
-    if (payload.explanations) {
-      for (const exp of payload.explanations) {
-        await prisma.companyValuationExplanation.create({
-          data: {
-            companyId: company.id, runId: run.id, valuationSnapshotId: valuation.id,
-            explanationType: exp.explanationType || 'valuation_factor',
-            title: exp.title, body: exp.body || exp.content,
-            impactDirection: exp.impactDirection, isRecurring: exp.isRecurring, confidence: typeof exp.confidence === 'string' ? { low: 30, medium: 60, high: 85 }[exp.confidence] || 60 : exp.confidence,
-            authorType: 'ai',
-          }
-        });
-      }
-      console.log('Created', payload.explanations.length, 'explanations');
-    }
-  }
-  
+  const raw = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  console.log('Processing:', raw.company.name);
+
+  const payload = buildPayload(raw);
+  const result = await writeMarketAnalysisIdempotent(payload);
+
+  console.log('Company:', result.company.id);
+  if (result.exploration) console.log('Exploration:', result.exploration.id);
+  if (result.valuation) console.log('Valuation:', result.valuation.id);
+  console.log('Explanations:', result.explanations.length);
   console.log('SUCCESS:', payload.company.name);
 }
 
 const file = process.argv[2];
+if (!file) {
+  console.error('用法: node scripts/write-hk-analysis.js <payload.json>');
+  process.exit(1);
+}
+
 writeAnalysis(file)
-  .then(() => prisma.$disconnect())
-  .catch(e => { console.error('ERROR:', e.message); prisma.$disconnect(); process.exit(1); });
+  .then(async () => {
+    await disconnectMarketAnalysisClient();
+  })
+  .catch(async (e) => {
+    console.error('ERROR:', e.message);
+    await disconnectMarketAnalysisClient();
+    process.exit(1);
+  });

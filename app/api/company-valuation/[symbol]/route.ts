@@ -5,26 +5,6 @@ import { buildCompanyValuationCard } from '../summary'
 
 const prisma = new PrismaClient()
 
-function canonicalCompanySymbol(input: string) {
-  const normalized = normalizeMarketSymbol(input)
-  if (normalized.market === 'hk') {
-    return {
-      market: normalized.market,
-      symbol: `${normalized.symbol}.HK`,
-    }
-  }
-  if (normalized.market === 'cn') {
-    return {
-      market: normalized.market,
-      symbol: normalized.eastmoneyCode,
-    }
-  }
-  return {
-    market: normalized.market,
-    symbol: normalized.symbol,
-  }
-}
-
 function canonicalCompanySymbolVariants(input: string) {
   const normalized = normalizeMarketSymbol(input)
   if (normalized.market === 'hk') {

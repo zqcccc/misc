@@ -21,7 +21,7 @@ export default function PrivacyPage() {
     <main className='trust-page'>
       <header>
         <h1>隐私政策</h1>
-        <p>生效日期：2026 年 10 月 23 日。</p>
+        <p>生效日期：2026 年 11 月 25 日。</p>
       </header>
 
       <section>
@@ -41,7 +41,7 @@ export default function PrivacyPage() {
       <section id='analytics'>
         <h2>匿名访问统计</h2>
         <p>
-          Google Analytics 只有在你点击“允许匿名统计”后才会加载。它可能使用 Cookie 或类似技术记录页面访问、设备类别和大致地区等信息，并启用 IP 匿名化。选择“仅必要功能”不会影响网站阅读或工具使用。
+          Google Analytics 和 Ezoic Analytics 只有在你点击“允许匿名统计”后才会加载。它们可能使用 Cookie 或类似技术记录页面访问、设备类别和大致地区等信息；Google Analytics 启用了 IP 匿名化。选择“仅必要功能”后这两项统计都不会加载，也不会影响网站阅读或工具使用。
         </p>
         <p>
           你的选择保存在浏览器本地键值 <code>c9cu-analytics-consent</code> 中。清除 onlylike.work 的站点数据后，网站会再次询问。
@@ -59,11 +59,15 @@ export default function PrivacyPage() {
         <h2>广告</h2>
         {adProviders.length > 0 ? (
           <p>
-            首页和文章页的广告位由第三方广告服务提供：{adProviders.join('、')}。这些服务可能使用 Cookie、设备标识或类似技术来展示广告、限制重复展示和统计效果，并适用各自的隐私政策。广告位都标有“广告”字样。
-            {EZOIC_ENABLED && '从欧洲经济区、英国等地区访问时，网站会先请你选择是否同意个性化广告。'}
+            首页和文章页标有“广告”字样的固定广告位由第三方广告服务提供：{adProviders.join('、')}。这些服务可能使用 Cookie、设备标识或类似技术来展示广告、限制重复展示和统计效果，并适用各自的隐私政策。
           </p>
         ) : (
-          <p>网站目前没有加载第三方广告服务。</p>
+          <p>网站目前没有配置固定广告位。</p>
+        )}
+        {EZOIC_ENABLED && (
+          <p>
+            网站还加载了 Ezoic 的脚本：同意管理平台负责在需要的地区先询问你是否同意个性化广告；Ezoic 的自动广告可能由其系统自行决定是否、在什么位置插入，这类自动插入的广告不占用上面的固定广告位，也不都标有“广告”字样。
+          </p>
         )}
         <p>
           标有“赞助”的广告位是直接与赞助商合作的图片链接，点击前不会向赞助商发送你的任何数据。合作方式见<Link href='/advertise'>广告合作</Link>。

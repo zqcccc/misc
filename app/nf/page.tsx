@@ -1,13 +1,16 @@
 import React from 'react'
+import { checkNetflixStatus } from '../api/nf/utils'
+
+export const dynamic = 'force-dynamic'
 
 const NF = async () => {
   let data: [boolean, string][] | null = null
   try {
-    const res = await fetch('/api/nf', { cache: 'no-store' })
-    data = await res.json()
+    data = await checkNetflixStatus()
   } catch (err) {
     // ignore
   }
+
 
   return (
     <div className='w-full h-full min-h-screen flex flex-col justify-center items-center'>

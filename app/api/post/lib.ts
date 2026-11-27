@@ -2,21 +2,14 @@ import fs from 'fs'
 import path from 'path'
 import { unstable_cache } from 'next/cache'
 import matter, { GrayMatterFile } from 'gray-matter'
-// import { remark } from 'remark'
-// import html from 'remark-html'
-// import remarkParse from 'remark-parse'
-import remarkGfm from 'remark-gfm'
-// import remarkRehype from 'remark-rehype'
-// import rehypeSanitize from 'rehype-sanitize'
-// import rehypeStringify from 'rehype-stringify'
-// import rehypePrism from '@mapbox/rehype-prism'
-import rehypePrettyCode from 'rehype-pretty-code'
-import { serialize } from 'next-mdx-remote-client/serialize'
 import { isPublicPost } from '@/lib/site'
 
-const postsDirectory = path.join(process.cwd(), 'posts')
+// 文章根目录在运行时动态读取 (posts 由 next.config.js 的 outputFileTracingIncludes 打进
+// 镜像, plusPosts 由容器运行时挂载), 构建期 NFT 无法静态追踪; 所有动态 fs/path 访问点
+// 统一加 turbopackIgnore, 避免动态访问导致整仓追踪。
+const postsDirectory = path.join(/* turbopackIgnore: true */ process.cwd(), 'posts')
 
-const plusDirectory = path.join(process.cwd(), 'plusPosts')
+const plusDirectory = path.join(/* turbopackIgnore: true */ process.cwd(), 'plusPosts')
 
 const postDirectories = [postsDirectory, plusDirectory]
 
@@ -40,7 +33,7 @@ function readFile(
   callback?: (err: NodeJS.ErrnoException | null, data: Buffer) => void
 ) {
   return new Promise<Buffer>((resolve, reject) => {
-    fs.readFile(filePath, {}, (err, data) => {
+    fs.readFile(/* turbopackIgnore: true */ filePath, {}, (err, data) => {
       if (err) reject(err)
       callback?.(err, data)
       resolve(data)
@@ -49,12 +42,12 @@ function readFile(
 }
 
 export async function getAllPostsPath(dirPath = postsDirectory) {
-  let fileNames = fs.readdirSync(dirPath)
+  let fileNames = fs.readdirSync(/* turbopackIgnore: true */ dirPath)
   const allPaths = await Promise.all(
     fileNames.map(async (fileName) => {
-      const p = path.join(dirPath, fileName)
+      const p = path.join(/* turbopackIgnore: true */ dirPath, fileName)
       return new Promise<NestedString>((resolve, reject) => {
-        fs.stat(p, (err, stats) => {
+        fs.stat(/* turbopackIgnore: true */ p, (err, stats) => {
           if (err) {
             console.error(err)
             reject(err)
@@ -89,7 +82,7 @@ export async function getAllPost(dirPath = postsDirectory) {
       ? (
           await Promise.all(
             postDirectories
-              .filter((directory) => fs.existsSync(directory))
+              .filter((directory) => fs.existsSync(/* turbopackIgnore: true */ directory))
               .map((directory) => getAllPostsPath(directory))
           )
         ).flat()
@@ -139,11 +132,11 @@ export function getPostMeta(id: string[]): {
   const fileId = [...id]
   fileId[fileId.length - 1] =
     decodeURIComponent(fileId[fileId.length - 1]) + '.md'
-  const path1 = path.join(postsDirectory, ...fileId)
-  const path2 = path.join(plusDirectory, ...fileId)
-  const fullPath = fs.existsSync(path1)
+  const path1 = path.join(/* turbopackIgnore: true */ postsDirectory, ...fileId)
+  const path2 = path.join(/* turbopackIgnore: true */ plusDirectory, ...fileId)
+  const fullPath = fs.existsSync(/* turbopackIgnore: true */ path1)
     ? path1
-    : fs.existsSync(path2)
+    : fs.existsSync(/* turbopackIgnore: true */ path2)
     ? path2
     : ''
   if (!fullPath) {
@@ -158,8 +151,8 @@ export function getPostMeta(id: string[]): {
       source: 'builtin',
     }
   }
-  const fileContents = fs.readFileSync(fullPath, 'utf8')
-  const stat = fs.statSync(fullPath)
+  const fileContents = fs.readFileSync(/* turbopackIgnore: true */ fullPath, 'utf8')
+  const stat = fs.statSync(/* turbopackIgnore: true */ fullPath)
   const matterResult = matter(fileContents) as GrayMatterFile<string> & {
     data: PostFrontmatter
   }

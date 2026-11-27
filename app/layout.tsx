@@ -101,8 +101,8 @@ export default function RootLayout({
               strategy='beforeInteractive'
               data-cfasync='false'
             />
+            {/* Ezoic 广告脚本：同意由上面的 CMP 管理；Ezoic Analytics 与 GA 一样在 AnalyticsConsent 里按同意加载 */}
             <script async src='//www.ezojs.com/ezoic/sa.min.js' />
-            <script async src='//ezoicanalytics.com/analytics.js' />
           </>
         )}
       </head>

@@ -87,7 +87,7 @@ export default async function Post(props: PageProps) {
       />
       <header className='article-header'>
         <div className='article-context'>
-          <Link href={`/#notes-${category}`}>{categoryLabel}</Link>
+          <Link href='/#notes'>{categoryLabel}</Link>
           <span aria-hidden='true'>/</span>
           <span>作者：<Link href='/about'>c9cu</Link></span>
         </div>

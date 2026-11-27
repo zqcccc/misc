@@ -1,6 +1,6 @@
 'use client'
 
-import { FormEvent, useRef, useCallback, useState } from 'react'
+import { FormEvent, useRef, useCallback } from 'react'
 import { CompanyValuationCard } from '../types'
 import { formatNumber, qualityColor } from '../utils'
 import { Skeleton } from './Skeleton'
@@ -19,6 +19,8 @@ interface CompanySidebarProps {
   onSearchSubmit: () => void
   onLoadMore: () => void
   hasMore: boolean
+  loadError: string | null
+  onRetry: () => void
   searchLoading: boolean
 }
 
@@ -48,9 +50,10 @@ export function CompanySidebar({
   onLoadMore,
   hasMore,
   searchLoading,
+  loadError,
+  onRetry,
 }: CompanySidebarProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
-  const [loadError, setLoadError] = useState(false)
 
   const handleScroll = useCallback(() => {
     const container = scrollRef.current
@@ -58,15 +61,9 @@ export function CompanySidebar({
 
     const { scrollTop, scrollHeight, clientHeight } = container
     if (scrollTop + clientHeight >= scrollHeight - 100) {
-      setLoadError(false)
       onLoadMore()
     }
   }, [entriesLoading, entriesLoadingMore, hasMore, loadError, onLoadMore])
-
-  const handleRetry = useCallback(() => {
-    setLoadError(false)
-    onLoadMore()
-  }, [onLoadMore])
 
   const handleSubmit = useCallback((event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -148,6 +145,17 @@ export function CompanySidebar({
               </div>
             ))}
           </div>
+        ) : loadError && entries.length === 0 ? (
+          <div className='px-3 py-6 text-center'>
+            <p className='text-sm leading-6 text-red-400 dark:text-red-500'>列表加载失败（{loadError}）</p>
+            <button
+              type='button'
+              className='mt-2 text-[11px] text-blue-500 hover:text-blue-600 underline'
+              onClick={onRetry}
+            >
+              点击重试
+            </button>
+          </div>
         ) : entries.length === 0 ? (
           <div className='px-3 py-6 text-sm leading-6 text-gray-400 dark:text-gray-600 text-center'>
             {totalCount === 0 ? '暂无数据' : '无匹配结果'}
@@ -213,11 +221,11 @@ export function CompanySidebar({
             {entriesLoadingMore && <LoadingSpinner />}
             {loadError && (
               <div className='py-3 text-center'>
-                <span className='text-[11px] text-red-400 dark:text-red-500'>加载失败，</span>
+                <span className='text-[11px] text-red-400 dark:text-red-500'>加载失败（{loadError}），</span>
                 <button
                   type='button'
                   className='text-[11px] text-blue-500 hover:text-blue-600 underline'
-                  onClick={handleRetry}
+                  onClick={onRetry}
                 >
                   点击重试
                 </button>

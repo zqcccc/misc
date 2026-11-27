@@ -102,31 +102,58 @@ export default function MergeImagesClient() {
   const [quality, setQuality] = useState(90);
   const [outputType, setOutputType] = useState<'image/png' | 'image/jpeg' | 'image/webp'>('image/png');
 
+  // 下载文件名跟随导出格式；两个下载入口共用同一文件名
+  const resultFileName = `merged.${outputType === 'image/jpeg' ? 'jpg' : outputType === 'image/webp' ? 'webp' : 'png'}`;
+
   const sensors = useSensors(useSensor(PointerSensor));
 
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCounter = useRef(0);
+  const loadSeq = useRef(0);
+
+  // 旧合成结果整体作废：data URL 直接清出状态，交给 GC
+  const invalidateResult = useCallback(() => {
+    setResultUrl(null);
+    setResultSize(null);
+  }, []);
+
+  // 设置版本号：合并进行期间任一设置变更都会递增，完成的结果据此作废
+  const settingsVersionRef = useRef(0);
+
+  // 设置变更统一入口：值确实变化时先落新值，再立即作废旧结果（布局/尺寸基准/质量/格式均不得复用旧产物）
+  const changeSetting = useCallback((changed: boolean, apply: () => void) => {
+    if (!changed) return;
+    apply();
+    settingsVersionRef.current++;
+    invalidateResult();
+  }, [invalidateResult]);
 
   const loadFiles = useCallback((files: File[]) => {
     if (files.length === 0) return;
-    Promise.all(files.map(f => new Promise<{ id: string; file: File; preview: string }>((resolve, reject) => {
+    const seq = ++loadSeq.current;
+    Promise.all(files.map(f => {
+      const { promise, resolve, reject } = Promise.withResolvers<{ id: string; file: File; preview: string }>();
       const reader = new FileReader();
       reader.onload = () => resolve({ id: getFileId(f), file: f, preview: reader.result as string });
       reader.onerror = reject;
       reader.readAsDataURL(f);
-    }))).then(async (objs) => {
+      return promise;
+    })).then(async (objs) => {
+      if (seq !== loadSeq.current) return;
       setFileObjs(objs);
-      setResultUrl(null);
-      setResultSize(null);
+      invalidateResult();
       const imgs = await Promise.all(
-        objs.map(obj => new Promise<HTMLImageElement>((resolve, reject) => {
+        objs.map(obj => {
+          const { promise, resolve, reject } = Promise.withResolvers<HTMLImageElement>();
           const img = new window.Image();
           img.onload = () => resolve(img);
           img.onerror = reject;
           img.src = obj.preview;
-        }))
+          return promise;
+        })
       );
+      if (seq !== loadSeq.current) return;
       const widths = imgs.map(img => img.width);
       const heights = imgs.map(img => img.height);
       setImgStats({
@@ -136,7 +163,7 @@ export default function MergeImagesClient() {
         maxHeight: Math.max(...heights),
       });
     });
-  }, []);
+  }, [invalidateResult]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) loadFiles(Array.from(e.target.files));
@@ -192,19 +219,20 @@ export default function MergeImagesClient() {
     const arr = fileObjs.slice();
     [arr[idx - 1], arr[idx]] = [arr[idx], arr[idx - 1]];
     setFileObjs(arr);
+    invalidateResult();
   };
   const moveDown = (idx: number) => {
     if (idx === fileObjs.length - 1) return;
     const arr = fileObjs.slice();
     [arr[idx + 1], arr[idx]] = [arr[idx], arr[idx + 1]];
     setFileObjs(arr);
+    invalidateResult();
   };
   const remove = (idx: number) => {
     const arr = fileObjs.slice();
     arr.splice(idx, 1);
     setFileObjs(arr);
-    setResultUrl(null);
-    setResultSize(null);
+    invalidateResult();
   };
 
   const handleDragEnd = (event: any) => {
@@ -213,29 +241,25 @@ export default function MergeImagesClient() {
       const oldIndex = fileObjs.findIndex((f) => f.id === active.id);
       const newIndex = fileObjs.findIndex((f) => f.id === over.id);
       setFileObjs((arr) => arrayMove(arr, oldIndex, newIndex));
+      invalidateResult();
     }
   };
 
-  // 合并图片
   const handleMerge = async () => {
     if (fileObjs.length === 0) return;
     setLoading(true);
+    const startVersion = settingsVersionRef.current;
     try {
+      // 复用上传时已读出的 data URL 解码，不再对同一批文件做第二次 FileReader
       const images = await Promise.all(
-        fileObjs.map(
-          ({ file }) =>
-            new Promise<HTMLImageElement>((resolve, reject) => {
-              const reader = new FileReader();
-              reader.onload = () => {
-                const img = new window.Image();
-                img.onload = () => resolve(img);
-                img.onerror = reject;
-                img.src = reader.result as string;
-              };
-              reader.onerror = reject;
-              reader.readAsDataURL(file);
-            })
-        )
+        fileObjs.map((obj) => {
+          const { promise, resolve, reject } = Promise.withResolvers<HTMLImageElement>();
+          const img = new window.Image();
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = obj.preview;
+          return promise;
+        })
       );
       let canvasWidth = 0;
       let canvasHeight = 0;
@@ -300,6 +324,8 @@ export default function MergeImagesClient() {
       } else {
         dataUrl = canvas.toDataURL(outputType, quality / 100);
       }
+      // 合并期间设置被改动：本轮结果作废，不写入
+      if (settingsVersionRef.current !== startVersion) return;
       setResultUrl(dataUrl);
       setResultSize({ width: canvasWidth, height: canvasHeight });
     } catch (err) {
@@ -316,22 +342,26 @@ export default function MergeImagesClient() {
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        onClick={() => fileInputRef.current?.click()}
-        className={`relative mb-6 cursor-pointer rounded-2xl border-2 border-dashed transition-all duration-200 ${
+        className={`relative mb-6 rounded-2xl border-2 border-dashed transition-all duration-200 ${
           dragOver
             ? 'border-blue-500 bg-blue-50/80 dark:bg-blue-900/20 scale-[1.01]'
             : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-gray-50 dark:hover:bg-[#363c48]'
-        } ${fileObjs.length === 0 ? 'p-12' : 'p-6'}`}
+        }`}
       >
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          multiple
-          onChange={handleFileChange}
-          className="hidden"
-        />
-        <div className="flex items-center gap-4 pointer-events-none">
+        <label
+          className={`block cursor-pointer rounded-2xl focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500 focus-within:bg-blue-50/80 dark:focus-within:bg-blue-900/20 ${
+            fileObjs.length === 0 ? 'p-12' : 'p-6'
+          }`}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleFileChange}
+            className="sr-only"
+          />
+          <div className="flex items-center gap-4 pointer-events-none">
           <div className={`flex-shrink-0 flex items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 text-white shadow-lg ${fileObjs.length === 0 ? 'w-14 h-14' : 'w-12 h-12'} transition-all`}>
             <svg className={fileObjs.length === 0 ? 'w-7 h-7' : 'w-6 h-6'} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.9A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
@@ -354,6 +384,7 @@ export default function MergeImagesClient() {
             )}
           </div>
         </div>
+        </label>
       </div>
       {fileObjs.length > 0 && (
         <div className="mb-8 bg-gray-50 dark:bg-[#363c48] rounded-lg p-5 shadow">
@@ -387,7 +418,7 @@ export default function MergeImagesClient() {
                 name="layout"
                 value={item.value}
                 checked={layout === item.value}
-                onChange={() => setLayout(item.value)}
+                onChange={() => changeSetting(layout !== item.value, () => setLayout(item.value))}
                 className="mr-1"
               />
               {item.label}
@@ -403,7 +434,7 @@ export default function MergeImagesClient() {
                 name="sizeMode"
                 value={item.value}
                 checked={sizeMode === item.value}
-                onChange={() => setSizeMode(item.value)}
+                onChange={() => changeSetting(sizeMode !== item.value, () => setSizeMode(item.value))}
                 className="mr-1"
               />
               {item.label}
@@ -420,7 +451,7 @@ export default function MergeImagesClient() {
                   name="baseMode"
                   value={item.value}
                   checked={baseMode === item.value}
-                  onChange={() => setBaseMode(item.value as any)}
+                  onChange={() => changeSetting(baseMode !== item.value, () => setBaseMode(item.value as any))}
                   className="mr-1"
                 />
                 {item.label}
@@ -431,7 +462,7 @@ export default function MergeImagesClient() {
                 type="number"
                 min={1}
                 value={customBase}
-                onChange={e => setCustomBase(e.target.value)}
+                onChange={e => changeSetting(customBase !== e.target.value, () => setCustomBase(e.target.value))}
                 placeholder={layout === 'vertical' ? '宽度(px)' : '高度(px)'}
                 className="w-20 ml-1 px-2 py-0.5 rounded border border-gray-300 dark:border-gray-600 text-sm bg-white dark:bg-[#282c35] text-gray-900 dark:text-gray-100"
               />
@@ -448,7 +479,7 @@ export default function MergeImagesClient() {
         <label className="font-medium mr-2">导出格式：</label>
         <select
           value={outputType}
-          onChange={e => setOutputType(e.target.value as any)}
+          onChange={e => changeSetting(outputType !== e.target.value, () => setOutputType(e.target.value as any))}
           className="border rounded px-2 py-1 bg-white dark:bg-[#282c35] text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
         >
           <option value="image/png">PNG（无损）</option>
@@ -464,7 +495,7 @@ export default function MergeImagesClient() {
             min={1}
             max={100}
             value={quality}
-            onChange={e => setQuality(Number(e.target.value))}
+            onChange={e => changeSetting(quality !== Number(e.target.value), () => setQuality(Number(e.target.value)))}
             className="w-48 accent-blue-600"
           />
           <span className="ml-2 text-blue-700 dark:text-blue-300 font-semibold w-10 inline-block">{quality}%</span>
@@ -481,7 +512,7 @@ export default function MergeImagesClient() {
         {resultUrl && (
           <a
             href={resultUrl}
-            download="merged.png"
+            download={resultFileName}
             className="px-6 py-2 text-lg rounded-md font-semibold shadow bg-green-600 dark:bg-green-800 text-white hover:bg-green-700 dark:hover:bg-green-900 transition-colors"
           >
             下载图片
@@ -501,7 +532,7 @@ export default function MergeImagesClient() {
             style={{ maxWidth: '100%', height: 'auto' }}
           />
           <div>
-            <a href={resultUrl} download="merged.png" className="text-blue-600 dark:text-blue-300 font-medium text-base hover:underline">
+            <a href={resultUrl} download={resultFileName} className="text-blue-600 dark:text-blue-300 font-medium text-base hover:underline">
               下载图片
             </a>
           </div>

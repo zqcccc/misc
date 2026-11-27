@@ -16,6 +16,7 @@ const buildShortUrl = (key: string) =>
 export default function Shorter() {
   const [state, setState] = useSetState({
     url: '',
+    adminToken: '',
     duration: null as null | number,
     shortUrl: '',
     id: '',
@@ -25,6 +26,37 @@ export default function Shorter() {
   })
   const [defaultRedirectUrl, setDefaultRedirectUrl] = useState('')
   const [baseUrl, setBaseUrl] = useState('')
+  const submitWrite = async (
+    method: 'POST' | 'PATCH',
+    body: Record<string, unknown>,
+  ) => {
+    const token = state.adminToken.trim()
+    if (!token) {
+      toast.error('请先输入管理员工令牌')
+      return
+    }
+    const res = await fetch('/api/shorter', {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(body),
+    })
+    const text = await res.text()
+    if (!res.ok) {
+      // 展示服务端原始错误（401/503/400/409 均为 JSON { error }）
+      let message = text
+      try {
+        message = JSON.parse(text).error ?? text
+      } catch {
+        // 非 JSON 错误体直接原文展示
+      }
+      toast.error(message)
+      return
+    }
+    setState({ shortUrl: buildShortUrl(text) })
+  }
   useEffect(() => {
     fetch('/api/shorter/default')
       .then((res) => res.text())
@@ -92,6 +124,16 @@ export default function Shorter() {
 
         <section className='rounded-lg border border-border bg-background p-4 shadow-sm dark:border-gray-700'>
           <h2 className='text-base font-semibold'>origin url</h2>
+          <div className='mt-3 flex items-center gap-2 flex-wrap text-sm'>
+            <span className='font-medium'>admin token</span>
+            <Input
+              className='w-64 bg-background'
+              type='password'
+              autoComplete='off'
+              value={state.adminToken}
+              onChange={(e) => setState({ adminToken: e.target.value })}
+            />
+          </div>
           <Input
             className='mt-2 bg-background'
             type='text'
@@ -162,18 +204,10 @@ export default function Shorter() {
             variant='outline'
             className='mt-2'
             onClick={() => {
-              fetch('/api/shorter', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  url: state.url,
-                  duration: state.duration,
-                }),
+              submitWrite('POST', {
+                url: state.url,
+                duration: state.duration,
               })
-                .then((res) => res.text())
-                .then((key) => setState({ shortUrl: buildShortUrl(key) }))
             }}
           >
             submit
@@ -207,19 +241,11 @@ export default function Shorter() {
                   toast.error('id is empty')
                   return
                 }
-                fetch('/api/shorter', {
-                  method: 'PATCH',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({
-                    id: state.id,
-                    url: state.url,
-                    duration: state.duration,
-                  }),
+                submitWrite('PATCH', {
+                  id: state.id,
+                  url: state.url,
+                  duration: state.duration,
                 })
-                  .then((res) => res.text())
-                  .then((key) => setState({ shortUrl: buildShortUrl(key) }))
               }}
             >
               Update

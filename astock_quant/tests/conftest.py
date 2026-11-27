@@ -32,7 +32,10 @@ def make_panels(prices: dict[str, list[float]], dates: pd.DatetimeIndex = None,
         pd.DataFrame(1e6, index=dates, columns=close.columns)
     amount = volume * 0 + amount_scale
     amount = amount.where(close.notna())
+    # 合成序列没有公司行动，不复权价与复权价一致——这是事实口径；
+    # rules.tradability 需要完整不复权面板（fail-closed，见 B0005），fixture 必须给全。
     return {"open": open_, "high": high, "low": low, "close": close,
+            "open_raw": open_, "high_raw": high, "low_raw": low,
             "volume": volume, "amount": amount, "close_raw": close}
 
 
@@ -61,5 +64,7 @@ def random_panels(rng):
     low = pd.DataFrame(low, index=dates, columns=codes).mask(halt)
     volume = volume.mask(halt)
     amount = (volume * close * 100).astype(float)
+    # 合成序列没有公司行动，不复权价与复权价一致（tradability 需要完整不复权面板）
     return {"open": open_, "high": high, "low": low, "close": close,
+            "open_raw": open_, "high_raw": high, "low_raw": low,
             "volume": volume, "amount": amount, "close_raw": close}

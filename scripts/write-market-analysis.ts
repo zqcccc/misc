@@ -4,6 +4,7 @@ import {
   writeMarketAnalysisCrossMarket,
   type CrossMarketWriteInput,
 } from '../lib/market-analysis'
+import { disconnectMarketAnalysisClient } from '../lib/market-analysis'
 import { recordMarketAnalysisScratchpad } from '../lib/market-analysis-scratchpad'
 
 const FLAG_DRY_RUN = '--dry-run'
@@ -63,11 +64,11 @@ type VerifyResult = {
 }
 
 function printUsage() {
-  console.log(`Usage: npm run market-analysis:write -- <payload.json> [--dry-run] [--no-verify]
+  console.log(`Usage: pnpm market-analysis:write <payload.json> [--dry-run] [--no-verify]
 
 Examples:
-  npm run market-analysis:write -- tmp/aapl-analysis.json
-  npm run market-analysis:write -- tmp/aapl-analysis.json --dry-run
+  pnpm market-analysis:write tmp/aapl-analysis.json
+  pnpm market-analysis:write tmp/aapl-analysis.json --dry-run
 
 The payload must match CrossMarketWriteInput and include runId, company.symbol, company.market, and company.name.`)
 }
@@ -325,11 +326,11 @@ async function verifyWrite(input: CrossMarketWriteInput): Promise<VerifyResult> 
     },
   }
 
-  const runExploration = await prisma.companyExploration.findFirst({
-    where: { companyId: company.id, runId: input.runId },
+  const runExploration = await prisma.companyExploration.findUnique({
+    where: { companyId_runId: { companyId: company.id, runId: input.runId } },
   })
-  const runValuation = await prisma.companyValuationSnapshot.findFirst({
-    where: { companyId: company.id, runId: input.runId },
+  const runValuation = await prisma.companyValuationSnapshot.findUnique({
+    where: { companyId_runId: { companyId: company.id, runId: input.runId } },
   })
   const runExplanations = await prisma.companyValuationExplanation.findMany({
     where: { companyId: company.id, runId: input.runId },
@@ -412,7 +413,7 @@ async function main() {
 
 main()
   .then(async () => {
-    await prisma.$disconnect()
+    await Promise.all([prisma.$disconnect(), disconnectMarketAnalysisClient()])
     process.exit(SUCCESS_EXIT_CODE)
   })
   .catch(async (error) => {
@@ -420,6 +421,6 @@ main()
       success: false,
       error: error instanceof Error ? error.message : String(error),
     }, null, 2))
-    await prisma.$disconnect()
+    await Promise.all([prisma.$disconnect(), disconnectMarketAnalysisClient()])
     process.exit(FAILURE_EXIT_CODE)
   })

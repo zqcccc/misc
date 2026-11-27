@@ -92,10 +92,10 @@ for (const [slot, config] of Object.entries(AD_SLOTS)) {
   }
 }
 
-// 隐私政策据此列出当前实际在用的第三方广告服务
+// 隐私政策据此列出标有“广告”字样的显式广告位来源：只看 AD_SLOTS 的实际配置。
+// Ezoic 的自动广告和 Ezoic Analytics 不属于显式广告位，在隐私政策里单独披露。
 export function getActiveAdProviders(): string[] {
   const providers = new Set<AdSlotConfig['provider']>()
-  if (EZOIC_ENABLED) providers.add(AD_PROVIDER.EZOIC)
   for (const config of Object.values(AD_SLOTS)) {
     if (config && config.provider !== AD_PROVIDER.DIRECT) providers.add(config.provider)
   }

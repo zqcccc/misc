@@ -35,6 +35,48 @@ const CHANGE_PCT_HINT =
   '口径 =（快照最新价 ÷ 前一交易日收盘价 − 1）×100%，即快照时点所在交易日的单日涨跌幅；'
   + '不是持有期收益，也不是本调仓周期收益。每行第二排是该行快照时间，收盘后刷新即为当日全天涨跌。'
 
+// 本期收益里被剔除标的的原因码 → 页面文案（与 aq/live_smallcap.py 的 codes_excluded 对应）。
+const EXCLUDED_REASON_LABELS: Record<string, string> = {
+  corporate_action_unconfirmed: '近期除权未确认复权',
+  missing_entry_price: '缺建仓价',
+  missing_last_price: '缺最新收盘价',
+}
+
+// sensitivity_table 行的最小结构；payload 经 isSensitivityRowList 守卫后才按此形状使用。
+interface SensitivityRow {
+  N: number
+  cagr_pct: number
+  daily_sharpe: number
+  max_drawdown_pct: number
+  crash_2024_mdd_pct: number
+  annual_turnover: number
+  alpha_annual_pct: number
+  alpha_t_nw: number
+  mc_p5: number
+  is_recommended: boolean
+  is_top_cagr: boolean
+  assessment: string
+}
+
+function isSensitivityRowList(value: unknown): value is SensitivityRow[] {
+  return Array.isArray(value) &&
+    value.every((row: unknown) =>
+      typeof row === 'object' &&
+      row !== null &&
+      'N' in row &&
+      typeof row.N === 'number',
+    )
+}
+
+function isStringRecord(value: unknown): value is Record<string, string> {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    !Array.isArray(value) &&
+    Object.values(value).every((item) => typeof item === 'string')
+  )
+}
+
 function fmtQuoteTime(value: string | undefined, fallback: string): string {
   if (!value) return fallback
   if (/^\d{14}$/.test(value)) {
@@ -63,7 +105,7 @@ export default function SmallCapStrategyPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   
-  // 选中的持仓只数配置: 默认打开推荐 7 只组合 (收益之王)
+  // 选中的持仓只数配置: 默认打开推荐 7 只组合（默认展示配置；排名断言以 sensitivity payload 为准）
   const [activeN, setActiveN] = useState<'8' | '7' | '6' | '5' | '10' | '30'>('7')
   
   // 自定义实操本金（万元），默认 50 万元
@@ -76,6 +118,9 @@ export default function SmallCapStrategyPage() {
   const [searchKey, setSearchKey] = useState('')
   const [sortField, setSortField] = useState<'float_cap_billion' | 'price' | 'change_pct' | 'period_return_pct' | 'factor_score'>('float_cap_billion')
   const [sortAsc, setSortAsc] = useState(true)
+
+  // 当前时间（毫秒）：由下方 useEffect 订阅，首次异步触发；null 表示尚未就绪。
+  const [nowMs, setNowMs] = useState<number | null>(null)
 
   const equityChartRef = useRef<HTMLDivElement>(null)
   const drawdownChartRef = useRef<HTMLDivElement>(null)
@@ -99,6 +144,17 @@ export default function SmallCapStrategyPage() {
       .finally(() => setLoading(false))
   }, [])
 
+  // 当前时间订阅：render 必须保持纯函数，Date.now() 只能在回调里取。
+  // 首次也通过 timeout 异步触发，卸载时清理；nowMs 未就绪时不做时效判断。
+  useEffect(() => {
+    const timer = setTimeout(() => setNowMs(Date.now()), 0)
+    const interval = setInterval(() => setNowMs(Date.now()), 60_000)
+    return () => {
+      clearTimeout(timer)
+      clearInterval(interval)
+    }
+  }, [])
+
   // 当前选中配置的数据
   const curConfig = useMemo(() => {
     if (!data || !data.configs) return null
@@ -108,6 +164,7 @@ export default function SmallCapStrategyPage() {
   // 渲染 ECharts
   useEffect(() => {
     if (!curConfig || !curConfig.equity_curve) return
+    let cancelled = false
 
     const curve = curConfig.equity_curve
     const dates = curve.map((c: any) => c.date)
@@ -118,6 +175,7 @@ export default function SmallCapStrategyPage() {
     const hs300DD = curve.map((c: any) => c.hs300_drawdown)
 
     import('echarts').then((echarts) => {
+      if (cancelled) return
       // 1. 净值曲线
       if (equityChartRef.current) {
         if (!chartInstance1.current) {
@@ -293,7 +351,16 @@ export default function SmallCapStrategyPage() {
       chartInstance3.current?.resize()
     }
     window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
+    return () => {
+      cancelled = true
+      window.removeEventListener('resize', handleResize)
+      chartInstance1.current?.dispose()
+      chartInstance1.current = null
+      chartInstance2.current?.dispose()
+      chartInstance2.current = null
+      chartInstance3.current?.dispose()
+      chartInstance3.current = null
+    }
   }, [curConfig, activeN])
 
   // 排序与搜索持仓
@@ -363,17 +430,49 @@ export default function SmallCapStrategyPage() {
   const cap = curConfig.cap_distribution || {}
   const holdings = curConfig.current_holdings || []
   const rbHistory = curConfig.rebalance_history || []
+  // 运行状态：读取数据文件的 runtime / update_time / latest_trading_date。
+  // runtime 缺失说明仍是旧版种子数据（守护进程未写入状态字段）；degraded 表示上一轮
+  // 更新失败，页面继续展示最后有效数据，但必须给出明确警示而不是当作实时数据。
+  const runtime = data.runtime || null
+  const runtimeStatus = runtime?.status || null
+  const updateTime = data.update_time || null
+  const lastTradingDate = data.latest_trading_date || null
+  const updateTimeAgeDays =
+    nowMs != null && updateTime
+      ? Math.max(0, Math.floor((nowMs - new Date(updateTime.replace(' ', 'T')).getTime()) / 86400000))
+      : null
+  const tradingDateAgeDays =
+    nowMs != null && lastTradingDate
+      ? Math.max(0, Math.floor((nowMs - new Date(`${lastTradingDate}T00:00:00`).getTime()) / 86400000))
+      : null
+  // 时钟未就绪时无法判定过期，不得默认给出「未过期/正常」的保证
+  const stalenessPending = nowMs == null && (updateTime != null || lastTradingDate != null)
+  const coverage = runtime?.validation?.coverage
+  const isLowCoverage = typeof coverage === 'number' && coverage < 0.95
+  const isStale = Math.max(updateTimeAgeDays ?? 0, tradingDateAgeDays ?? 0) >= 10
+  const runtimeWarning = runtimeStatus === 'degraded' || isStale || isLowCoverage
   // 三态：后端未升级(无字段) / 已出信号但还没到 T+1 建仓 / 本期持仓运行中。
   // 缺字段不能当成「尚未建仓」，否则老数据会谎报本期没开仓。
   const currentPeriod = curConfig.current_period || null
   const hasPeriodData = Boolean(currentPeriod)
   const isPeriodPending = hasPeriodData && currentPeriod.status === PERIOD_STATUS_PENDING
-  const sensitivity = data.sensitivity_table || []
+  // 本期被剔除标的（原因码 → 文案），payload 缺失或形状不符时按空处理，不冒充。
+  const codesExcluded: Record<string, string> =
+    isStringRecord(currentPeriod?.codes_excluded) ? currentPeriod.codes_excluded : {}
+  const sensitivity: SensitivityRow[] = isSensitivityRowList(data.sensitivity_table)
+    ? data.sensitivity_table
+    : []
+
+  const recommendedN = data.recommended_n != null ? String(data.recommended_n) : '7'
+  const freqDays =
+    Number(data.rules?.freq_days) || Number(currentPeriod?.trading_days_total) || 20
+  const freqLabel =
+    freqDays >= 15 ? '月频轮动' : freqDays <= 7 ? '周频轮动' : '双周轮动'
   const factorMethodology = data.factor_methodology || {
     formula: '[1.0×(小盘百分位-0.5) + 0.5×(反转百分位-0.5) + 0.5×(低特质波动百分位-0.5)] / 2.0',
     ranking: '每个交易日只在当日可投资股票池内做截面百分位排名；百分位越高越好',
     timing: 'T 日收盘后计算，T+1 日开盘执行',
-    selection: '每 10 个交易日调仓；已持仓进入前 2N 名即可保留，再用高分股补足 N 只',
+    selection: `每 ${freqDays} 个交易日调仓；已持仓进入前 2N 名即可保留，再用高分股补足 N 只`,
     factors: {
       liqsize20: { short_label: '小盘规模', weight: 1, formula: '-ln(mean(成交额, 20日))', direction: '过去 20 日平均成交额越小，得分越高' },
       rev5: { short_label: '短期反转', weight: 0.5, formula: '-(收盘价_t / 收盘价_t-5 - 1)', direction: '过去 5 日涨幅越低，得分越高' },
@@ -381,6 +480,20 @@ export default function SmallCapStrategyPage() {
     },
   }
 
+  // 排名类结论一律由当前 sensitivity payload 实算派生；页面不维护历史硬数字。
+  const topCagrRow = sensitivity.reduce<SensitivityRow | null>(
+    (best, row) => (best == null || row.cagr_pct > best.cagr_pct ? row : best),
+    null,
+  )
+  const mildestDrawdownRow = sensitivity.reduce<SensitivityRow | null>(
+    (best, row) => (best == null || row.max_drawdown_pct > best.max_drawdown_pct ? row : best),
+    null,
+  )
+  const selectionRows = {
+    r6: sensitivity.find((row) => row.N === 6) ?? null,
+    r7: sensitivity.find((row) => row.N === 7) ?? null,
+    r8: sensitivity.find((row) => row.N === 8) ?? null,
+  }
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 space-y-8 font-sans">
       {/* 头部标题与严谨因果声明 */}
@@ -411,8 +524,14 @@ export default function SmallCapStrategyPage() {
                   : 'text-gray-600 dark:text-gray-300 hover:text-gray-900'
               }`}
             >
-              <span>⭐ 7 只</span>
-              <span className="text-[10px] font-normal opacity-90">(收益最高)</span>
+              <span>{recommendedN === '7' ? '⭐ 7 只' : '7 只'}</span>
+              <span className="text-[10px] font-normal opacity-90">
+                {topCagrRow && topCagrRow.N === 7
+                  ? '(收益最高)'
+                  : recommendedN === '7'
+                  ? '(默认)'
+                  : null}
+              </span>
             </button>
             <button
               onClick={() => setActiveN('8')}
@@ -423,7 +542,9 @@ export default function SmallCapStrategyPage() {
               }`}
             >
               <span>8 只</span>
-              <span className="text-[10px] opacity-75">(回撤平衡)</span>
+              <span className="text-[10px] opacity-75">
+                {mildestDrawdownRow && mildestDrawdownRow.N === 8 ? '(回撤平衡)' : null}
+              </span>
             </button>
             <button
               onClick={() => setActiveN('6')}
@@ -468,6 +589,59 @@ export default function SmallCapStrategyPage() {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* 数据管线运行状态：degraded/数据过旧时给出明确警示，同时保留最后有效数据可读 */}
+      <div
+        className={`rounded-xl border p-4 text-xs leading-relaxed ${
+          runtimeWarning
+            ? 'border-rose-200 bg-rose-50/60 text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/20 dark:text-rose-300'
+            : 'border-gray-200 bg-gray-50/60 text-gray-600 dark:border-gray-800 dark:bg-gray-900/40 dark:text-gray-300'
+        }`}
+      >
+        {runtimeWarning ? (
+          <div className="space-y-1">
+            <div className="text-sm font-bold">⚠️ 数据管线异常：以下为最后有效数据，可能已过期</div>
+            <div>
+              最后有效数据日: <strong>{lastTradingDate || '未知'}</strong>
+              {updateTime ? <> · 数据文件更新于 {updateTime}</> : null}
+              {updateTimeAgeDays != null ? <>（已 {updateTimeAgeDays} 天未更新）</> : null}
+            </div>
+            {runtimeStatus === 'degraded' ? (
+              <div>
+                守护进程状态 <strong>degraded</strong>
+                {runtime?.failed_at ? <>，最近一次失败于 {runtime.failed_at}</> : null}
+                {runtime?.last_error ? <>，原因: {runtime.last_error}</> : null}
+                。页面继续展示上一份有效信号，请勿当作最新数据使用。
+              </div>
+            ) : null}
+            {isLowCoverage ? (
+              <div>
+                最新截面覆盖率 {fmtNum(coverage * 100, 1)}%，低于 95% 健康阈值，选股结果可能受缺失行情影响。
+              </div>
+            ) : null}
+            {isStale && runtimeStatus !== 'degraded' ? (
+              <div>数据文件或行情日期已 10 天以上未更新（可能处于长假停市或守护进程未运行），请谨慎参考。</div>
+            ) : null}
+          </div>
+        ) : (
+          <div>
+            {stalenessPending ? (
+              <>
+                数据状态核对中 · 最后有效数据日: <strong>{lastTradingDate || '未知'}</strong>
+                {updateTime ? <> · 数据文件更新于 {updateTime}</> : null}
+                （正在核对数据是否过期…）
+              </>
+            ) : (
+              <>
+                数据管线运行正常
+                {runtime?.mode ? <>（{runtime.mode} · {runtimeStatus}）</> : '（数据文件未提供运行状态字段）'}
+                · 最后有效数据日: <strong>{lastTradingDate || '未知'}</strong>
+                {updateTime ? <> · 数据文件更新于 {updateTime}</> : null}
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* 调仓频率研究结论（2026-09-08 定稿）：三段切分 + TEST 物理隔离 + 四层证伪 + 多相位检验 */}
@@ -536,8 +710,9 @@ export default function SmallCapStrategyPage() {
         </div>
 
         <div className="text-xs text-amber-800 dark:text-amber-300 mt-2 leading-relaxed">
-          📌 <b>生效状态</b>：代码已切至 20 日，但本页回测指标仍按旧的 10 日口径算（线上守护进程只做增量更新，不会重算历史回测）。
-          20 日周期自<b>下次调仓日</b>起生效，届时年换手由约 45x 降至约 23x（线上 2019 起全样本口径 45.8x → 23.4x，与研究口径一致）；历史曲线需重跑一次种子数据才会同步。
+          📌 <b>生效状态</b>：代码、种子回测与 rules.freq_days 已统一按 <b>{freqDays} 日</b>周期计算。
+          线上旧的 10 日状态会在它既有的下一调仓日一次性迁移到 {freqDays} 日，之后每 {freqDays} 个交易日轮动一次；
+          迁移前的最后一期仍按 10 日节奏运行，下方「本期持仓周期」卡片显示的是当前实际状态。
         </div>
       </div>
 
@@ -552,7 +727,7 @@ export default function SmallCapStrategyPage() {
         </div>
 
         <div className="p-4 rounded-xl border bg-white dark:bg-gray-900/60 dark:border-gray-800 shadow-sm">
-          <div className="text-xs text-gray-500 dark:text-gray-400">日夏普比率 (Rf=2%)</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400">日夏普比率 (Rf=0)</div>
           <div className="text-xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">
             {fmtNum(m.daily_sharpe)}
           </div>
@@ -611,7 +786,7 @@ export default function SmallCapStrategyPage() {
                 <th className="py-2.5 px-3">持仓只数 (N)</th>
                 <th className="py-2.5 px-3">单只仓位</th>
                 <th className="py-2.5 px-3">年化收益 (CAGR)</th>
-                <th className="py-2.5 px-3">日夏普比率</th>
+                <th className="py-2.5 px-3">日夏普比率 (Rf=0)</th>
                 <th className="py-2.5 px-3">全期最大回撤</th>
                 <th className="py-2.5 px-3">2024初踩踏回撤</th>
                 <th className="py-2.5 px-3">年化换手率</th>
@@ -694,21 +869,39 @@ export default function SmallCapStrategyPage() {
           </table>
         </div>
 
-        {/* 选型依据说明 */}
-        <div className="p-3.5 rounded-lg bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 text-xs text-amber-900 dark:text-amber-200 leading-relaxed space-y-1.5">
-          <div className="font-bold flex items-center gap-1.5">
-            <span>💡</span> 6 只、7 只、8 只怎么选
+        {/* 选型依据说明：全部数字由当前 sensitivity payload 实算派生，不引用历史硬编码 */}
+        {selectionRows.r7 || selectionRows.r8 || selectionRows.r6 ? (
+          <div className="p-3.5 rounded-lg bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 text-xs text-amber-900 dark:text-amber-200 leading-relaxed space-y-1.5">
+            <div className="font-bold flex items-center gap-1.5">
+              <span>💡</span> 6 只、7 只、8 只怎么选（当前回测实算）
+            </div>
+            {selectionRows.r7 && (
+              <div>
+                • <strong>7 只 (N=7)</strong>：年化 <strong>{fmtPct(selectionRows.r7.cagr_pct)}</strong>
+                {topCagrRow && topCagrRow.N === 7 ? '（本表最高）' : ''}
+                ；纯 Alpha {fmtPct(selectionRows.r7.alpha_annual_pct)}
+                (NW t={fmtNum(selectionRows.r7.alpha_t_nw)})，蒙卡 P5 {fmtNum(selectionRows.r7.mc_p5)}；
+              </div>
+            )}
+            {selectionRows.r8 && (
+              <div>
+                • <strong>8 只 (N=8)</strong>：年化 {fmtPct(selectionRows.r8.cagr_pct)}，
+                2024 年初踩踏回撤 {fmtPct(selectionRows.r8.crash_2024_mdd_pct)}
+                {mildestDrawdownRow && mildestDrawdownRow.N === 8
+                  ? '（全表最浅，可点击配置中回撤控制最好）'
+                  : ''}
+                ，夏普 {fmtNum(selectionRows.r8.daily_sharpe)}；
+              </div>
+            )}
+            {selectionRows.r6 && (
+              <div>
+                • <strong>6 只 (N=6)</strong>：年化 {fmtPct(selectionRows.r6.cagr_pct)}，
+                2024 初踩踏回撤 <strong>{fmtPct(selectionRows.r6.crash_2024_mdd_pct)}</strong>
+                （全期回撤 {fmtPct(selectionRows.r6.max_drawdown_pct)}）。
+              </div>
+            )}
           </div>
-          <div>
-            • <strong>7 只 (N=7)</strong>：年化复合收益 <strong>21.01%</strong>，各配置中最高；纯 Alpha 10.32% (NW t=1.79)，蒙卡 P5 1.12；
-          </div>
-          <div>
-            • <strong>8 只 (N=8)</strong>：年化收益 20.65%，2024 年初踩踏回撤从 7 只的 -47.43% 降至 <strong>-44.61%</strong>，夏普最高 (0.831)；
-          </div>
-          <div>
-            • <strong>6 只 (N=6)</strong>：年化 20.99%，但 2024 初踩踏回撤 <strong>-49.44%</strong>（全期回撤 -52.04%），收益和回撤都不如 7 只。
-          </div>
-        </div>
+        ) : null}
       </div>
 
       {/* 专设模块：实盘调仓时机与交易执行指南 */}
@@ -718,7 +911,7 @@ export default function SmallCapStrategyPage() {
             ⏰ 调仓执行时间与方式
           </span>
           <span className="text-xs px-2 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300">
-            双周轮动
+            {freqLabel}
           </span>
         </div>
 
@@ -749,7 +942,7 @@ export default function SmallCapStrategyPage() {
               2. <strong>先卖后买</strong>：09:35 先按买一价将调出标的卖出，资金实时可用；
             </div>
             <div>
-              3. <strong>再买入调入标的</strong>：对照下方表格里的<strong>建议股数/手数</strong>挂单买入。因有 2.0x 滞后带缓冲，双周调仓平均每次只变动 1~2 只股票，其余继续持有。
+              3. <strong>再买入调入标的</strong>：对照下方表格里的<strong>建议股数/手数</strong>挂单买入。因有 2.0x 滞后带缓冲，每 {freqDays} 个交易日调仓一次，平均每次只变动 1~2 只股票，其余继续持有。
             </div>
           </div>
         </div>
@@ -840,7 +1033,7 @@ export default function SmallCapStrategyPage() {
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 className="font-bold text-sm">🗓️ 本期持仓周期与当期收益</h3>
             <span className="text-[11px] text-sky-700 dark:text-sky-300">
-              每 {currentPeriod?.trading_days_total ?? 10} 个交易日轮动一次
+              每 {currentPeriod?.trading_days_total ?? freqDays} 个交易日轮动一次
             </span>
           </div>
 
@@ -873,7 +1066,7 @@ export default function SmallCapStrategyPage() {
               <div className="mt-0.5 text-[10px] text-gray-500 dark:text-gray-400">
                 {hasPeriodData
                   ? `再过 ${currentPeriod.trading_days_remaining} 个交易日出下一期信号`
-                  : '每 10 个交易日出一次新信号'}
+                  : `每 ${freqDays} 个交易日出一次新信号`}
               </div>
             </div>
             <div
@@ -921,7 +1114,18 @@ export default function SmallCapStrategyPage() {
           ) : (
             <div className="rounded-md border border-sky-200/80 bg-white/80 px-3 py-2 leading-relaxed dark:border-sky-900 dark:bg-gray-950/40">
               建仓价基准：{currentPeriod.entry_basis_label}
-              {currentPeriod.entry_basis !== ENTRY_BASIS_T1_OPEN && '；实盘若在 T+1 开盘成交，收益会与此有偏差'}。
+              {currentPeriod.entry_basis_degraded === true
+                ? '（降级：本期缺 T+1 开盘价，暂以信号日收盘价近似；open 数据恢复后自动回到开盘价口径）'
+                : currentPeriod.entry_basis !== ENTRY_BASIS_T1_OPEN && '；实盘若在 T+1 开盘成交，收益会与此有偏差'}
+              。
+              {Object.keys(codesExcluded).length > 0 && (
+                <span className="mt-1 block text-rose-700 dark:text-rose-300">
+                  ⚠️ {Object.keys(codesExcluded).length} 只标的被剔除出本期收益
+                  （{Object.values(codesExcluded)
+                    .map((reason) => EXCLUDED_REASON_LABELS[reason] || reason)
+                    .join('、')}），未计入组合收益。
+                </span>
+              )}
               组合收益按建仓时等权计算 = 各标的本期收益的算术平均，未扣佣金、印花税与滑点。
             </div>
           )}

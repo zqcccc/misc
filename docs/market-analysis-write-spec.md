@@ -9,6 +9,17 @@
 - 写入的数据应基于 Agent 对多维度信息的**综合判断**，而非简单的财务指标计算
 - 评分（score）应反映 Agent 对公司投资价值的**主观+客观综合评估**
 
+## 鉴权与请求限制
+
+所有 POST 请求必须携带：
+
+```http
+Authorization: Bearer <ADMIN_API_TOKEN>
+Content-Type: application/json
+```
+
+`ADMIN_API_TOKEN` 只配置在服务端与调用方的秘密环境中。服务器未配置时写入接口返回 503，凭证错误返回 401；请求体上限为 1 MiB，每个来源 IP 每分钟最多 60 次写入。下文所有 curl 示例都必须附加上述 Authorization 请求头。
+
 ## Agent 分析要求
 
 ### 什么情况下应该写入数据？

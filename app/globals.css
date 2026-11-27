@@ -937,6 +937,12 @@ body {
     grid-column: 1;
   }
 
+  .trust-page section h3,
+  .trust-page section dl,
+  .trust-page section > dl {
+    grid-column: 1;
+  }
+
   .trust-page section > p + p,
   .trust-page section > p + ul {
     margin-top: 0;

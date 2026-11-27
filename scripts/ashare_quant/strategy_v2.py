@@ -5,12 +5,12 @@ EP004 增强版: A股核心赛道龙头截面相对强弱 Alpha 策略
 基于 frank-quant/ai-trading-videos EP004 核心理念重构:
 1. 提取真 Alpha (Relative Strength Alpha vs 沪深300基准):
    - 衡量标的相对于基准大盘的超额主升浪能力, 剥离纯 Beta 噪音。
-2. 严格控制换手 (Turnover Control & Hysteresis Buffer):
+2. 严格控制换手 (Turnover Control):
    - 调仓周期设为 20 个交易日 (月度稳健轮动);
-   - 引入 25% 的滞后缓冲 (新标的评分必须显著超越老持仓才调换), 杜绝频繁摩擦。
+   - 调仓日老持仓只要仍有合格正得分就优先保留, 名额不足时由剩余候选按得分递补。
 3. 非对称盈亏比 (Asymmetric Risk-Reward / Let Winners Run):
-   - 浮盈超过 15% 时自动启动移动跟踪止盈 (锁定 50% 利润);
-   - 跌破关键支撑 MA20 或高点回撤 10% 坚决离场。
+   - 浮盈达到 15% 且自最高点回撤 8% 时移动止盈离场;
+   - 自成本亏损达到 10% 硬止损; 跌破 MA20 且自高点回撤 6% 离场。
 4. 严格防未来函数:
    - T日盘后计算截面相对强弱, T+1日以开盘价 Open 成交。
 """
@@ -31,7 +31,6 @@ class RelativeStrengthAlphaStrategy:
         market_filter_ma: int = 60,           # 大盘均线过滤
         rs_window_fast: int = 20,             # 快速相对强弱窗口
         rs_window_slow: int = 60,             # 慢速相对强弱窗口
-        hysteresis_buffer: float = 0.20,      # 换仓缓冲阈值 (新股票必须比老股票高20%才换)
         stop_loss_pct: float = 0.10,          # 基础止损阈值 (10%)
         trail_activation_pct: float = 0.15,   # 浮盈达到 15% 启动移动止盈
         trail_pullback_pct: float = 0.08,     # 移动止盈回撤阈值 (8%)
@@ -43,7 +42,6 @@ class RelativeStrengthAlphaStrategy:
         self.market_filter_ma = market_filter_ma
         self.rs_window_fast = rs_window_fast
         self.rs_window_slow = rs_window_slow
-        self.hysteresis_buffer = hysteresis_buffer
         self.stop_loss_pct = stop_loss_pct
         self.trail_activation_pct = trail_activation_pct
         self.trail_pullback_pct = trail_pullback_pct
@@ -191,8 +189,8 @@ class RelativeStrengthAlphaStrategy:
 
         self.last_scores = candidate_scores
 
-        # 选出 Top-K，带缓冲阈值机制 (Hysteresis Buffer)
-        # 如果老持仓依然在前列且没有被新股票大幅超越，优先保留老持仓以节约换手！
+        # 选出 Top-K: 调仓日老持仓只要仍有合格正得分即优先保留 (按持仓顺序),
+        # 名额不足时从剩余候选按得分从高到低递补。
         ranked_candidates = sorted(candidate_scores.items(), key=lambda x: x[1], reverse=True)
         
         target_symbols: List[str] = []

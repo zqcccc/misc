@@ -99,7 +99,7 @@ def refresh_universe_if_due(cache_dir: str | Path, max_age_days: int = 30) -> No
                 if code in chunk and len(parts) > 3 and parts[1] and parts[2]:
                     active[code] = parts[1].replace(" ", "")
         except Exception as exc:  # noqa: BLE001
-            print(f"[WARN] 代码扫描批次 {start // 50 + 1} 失败: {exc}", flush=True)
+            print(f"[WARN] 月度代码扫描批次 {start // 50 + 1} 失败: {exc}", flush=True)
 
     # 防止网络半失败把代码表缩成残缺集合；旧 meta 仍是永久兜底。
     if len(active) < 4000:
@@ -124,8 +124,13 @@ def _fetch_code(code: str, end: str, count: int, stage_dir: Path) -> dict:
     target = _stage_path(stage_dir, code)
     if target.exists():
         try:
-            return json.loads(target.read_text(encoding="utf-8"))
-        except Exception:  # noqa: BLE001
+            saved = json.loads(target.read_text(encoding="utf-8"))
+            rows = saved.get("rows") or []
+            if rows and "open" in rows[0] and "open_raw" in rows[0]:
+                return saved
+            # 旧格式断点文件没有开盘价：删掉重抓，缺 open 会让本期收益降级
+            target.unlink()
+        except Exception:
             target.unlink(missing_ok=True)
 
     hfq_bars, name = ds.fetch_chunk(code, end=end, count=count, fq="hfq")
@@ -142,7 +147,9 @@ def _fetch_code(code: str, end: str, count: int, stage_dir: Path) -> dict:
         raw_close = float(raw.at[date, "close"])
         rows.append({
             "date": str(date.date()),
+            "open": float(hfq.at[date, "open"]),
             "close": float(hfq.at[date, "close"]),
+            "open_raw": float(raw.at[date, "open"]),
             "close_raw": raw_close,
             "amount": float(volume.at[date] * 100.0 * raw_close),
         })
@@ -157,7 +164,7 @@ def fetch_market_rows(
     cache_dir: str | Path,
     bootstrap: bool,
     workers: int,
-) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, dict[str, str], Path]:
+) -> dict:
     # 周一多回补一些交易日，自动修复上周可能迟到的历史修订。
     count = live.ROLLING_DAYS if bootstrap else (20 if expected.weekday() == 0 else 8)
     stage_dir = Path(cache_dir) / "staging" / str(expected.date())
@@ -166,6 +173,8 @@ def fetch_market_rows(
     close_series: dict[str, pd.Series] = {}
     raw_series: dict[str, pd.Series] = {}
     amount_series: dict[str, pd.Series] = {}
+    open_series: dict[str, pd.Series] = {}
+    open_raw_series: dict[str, pd.Series] = {}
     names: dict[str, str] = {}
     failed: list[tuple[str, str]] = []
     print(
@@ -193,6 +202,8 @@ def fetch_market_rows(
                     frame["date"] = pd.to_datetime(frame["date"])
                     frame = frame.set_index("date").sort_index()
                     close_series[code] = frame["close"]
+                    open_series[code] = frame["open"]
+                    open_raw_series[code] = frame["open_raw"]
                     raw_series[code] = frame["close_raw"]
                     amount_series[code] = frame["amount"]
                     names[code] = result.get("name", "")
@@ -208,10 +219,15 @@ def fetch_market_rows(
         preview = "; ".join(f"{code}: {err}" for code, err in failed[:10])
         print(f"[WARN] {len(failed)} 只抓取失败（截取前10）: {preview}", flush=True)
 
-    close_rows = pd.DataFrame(close_series).sort_index()
-    raw_rows = pd.DataFrame(raw_series).sort_index()
-    amount_rows = pd.DataFrame(amount_series).sort_index()
-    return close_rows, amount_rows, raw_rows, names, stage_dir
+    return {
+        "close": pd.DataFrame(close_series).sort_index(),
+        "amount": pd.DataFrame(amount_series).sort_index(),
+        "close_raw": pd.DataFrame(raw_series).sort_index(),
+        "open": pd.DataFrame(open_series).sort_index(),
+        "open_raw": pd.DataFrame(open_raw_series).sort_index(),
+        "names": names,
+        "stage_dir": stage_dir,
+    }
 
 
 def _initial_state(deliverable: dict, panels: dict[str, pd.DataFrame]) -> dict:
@@ -227,7 +243,8 @@ def _initial_state(deliverable: dict, panels: dict[str, pd.DataFrame]) -> dict:
     return {
         "last_processed_date": last_processed,
         "last_rebalance_date": last_rebalance,
-        "trading_days_since_rebalance": int(len(between) % 10),
+        "trading_days_since_rebalance": int(len(between) % live.REBALANCE_FREQUENCY),
+        "rebalance_frequency": live.REBALANCE_FREQUENCY,
         "holdings_by_n": {
             str(n): [
                 item["code"]
@@ -312,9 +329,11 @@ def update_deliverable(
     names: dict[str, str],
     validation: dict,
     mature_codes: set[str] | None = None,
+    adjustment: adjust.ScoringAdjustment | None = None,
 ) -> tuple[dict, dict, bool]:
+    factor_valid = adjustment.factor_valid if adjustment is not None else None
     scores, raw_factors, ranked_factors = live.production_score_breakdown(
-        panels, mature_codes=mature_codes
+        panels, mature_codes=mature_codes, factor_valid=factor_valid
     )
     latest = pd.Timestamp(panels["close"].index[-1])
     last_processed = pd.Timestamp(state["last_processed_date"])
@@ -322,10 +341,14 @@ def update_deliverable(
     rebalanced = False
 
     for date in new_dates:
-        state["trading_days_since_rebalance"] = int(
-            state.get("trading_days_since_rebalance", 0)
-        ) + 1
-        if state["trading_days_since_rebalance"] < 10:
+        # 调仓频率统一 20 日：旧 10 日状态在既有下一调仓日（计数达 10）触发
+        # 一次性迁移，之后每 20 个交易日一次（live.rebalance_tick/settle）。
+        frequency = live.state_rebalance_frequency(state)
+        days_since, due = live.rebalance_tick(
+            state.get("trading_days_since_rebalance", 0), frequency
+        )
+        state["trading_days_since_rebalance"] = days_since
+        if not due:
             state["last_processed_date"] = str(date.date())
             continue
 
@@ -337,7 +360,7 @@ def update_deliverable(
                 raise RuntimeError(f"{date.date()} N={n} 只有 {len(new)} 只有效候选，拒绝发布")
             _record_rebalance(deliverable, n, pd.Timestamp(date), old, new, names)
             state["holdings_by_n"][key] = new
-        state["trading_days_since_rebalance"] = 0
+        live.settle_rebalance_state(state)
         state["last_rebalance_date"] = str(pd.Timestamp(date).date())
         state["last_processed_date"] = str(pd.Timestamp(date).date())
         rebalanced = True
@@ -403,6 +426,8 @@ def update_deliverable(
             latest,
             close_raw=panels.get("close_raw"),
             open_panel=panels.get("open"),
+            frequency=live.state_rebalance_frequency(state),
+            unresolved_events=adjustment.unresolved_events if adjustment is not None else None,
         )
         for item in cfg["current_holdings"]:
             period = current_period["returns_by_code"].get(item["code"], {})
@@ -416,6 +441,8 @@ def update_deliverable(
     deliverable["latest_trading_date"] = str(latest.date())
     deliverable["latest_rebalance_date"] = state["last_rebalance_date"]
     deliverable["factor_methodology"] = live.factor_methodology()
+    # 增量运行策略频率以 20 日为准；种子遗留的 freq_days 在这里对齐，页面据此展示。
+    deliverable.setdefault("rules", {})["freq_days"] = live.REBALANCE_FREQUENCY
     deliverable["runtime"] = {
         "mode": "incremental",
         "status": "healthy",
@@ -443,14 +470,21 @@ def run_once(args: argparse.Namespace) -> dict:
         flush=True,
     )
 
-    close_rows, amount_rows, raw_rows, fetched_names, stage_dir = fetch_market_rows(
+    fetched = fetch_market_rows(
         codes=codes,
         expected=expected,
         cache_dir=args.cache_dir,
         bootstrap=cached is None,
         workers=args.workers,
     )
-    merged = live.merge_market_rows(cached, close_rows, amount_rows, raw_rows)
+    merged = live.merge_market_rows(
+        cached,
+        fetched["close"],
+        fetched["amount"],
+        fetched["close_raw"],
+        fetched["open"],
+        fetched["open_raw"],
+    )
     cleaned, bad_ticks = panel.clean_bad_ticks(merged)
     validation = live.validate_latest_cross_section(
         cached, cleaned, expected, min_coverage=args.min_coverage
@@ -461,11 +495,13 @@ def run_once(args: argparse.Namespace) -> dict:
         cleaned["close"],
         cleaned["amount"],
         cleaned["close_raw"],
+        cleaned["open"],
+        cleaned["open_raw"],
     )
 
     meta = pd.read_csv(args.meta).drop_duplicates("code")
     names = meta.set_index("code")["name"].fillna("").astype(str).to_dict()
-    names.update({code: name for code, name in fetched_names.items() if name})
+    names.update({code: name for code, name in fetched["names"].items() if name})
     bars = (
         pd.to_numeric(meta["bars"], errors="coerce")
         if "bars" in meta.columns
@@ -483,14 +519,26 @@ def run_once(args: argparse.Namespace) -> dict:
     #
     # 缓存仍然存 hfq 原样不动：滚动合并要求新旧 bar 在同一口径上，而重建结果依赖整段
     # 窗口，逐日增量写回会让历史随每次运行漂移。所以重建只作用于打分这一步。
+    # 复权走 adjust.build_scoring_panels —— 与 seed/历史回测管线的唯一入口相同；
+    # 近期公司行动解不出复权时，相关个股因子被标无效排除，不退回 raw 收益。
+    adjustment = adjust.build_scoring_panels(
+        None,
+        cleaned["close_raw"],
+        close_hfq=cleaned["close"],
+        open_raw=cleaned["open_raw"],
+    )
     scoring = dict(cleaned)
-    scoring["close"] = adjust.adjusted_close(cleaned["close"], cleaned["close_raw"])
+    scoring["close"] = adjustment.close
+    scoring["open"] = adjustment.open
+    flagged = len(adjustment.unresolved_events)
     dropped = len(cleaned["close"].columns) - len(scoring["close"].columns)
     print(f"[smallcap-live] 复权重建：{len(scoring['close'].columns)} 只可用"
-          f"（{dropped} 只缺不复权价，未进打分）", flush=True)
+          f"（{dropped} 只缺不复权价，未进打分）；{flagged} 只近期公司行动未确认，"
+          "相关因子窗口已标无效", flush=True)
 
     deliverable, state, rebalanced = update_deliverable(
-        deliverable, scoring, state, names, validation, mature_codes=mature_codes
+        deliverable, scoring, state, names, validation,
+        mature_codes=mature_codes, adjustment=adjustment,
     )
     state["last_success_wall_date"] = datetime.now().strftime("%Y-%m-%d")
     state["last_success_market_date"] = str(expected.date())

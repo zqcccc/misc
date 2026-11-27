@@ -136,9 +136,9 @@ export default function GiftPage() {
               <br />
               <span className="line">每一天都被温柔以待 ❤</span>
             </div>
-            <div className="replay" onClick={reset}>
+            <button type="button" className="replay" onClick={reset}>
               再打开一次
-            </div>
+            </button>
           </div>
         )}
       </div>
@@ -266,6 +266,7 @@ const CSS = `
 .sub .line { display: inline-block; }
 
 .replay {
+  font-family: inherit;
   margin-top: 40px;
   display: inline-block;
   border: 1.5px solid rgba(255, 107, 138, 0.6);
@@ -281,7 +282,7 @@ const CSS = `
   opacity: 0;
   pointer-events: none;
 }
-.replay.show { opacity: 1; pointer-events: auto; animation: fadeIn 1s ease 1.6s both; }
+.message.show .replay { opacity: 1; pointer-events: auto; animation: fadeIn 1s ease 1.6s both; }
 .replay:hover { background: rgba(255, 107, 138, 0.15); transform: translateY(-2px); }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 `;

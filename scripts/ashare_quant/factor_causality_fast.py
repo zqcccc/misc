@@ -35,7 +35,6 @@ def fast_causality_audit():
         "market_filter_ma": 60,
         "rs_window_fast": 20,
         "rs_window_slow": 60,
-        "hysteresis_buffer": 0.20,
         "stop_loss_pct": 0.10,
         "trail_activation_pct": 0.15,
         "trail_pullback_pct": 0.08,

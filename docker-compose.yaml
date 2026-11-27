@@ -1,4 +1,3 @@
-version: '3'
 services:
   misc:
     image: 172232502/misc
@@ -25,9 +24,11 @@ services:
       - ./.env
     volumes:
       - 'ashare-data:/app/deliverables'
+      - 'ashare-signal-cache:/app/scripts/ashare_quant/cache'
       - './monitor/feishu_webhook.json:/app/monitor/feishu_webhook.json:ro'
 
   ashare-smallcap-quant:
+    image: 172232502/ashare-smallcap-quant
     build:
       context: .
       dockerfile: docker/ashare-smallcap-quant/Dockerfile
@@ -45,3 +46,4 @@ services:
 
 volumes:
   ashare-data:
+  ashare-signal-cache:

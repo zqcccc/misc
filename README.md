@@ -1,38 +1,35 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# c9cu
 
-## Getting Started
+`onlylike.work` 的个人研究、工程记录与自用工具。生产页面使用 Next.js 16、React 19、Tailwind CSS 与 ECharts。
 
-First, run the development server:
+## 本地开发
+
+需要 Node.js 22+ 与 pnpm：
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+开发地址为 `http://localhost:3011`。公司估值等数据库功能需要可用的 `DATABASE_URL`；本地 PostgreSQL 通过现有 SSH 转发提供，不启动本地数据库容器。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+pnpm build
+pnpm start
+```
 
-[API routes](https://nextjs.org/docs/api-routes/introduction) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.ts`.
+## 公开数据服务
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/api-routes/introduction) instead of React pages.
+- `/ashare-strategy`：A 股策略信号与历史回测。
+- `/smallcap-strategy`：小微盘轮动持仓与回测。
+- `/etf-premium`：跨境 ETF 实时溢价、同指数载体比较，以及收盘价与单位净值重建的历史溢价。实时行情使用东方财富公开接口，受限时使用已核对字段的腾讯行情；页面标注实际来源与数据日期。
+- `/pe`：利润线与估值。
+- `/tools`：浏览器本地图片工具与 Chrome 扩展。
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+## 部署
 
-## Learn More
+生产 Compose 包含 `misc`、`ashare-signal` 与 `ashare-smallcap-quant`。GitHub Actions 构建并推送三个镜像，全部成功后通过 webhook 调用服务器部署；服务器执行 `deploy.sh` 拉取镜像并更新服务。
 
-To learn more about Next.js, take a look at the following resources:
+保留的管理员写接口需要在部署环境配置 `ADMIN_API_TOKEN`。未配置时这些接口默认返回 503；短链管理页只在当前页面输入令牌，不在浏览器持久化。
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+TRHRP、EMA、B&H、Pyramid 与旧 Chat 的研究代码仅作档案保留，公开页面和 API 返回 404，不启动对应 daemon，也不加入部署编排。

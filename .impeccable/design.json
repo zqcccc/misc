@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-01T09:03:12+08:00",
+  "generatedAt": "2026-11-25T23:55:54+08:00",
   "title": "Design System: c9cu",
   "extensions": {
     "colorMeta": {
@@ -9,6 +9,12 @@
         "displayName": "档案蓝",
         "canonical": "#075a9c",
         "tonalRamp": ["#05253c", "#063a60", "#075083", "#075a9c", "#2e78ad", "#6ca4ca", "#b5d3e7", "#eef7fc"]
+      },
+      "archive-blue-deep": {
+        "role": "primary",
+        "displayName": "深档案蓝",
+        "canonical": "#034270",
+        "tonalRamp": ["#021a2c", "#03283f", "#033754", "#034270", "#2b5f8c", "#5c89ab", "#9cbcd4", "#e8f2f9"]
       },
       "status-amber": {
         "role": "secondary",
@@ -22,29 +28,72 @@
         "canonical": "#f5f7fa",
         "tonalRamp": ["#20242a", "#424850", "#69727e", "#919ba7", "#bbc3cc", "#d8dde3", "#edf0f4", "#f5f7fa"]
       },
+      "panel": {
+        "role": "neutral",
+        "displayName": "白色面板",
+        "canonical": "#ffffff",
+        "tonalRamp": ["#1a1d21", "#3a3e44", "#5f646b", "#868c93", "#adb2b8", "#d2d5d9", "#eceef0", "#ffffff"]
+      },
       "graphite": {
         "role": "neutral",
         "displayName": "石墨",
         "canonical": "#151b26",
         "tonalRamp": ["#151b26", "#303845", "#4d5664", "#6d7683", "#929aa5", "#bac0c8", "#dfe2e6", "#f5f6f8"]
+      },
+      "muted-graphite": {
+        "role": "neutral",
+        "displayName": "弱石墨",
+        "canonical": "#5f6b7a",
+        "tonalRamp": ["#232930", "#3a424c", "#4d5663", "#5f6b7a", "#7e8996", "#a2aab4", "#c9cdd3", "#eff1f3"]
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "规则线",
+        "canonical": "#d8dee7",
+        "tonalRamp": ["#2b313a", "#454c56", "#616974", "#7f8894", "#a0a8b2", "#c1c7cf", "#d8dee7", "#f4f6f9"]
+      },
+      "night-paper": {
+        "role": "neutral",
+        "displayName": "夜间纸面",
+        "canonical": "#151a23",
+        "tonalRamp": ["#0c0f15", "#151a23", "#2a313d", "#434b58", "#5f6875", "#7d8592", "#9fa6b0", "#c9ced6"]
+      },
+      "night-panel": {
+        "role": "neutral",
+        "displayName": "夜间面板",
+        "canonical": "#1b222d",
+        "tonalRamp": ["#0e1219", "#1b222d", "#333c49", "#4d5867", "#697585", "#8793a2", "#a8b1bd", "#ccd2da"]
+      },
+      "night-ink": {
+        "role": "neutral",
+        "displayName": "夜间文字",
+        "canonical": "#f3f6fa",
+        "tonalRamp": ["#2c3138", "#4b525b", "#6c747e", "#8f97a1", "#b3bac2", "#d4d9df", "#f3f6fa", "#ffffff"]
+      },
+      "night-muted": {
+        "role": "neutral",
+        "displayName": "夜间弱文字",
+        "canonical": "#aeb8c5",
+        "tonalRamp": ["#3a414b", "#565e69", "#747c88", "#939ca8", "#aeb8c5", "#c4ccd6", "#dbe0e7", "#f2f4f7"]
       }
     },
     "typographyMeta": {
-      "display": { "displayName": "编辑式展示", "purpose": "首页、文章、工具与信任页的大标题。" },
-      "body": { "displayName": "清楚正文", "purpose": "正文、说明、导航与交互。" },
-      "label": { "displayName": "状态标签", "purpose": "日期、状态、分类和辅助动作。" }
+      "display": { "displayName": "编辑式展示", "purpose": "首页、工具页、信任页和文章标题。" },
+      "body": { "displayName": "清楚正文", "purpose": "说明、文章和方法文字，主要阅读列控制在约 760px。" },
+      "label": { "displayName": "状态标签", "purpose": "日期、状态、分类和辅助操作。" }
     },
     "shadows": [
-      { "name": "floating-panel", "value": "0 18px 56px rgba(16, 26, 41, 0.18)", "purpose": "同意面板和必须浮在正文上方的界面。" },
-      { "name": "evidence-card", "value": "0 24px 70px rgba(4, 48, 82, 0.22)", "purpose": "首页唯一的代表作品面板。" }
+      { "name": "floating-panel", "value": "0 18px 56px rgba(16, 26, 41, 0.18)", "purpose": "必须高于正文的同意提示面板。" },
+      { "name": "mobile-menu", "value": "0 18px 48px rgba(16, 26, 41, 0.14)", "purpose": "移动端 details 展开的导航浮层。" }
     ],
     "motion": [
-      { "name": "link-nudge", "value": "180ms ease-out", "purpose": "文字入口箭头的短距离反馈；减少动态偏好时关闭。" }
+      { "name": "reduced-motion", "value": "prefers-reduced-motion: reduce", "purpose": "减少动态偏好时将所有过渡与动画降至 0.01ms，并关闭平滑滚动；公共界面默认不使用装饰性动效。" }
     ],
     "breakpoints": [
       { "name": "mobile", "value": "640px" },
+      { "name": "trust-stack", "value": "680px" },
       { "name": "navigation", "value": "720px" },
-      { "name": "home-stack", "value": "900px" }
+      { "name": "tools-stack", "value": "760px" }
     ]
   },
   "components": [
@@ -54,41 +103,61 @@
       "refersTo": "consent-primary",
       "description": "同意统计等明确主动作。",
       "html": "<button class=\"ds-consent-primary\">允许匿名统计</button>",
-      "css": ".ds-consent-primary{min-height:38px;border:1px solid var(--site-link,#075a9c);border-radius:9px;padding:0 13px;background:var(--site-link,#075a9c);color:#fff;font:750 13px ui-sans-serif,system-ui,sans-serif}.ds-consent-primary:hover{background:var(--site-link-strong,#034270)}.ds-consent-primary:focus-visible{outline:3px solid #7db9df;outline-offset:3px}"
+      "css": ".ds-consent-primary{min-height:38px;border:1px solid var(--site-link,#075a9c);border-radius:9px;padding:0 13px;background:var(--site-link,#075a9c);color:#fff;font-size:13px;font-weight:700;white-space:nowrap;font-family:ui-sans-serif,system-ui,sans-serif}.ds-consent-primary:focus-visible{outline:3px solid color-mix(in srgb,var(--site-link,#075a9c) 76%,white);outline-offset:3px}"
+    },
+    {
+      "name": "Secondary Consent Button",
+      "kind": "button",
+      "description": "同意面板里的次动作，透明底配规则线边框，不比主动作醒目。",
+      "html": "<button class=\"ds-consent-secondary\">仅必要功能</button>",
+      "css": ".ds-consent-secondary{min-height:38px;border:1px solid var(--site-line,#d8dee7);border-radius:9px;padding:0 13px;background:transparent;color:var(--site-ink,#151b26);font-size:13px;font-weight:700;white-space:nowrap;font-family:ui-sans-serif,system-ui,sans-serif}.ds-consent-secondary:hover{border-color:var(--site-link,#075a9c)}.ds-consent-secondary:focus-visible{outline:3px solid color-mix(in srgb,var(--site-link,#075a9c) 76%,white);outline-offset:3px}"
     },
     {
       "name": "Text Link",
       "kind": "button",
       "description": "导航、阅读入口和信任页面的默认动作。",
       "html": "<a class=\"ds-text-link\" href=\"#\">查看完整方法 →</a>",
-      "css": ".ds-text-link{color:var(--site-link,#075a9c);font:750 14px ui-sans-serif,system-ui,sans-serif;text-decoration:underline;text-underline-offset:5px}.ds-text-link:hover{color:var(--site-link-strong,#034270)}.ds-text-link:focus-visible{outline:3px solid #7db9df;outline-offset:3px}"
+      "css": ".ds-text-link{color:var(--site-link,#075a9c);font:700 14px ui-sans-serif,system-ui,sans-serif;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:5px}.ds-text-link:hover{color:var(--site-link-strong,#034270)}.ds-text-link:focus-visible{outline:3px solid color-mix(in srgb,var(--site-link,#075a9c) 76%,white);outline-offset:3px}"
+    },
+    {
+      "name": "Open Index List",
+      "kind": "custom",
+      "description": "首页与工具页的开放列表：2px 石墨粗线分节，1px 规则线分行。",
+      "html": "<section class=\"ds-open-index\"><div class=\"ds-open-index-heading\"><h2>研究看板与工具</h2><a href=\"#\">全部工具</a></div><ul><li><h3><a href=\"#\">A 股小微盘轮动策略</a></h3><p>最近交易日的目标持仓、调仓记录，以及不同持股数量下的历史收益与回撤。</p><span class=\"ds-open-index-aside\">交易日盘后更新</span></li></ul></section>",
+      "css": ".ds-open-index{font-family:ui-sans-serif,system-ui,sans-serif}.ds-open-index-heading{display:flex;align-items:baseline;justify-content:space-between;gap:20px;padding-bottom:16px;border-bottom:2px solid var(--site-ink,#151b26)}.ds-open-index-heading h2{margin:0;color:var(--site-ink,#151b26);font-size:19px;letter-spacing:-0.02em}.ds-open-index-heading>a{color:var(--site-link,#075a9c);font-size:13px;font-weight:700;text-decoration:underline;text-underline-offset:4px}.ds-open-index ul{margin:0;padding:0;list-style:none}.ds-open-index li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 32px;padding:22px 0;border-bottom:1px solid var(--site-line,#d8dee7)}.ds-open-index h3{grid-column:1;margin:0;font-size:18px;font-weight:650;line-height:1.5}.ds-open-index h3 a{color:var(--site-ink,#151b26);text-decoration:none;text-underline-offset:5px}.ds-open-index h3 a:hover,.ds-open-index h3 a:focus-visible{color:var(--site-link,#075a9c);text-decoration:underline}.ds-open-index li>p{grid-column:1;max-width:46rem;margin:0;color:var(--site-muted,#5f6b7a);font-size:15px;line-height:1.7}.ds-open-index-aside{grid-column:2;grid-row:1;padding-top:3px;color:var(--site-muted,#5f6b7a);font-size:13px;font-variant-numeric:tabular-nums;white-space:nowrap}"
     },
     {
       "name": "Archive Status",
       "kind": "custom",
       "description": "明确标示停止刷新或退出运行的历史研究。",
-      "html": "<aside class=\"ds-archive-status\"><strong>历史研究档案</strong><p>数据已停止自动刷新，请核对截至日。</p></aside>",
-      "css": ".ds-archive-status{border:1px solid #d4b66d;border-top:3px solid var(--site-signal,#b98200);background:#fffaf0;padding:20px 22px;color:var(--site-ink,#151b26);font-family:ui-sans-serif,system-ui,sans-serif}.ds-archive-status strong{display:block;margin-bottom:7px}.ds-archive-status p{margin:0;color:var(--site-muted,#5f6b7a);line-height:1.7}"
-    },
-    {
-      "name": "Evidence Card",
-      "kind": "card",
-      "refersTo": "archive-card",
-      "description": "首页唯一的代表作品证据面板。",
-      "html": "<article class=\"ds-evidence\"><small>研究 · 历史状态</small><h2>代表作品标题</h2><p>方法、证据与局限的简短说明。</p><a href=\"#\">阅读完整方法 →</a></article>",
-      "css": ".ds-evidence{border-radius:16px;background:var(--site-link,#075a9c);color:#fff;padding:42px;font-family:ui-sans-serif,system-ui,sans-serif}.ds-evidence h2{max-width:12ch;margin:70px 0 20px;font:700 44px/1 ui-serif,Georgia,serif;letter-spacing:-.035em}.ds-evidence p{color:rgba(255,255,255,.82);line-height:1.7}.ds-evidence a{color:#fff;font-weight:750;text-decoration:underline;text-underline-offset:5px}.ds-evidence a:focus-visible{outline:3px solid #fff;outline-offset:3px}"
+      "html": "<aside class=\"ds-archive-notice\"><strong>历史研究档案</strong><p>数据已停止自动刷新，请核对截至日。</p></aside>",
+      "css": ".ds-archive-notice{display:grid;grid-template-columns:190px minmax(0,1fr);gap:28px;border:1px solid color-mix(in srgb,var(--site-signal,#b98200) 55%,var(--site-line,#d8dee7));border-top:3px solid var(--site-signal,#b98200);background:color-mix(in srgb,var(--site-signal,#b98200) 7%,var(--site-panel,#ffffff));padding:20px 24px;color:var(--site-ink,#151b26);font-family:ui-sans-serif,system-ui,sans-serif}.ds-archive-notice p{margin:0;color:var(--site-muted,#5f6b7a);line-height:1.7}"
     },
     {
       "name": "Site Navigation",
       "kind": "nav",
       "description": "公开主线的稳定入口。",
       "html": "<nav class=\"ds-nav\"><a href=\"#\">首页</a><a href=\"#\">作品</a><a href=\"#\">文章</a><a href=\"#\">工具</a><a href=\"#\">关于</a></nav>",
-      "css": ".ds-nav{display:flex;gap:26px;font:650 14px ui-sans-serif,system-ui,sans-serif}.ds-nav a{color:var(--site-muted,#5f6b7a);text-decoration:none;text-underline-offset:6px}.ds-nav a:hover,.ds-nav a:focus-visible{color:var(--site-link-strong,#034270);text-decoration:underline}.ds-nav a:focus-visible{outline:3px solid #7db9df;outline-offset:3px}"
+      "css": ".ds-nav{display:flex;align-items:center;gap:26px;font-family:ui-sans-serif,system-ui,sans-serif}.ds-nav a{color:var(--site-muted,#5f6b7a);font-size:14px;font-weight:650;text-decoration:none;text-underline-offset:6px}.ds-nav a:hover,.ds-nav a:focus-visible{color:var(--site-link-strong,#034270);text-decoration:underline}.ds-nav a:focus-visible{outline:3px solid color-mix(in srgb,var(--site-link,#075a9c) 76%,white);outline-offset:3px}"
+    },
+    {
+      "name": "Mobile Menu",
+      "kind": "nav",
+      "description": "720px 以下用原生 details 展开的移动导航浮层。",
+      "html": "<details class=\"ds-mobile-menu\" open><summary aria-label=\"打开导航菜单\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M4 7h16M4 12h16M4 17h16\"/></svg></summary><nav class=\"ds-mobile-menu-nav\"><a href=\"#\">首页</a><a href=\"#\">作品</a><a href=\"#\">文章</a><a href=\"#\">工具</a><a href=\"#\">关于</a></nav></details>",
+      "css": ".ds-mobile-menu{position:relative;font-family:ui-sans-serif,system-ui,sans-serif}.ds-mobile-menu>summary{width:38px;height:38px;display:grid;place-items:center;border-radius:10px;color:var(--site-muted,#5f6b7a);cursor:pointer;list-style:none}.ds-mobile-menu>summary::-webkit-details-marker{display:none}.ds-mobile-menu>summary:hover{color:var(--site-ink,#151b26);background:color-mix(in srgb,var(--site-line,#d8dee7) 36%,transparent)}.ds-mobile-menu svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;stroke-width:1.8}.ds-mobile-menu-nav{position:absolute;top:48px;right:0;width:190px;display:grid;gap:0;padding:8px;border:1px solid var(--site-line,#d8dee7);border-radius:14px;background:var(--site-panel,#ffffff);box-shadow:0 18px 48px rgba(16,26,41,0.14)}.ds-mobile-menu-nav a{padding:11px 12px;border-radius:8px;color:var(--site-muted,#5f6b7a);font-size:14px;font-weight:650;text-decoration:none}.ds-mobile-menu-nav a:hover,.ds-mobile-menu-nav a:focus-visible{color:var(--site-link-strong,#034270);text-decoration:underline;text-underline-offset:6px}"
+    },
+    {
+      "name": "Consent Panel",
+      "kind": "card",
+      "description": "唯一带阴影的悬浮层：右下角统计偏好询问。",
+      "html": "<section class=\"ds-consent-panel\" aria-label=\"统计偏好\"><div><strong>是否允许匿名访问统计？</strong><p>只有你同意后才会加载统计脚本。拒绝不会影响网站功能。<a href=\"#\">了解详情</a></p></div><div class=\"ds-consent-panel-actions\"><button type=\"button\">仅必要功能</button><button type=\"button\" class=\"ds-consent-panel-primary\">允许匿名统计</button></div></section>",
+      "css": ".ds-consent-panel{width:min(540px,100%);display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:22px;padding:18px;border:1px solid var(--site-line,#d8dee7);border-radius:16px;background:var(--site-panel,#ffffff);box-shadow:0 18px 56px rgba(16,26,41,0.18);color:var(--site-ink,#151b26);font-family:ui-sans-serif,system-ui,sans-serif}.ds-consent-panel strong{display:block;margin-bottom:4px}.ds-consent-panel p{margin:0;color:var(--site-muted,#5f6b7a);font-size:13px;line-height:1.55}.ds-consent-panel a{margin-left:6px;color:var(--site-link,#075a9c);text-decoration:underline;text-underline-offset:3px}.ds-consent-panel-actions{display:grid;gap:7px}.ds-consent-panel-actions button{min-height:38px;border:1px solid var(--site-line,#d8dee7);border-radius:9px;padding:0 13px;background:transparent;color:var(--site-ink,#151b26);font-size:13px;font-weight:700;white-space:nowrap;cursor:pointer}.ds-consent-panel-actions button:hover{border-color:var(--site-link,#075a9c)}.ds-consent-panel-actions .ds-consent-panel-primary{border-color:var(--site-link,#075a9c);background:var(--site-link,#075a9c);color:#fff}"
     }
   ],
   "narrative": {
     "northStar": "个人档案索引",
-    "overview": "c9cu 的界面像一份由本人持续整理的档案索引：先给身份和状态，再给证据与正文。视觉不模拟机构媒体，也不以促销组件制造权威感；冷色纸面、细规则线和开放列表承担主要秩序。展示层使用编辑式衬线字形成个人出版物的气质，正文与导航保持清楚克制。",
+    "overview": "c9cu 的界面像一份由本人持续整理的档案索引：先给身份和状态，再给证据与正文。视觉不模拟机构媒体，也不以促销组件制造权威感；冷色纸面、细规则线和开放列表承担主要秩序。\n\n展示层使用编辑式衬线字形成个人出版物的气质，正文与导航保持清楚克制。深蓝只承担链接、主证据和关键动作，琥珀色只表示状态或边界。",
     "keyCharacteristics": ["编辑式大标题与高可读正文并置。", "依靠网格、留白和细规则线组织内容。", "明暗主题共享同一语义色彩关系。", "状态、来源和限制是视觉层级的一部分。"],
     "rules": [
       { "name": "The Rare Accent Rule", "body": "档案蓝负责行动和证据，状态琥珀负责状态；两者不互相代替，也不把整页染成强调色。", "section": "colors" },

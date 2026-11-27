@@ -10,14 +10,20 @@ const nextConfig = {
   images: {
     formats: ['image/avif', 'image/webp'],
   },
+  // 文章正文在运行时用 fs 读 posts/ (app/api/post/lib.ts), 静态追踪追不到;
+  // lib 里已用 turbopackIgnore 阻止动态 fs 访问把整个仓库追进 standalone,
+  // 这里按消费路由精确把文章源打进产物。plusPosts 由容器运行时挂载, 不打进镜像。
+  outputFileTracingIncludes: {
+    '/': ['./posts/**/*'],
+    '/post/\\[\\.\\.\\.id\\]': ['./posts/**/*'],
+    '/sitemap.xml': ['./posts/**/*'],
+  },
   experimental: {
     optimizePackageImports: [
       '@dnd-kit/core',
       '@dnd-kit/sortable',
-      '@dnd-kit/modifiers',
       'ahooks',
       'echarts',
-      'dayjs',
     ],
   },
 }

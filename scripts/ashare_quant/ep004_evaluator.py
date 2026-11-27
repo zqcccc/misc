@@ -9,9 +9,22 @@ EP004 量化评测分析方法实现 (基于 frank-quant/ai-trading-videos EP004
 """
 
 import math
+import hashlib
+from typing import Dict, List, Tuple, Any
+
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Tuple, Any
+
+# 蒙特卡洛结果内存缓存: 键为输入序列指纹 + 采样参数, 命中即同一确定性输入
+_MC_RESULT_CACHE: Dict[str, Dict[str, Any]] = {}
+
+
+def _mc_cache_key(arr: np.ndarray, iters: int, block_size: int, start_capital: float, seed: int) -> str:
+    """蒙卡输入指纹: 序列字节 + 全部采样参数。命中即同一确定性输入, 不存在陈旧结果冒充新行情。"""
+    h = hashlib.sha256()
+    h.update(np.ascontiguousarray(arr, dtype=np.float64).tobytes())
+    h.update(np.asarray([iters, block_size, float(start_capital), seed], dtype=np.float64).tobytes())
+    return h.hexdigest()
 
 
 def _norm_cdf(x: float) -> float:
@@ -165,12 +178,19 @@ def run_monte_carlo_block_bootstrap(
     """
     3. 蒙特卡洛分块自助重采样 (Monte Carlo Block Bootstrap, EP004 核心检验)
     重采样 5000 次，保留时序自相关，回答: 这条曲线最终能赚钱的概率有多大?
+    相同输入 (序列指纹 + 全部采样参数) 命中内存缓存时直接复用, 重复调用不重跑。
     """
     if len(trades_profit_pcts) < 5:
         return {"prob_profit": 0.0, "p5": 0.0, "p50": 0.0, "p95": 0.0}
 
     arr = np.asarray(trades_profit_pcts, dtype=float)
+    cache_key = _mc_cache_key(arr, iters, block_size, start_capital, seed)
+    cached = _MC_RESULT_CACHE.get(cache_key)
+    if cached is not None:
+        return dict(cached)
+
     N = len(arr)
+
     rng = np.random.default_rng(seed)
     
     final_capitals = np.empty(iters)
@@ -188,7 +208,7 @@ def run_monte_carlo_block_bootstrap(
     p95 = float(np.percentile(final_capitals, 95))
     orig_final = float(start_capital * np.prod(1.0 + arr))
 
-    return {
+    result = {
         "iters": iters,
         "n_trades": N,
         "prob_profit": prob_profit,
@@ -197,3 +217,5 @@ def run_monte_carlo_block_bootstrap(
         "p95": p95,
         "orig_final": orig_final,
     }
+    _MC_RESULT_CACHE[cache_key] = dict(result)
+    return result

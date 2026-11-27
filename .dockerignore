@@ -1,21 +1,75 @@
-.git
-.vscode
-.gitignore
+# ==== 版本控制 / 编辑器 / 本地工具 (顶层隐藏目录, .env.example 反选保留) ====
+.*
+!.env.example
+**/.DS_Store
+
+# ==== 秘密与环境 ====
+.env
+.env.*
+!.env.example
+
+# ==== 构建产物 / 本地缓存 ====
+.next
 node_modules
 *.db
-!node_modules/shiki
-.github
-docker/trhrp-data
-deliverables/trhrp_backtest_all
-monitor/caches/TRHRP
-monitor/daemon_trhrp.py
-monitor/strategies_trhrp.json
-monitor/trhrp_strategy.py
-scripts/refresh_trhrp_cache.py
-scripts/trhrp_backtest_live.py
-scripts/trhrp_lib
+tmp
+temp
+runtime
+tsconfig.tsbuildinfo
+yarn-error.log
+
+# ==== 顶层纯研究目录 (无任何镜像引用) ====
+# quant_research: 研究台账/锁文件; quant_lab: 研究沙盒
+quant_research
+quant_lab
+# 策略研究目录 (crypto_*/cn_*/us_*/multi*/*_ema_15m 及 futures/fx/rates/hk_southbound)
+futures
+fx
+rates
+hk_southbound
+crypto_*
+cn_*
+us_*
+multi*
+*_ema_15m
+eth_sol_bnb_15m
+# 研究数据与产物: data(两个已下线 API 的导出 json)/outputs/verified/archive/docs/misc
+data
+outputs
+verified
+archive
+docs
+misc
+200美元的AI换不掉3万块的开发
+
+# ==== deliverables: 只保留两个服务的 seed JSON ====
+# ashare-signal 镜像 COPY ashare_strategy_backtest.json, smallcap 镜像 COPY smallcap_strategy.json
+deliverables/*
+!deliverables/ashare_strategy_backtest.json
+!deliverables/smallcap_strategy.json
+
+# ==== astock_quant: smallcap 镜像 COPY 整个目录, 只排研究数据/产物 ====
 astock_quant/data/*
 !astock_quant/data/meta.csv
+astock_quant/data_bs
+astock_quant/h00*
 astock_quant/verified
 astock_quant/reports
 astock_quant/strategies_ext
+
+# ==== monitor: 只排缓存与研究产物 ====
+# 生产只引用 monitor/notifiers + webhook json (ashare-signal / smallcap 镜像 COPY)
+monitor/caches
+monitor/research
+monitor/__pycache__
+
+# ==== scripts: 排除研究缓存/日志, 保留全部代码 ====
+# 不排除 scripts 下 TS/JS (tsconfig include **/*.ts, next build 会编译)
+# scripts/trhrp_lib(含 seed/def、seed/equity 两份 seed) 与 trhrp-data 镜像所需脚本保留
+scripts/_cache*
+scripts/_macro_cache
+scripts/_trhrp_def_cache
+scripts/_ema_prices
+scripts/intraday_cache
+scripts/__pycache__
+scripts/*.log

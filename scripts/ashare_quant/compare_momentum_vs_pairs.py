@@ -110,18 +110,14 @@ def run_strategy_backtest(
 
     metrics = calculate_performance_metrics(eq_df, benchmark_col="benchmark")
 
-    # 交易分析
-    trades_pnl = []
-    buy_map = {}
-    for t in engine.trades:
-        if t.action == "BUY":
-            buy_map[t.symbol] = t.price
-        elif t.action == "SELL" and t.symbol in buy_map:
-            trades_pnl.append((t.price / buy_map[t.symbol]) - 1.0)
+    # 交易分析: 已实现净盈亏序列 (引擎 FIFO 批次配对, 成交价含滑点与费用)
+    closed_trades = [t for t in engine.trades if t.action == "SELL" and t.realized_basis > 0.0]
+    realized_pnls = [t.realized_pnl for t in closed_trades]
+    realized_rets = [t.realized_pnl / t.realized_basis for t in closed_trades]
 
-    win_rate = (sum(1 for p in trades_pnl if p > 0) / len(trades_pnl)) if trades_pnl else 0.0
-    wins = [p for p in trades_pnl if p > 0]
-    losses = [abs(p) for p in trades_pnl if p <= 0]
+    win_rate = (sum(1 for p in realized_pnls if p > 0) / len(realized_pnls)) if realized_pnls else 0.0
+    wins = [p for p in realized_rets if p > 0]
+    losses = [abs(p) for p in realized_rets if p <= 0]
     pl_ratio = (np.mean(wins) / np.mean(losses)) if losses and wins else 0.0
     years = len(eq_df) / 250.0
     total_cost_turnover = sum(abs(t.total_cost) for t in engine.trades)
@@ -130,7 +126,7 @@ def run_strategy_backtest(
     metrics.update({
         "win_rate": float(win_rate),
         "profit_loss_ratio": float(pl_ratio),
-        "total_trades": len(trades_pnl),
+        "total_trades": len(realized_pnls),
         "annual_turnover": float(turnover),
     })
 
@@ -140,7 +136,7 @@ def run_strategy_backtest(
 
     alpha_decomp = decompose_alpha_beta(strat_daily_rets, bm_daily_rets)
     dsr_result = compute_deflated_sharpe(strat_daily_rets, n_trials=30)
-    mc_result = run_monte_carlo_block_bootstrap(trades_pnl, iters=5000, block_size=6)
+    mc_result = run_monte_carlo_block_bootstrap(realized_rets, iters=5000, block_size=6)
 
     # 2022 年极端熊市压力测试
     eq_df["year"] = pd.to_datetime(eq_df["date"]).dt.year
@@ -188,7 +184,6 @@ def main():
         "market_filter_ma": 60,
         "rs_window_fast": 20,
         "rs_window_slow": 60,
-        "hysteresis_buffer": 0.20,
         "stop_loss_pct": 0.10,
         "trail_activation_pct": 0.15,
         "trail_pullback_pct": 0.08,

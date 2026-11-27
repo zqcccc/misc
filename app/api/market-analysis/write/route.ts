@@ -1,10 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { guardAdminRequest, readJsonBody } from '@/lib/admin-api'
 import { writeMarketAnalysisCrossMarket, CrossMarketWriteInput } from '@/lib/market-analysis'
 import { recordMarketAnalysisScratchpad } from '@/lib/market-analysis-scratchpad'
 
+const ADMIN_ROUTE_ID = 'market-analysis/write'
+const MAX_BODY_BYTES = 1024 * 1024
+const RATE_LIMIT_PER_WINDOW = 60
+
 export async function POST(request: NextRequest) {
+  const denied = guardAdminRequest(request, ADMIN_ROUTE_ID, {
+    maxContentLengthBytes: MAX_BODY_BYTES,
+    rateLimitPerWindow: RATE_LIMIT_PER_WINDOW,
+  })
+  if (denied) return denied
+
+  const bodyResult = await readJsonBody<CrossMarketWriteInput>(
+    request,
+    MAX_BODY_BYTES,
+  )
+  if (!bodyResult.ok) return bodyResult.response
+  const body = bodyResult.data
+
   try {
-    const body: CrossMarketWriteInput = await request.json()
 
     if (!body.company?.symbol || !body.company?.market || !body.company?.name) {
       return NextResponse.json(

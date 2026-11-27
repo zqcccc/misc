@@ -213,6 +213,7 @@ export const metadata = {
   title: '元素滚动截图（Element Scroll Capture）隐私政策 | Privacy Policy',
   description:
     '元素滚动截图（Element Scroll Capture）Chrome 扩展隐私政策：不收集任何个人信息、不发起网络请求、不使用远程代码，截图与设置仅保存在本地。Privacy policy for the Element Scroll Capture Chrome extension.',
+  alternates: { canonical: '/privacy/element-scroll-capture' },
 }
 
 function SectionList({ sections }: { sections: Section[] }) {

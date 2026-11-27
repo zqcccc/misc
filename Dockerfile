@@ -2,16 +2,18 @@ FROM node:22-slim AS base
 
 # Install dependencies only when needed
 FROM --platform=$BUILDPLATFORM node:22-slim AS deps
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 RUN apt-get update && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 
-# Install dependencies based on the preferred package manager
-COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* ./
-RUN yarn --frozen-lockfile --network-timeout 600000
+# pnpm 由 corepack 按 package.json 的 packageManager 字段解析
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN corepack pnpm install --frozen-lockfile
 
 
 # Rebuild the source code only when needed
 FROM --platform=$BUILDPLATFORM node:22-slim AS builder
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/*
 COPY --from=deps /app/node_modules ./node_modules
@@ -22,10 +24,7 @@ COPY . .
 # Uncomment the following line in case you want to disable telemetry during the build.
 # ENV NEXT_TELEMETRY_DISABLED 1
 
-RUN yarn prisma generate && yarn build
-
-# If using npm comment out above and use below instead
-# RUN npm run build
+RUN corepack pnpm prisma generate && corepack pnpm build
 
 # Production image, copy all the files and run next
 FROM base AS runner

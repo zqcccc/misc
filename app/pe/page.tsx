@@ -48,7 +48,7 @@ export default function ProfitLinePage() {
   }, [])
 
   const { submittedSymbol, data, state, error, fetchData } = useProfitLineData(symbolInput)
-  const { valuationEntries, entriesLoading, entriesLoadingMore, totalCount, hasMore, loadMore } = useValuationEntries(debouncedSearch, filterQuality)
+  const { valuationEntries, entriesLoading, entriesLoadingMore, totalCount, hasMore, loadError, fetchEntries, loadMore } = useValuationEntries(debouncedSearch, filterQuality)
 
   const selectedEntry = useMemo(() => {
     return (
@@ -172,6 +172,8 @@ export default function ProfitLinePage() {
             onSearchSubmit={handleCompanySearchSubmit}
             onLoadMore={loadMore}
             hasMore={hasMore}
+            loadError={loadError}
+            onRetry={fetchEntries}
             searchLoading={state === 'loading'}
           />
 

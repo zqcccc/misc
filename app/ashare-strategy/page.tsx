@@ -13,6 +13,11 @@ function fmtNum(v: number | undefined | null, digits = 2): string {
   return v.toFixed(digits)
 }
 
+function fmtYM(d: string | undefined | null): string {
+  if (!d || d.length < 7 || !/^\d{4}-\d{2}/.test(d)) return '…'
+  return `${d.slice(0, 4)}.${d.slice(5, 7)}`
+}
+
 export default function AShareStrategyPage() {
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -40,6 +45,7 @@ export default function AShareStrategyPage() {
 
   useEffect(() => {
     if (!data) return
+    let cancelled = false
     const curDataset =
       activeTab === 'full'
         ? data.full_sample_top3
@@ -57,6 +63,7 @@ export default function AShareStrategyPage() {
     const bmDD = curve.map((c: any) => Number((c.benchmark_drawdown * 100).toFixed(2)))
 
     import('echarts').then((echarts) => {
+      if (cancelled) return
       if (equityChartRef.current) {
         if (!chartInstance1.current) {
           chartInstance1.current = echarts.init(equityChartRef.current)
@@ -178,7 +185,14 @@ export default function AShareStrategyPage() {
       chartInstance2.current?.resize()
     }
     window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
+    return () => {
+      cancelled = true
+      window.removeEventListener('resize', handleResize)
+      chartInstance1.current?.dispose()
+      chartInstance1.current = null
+      chartInstance2.current?.dispose()
+      chartInstance2.current = null
+    }
   }, [data, activeTab])
 
   if (loading) {
@@ -198,27 +212,25 @@ export default function AShareStrategyPage() {
     )
   }
 
-  const latestDate = data.metadata.latest_date || '2026-09-02'
+  const latestDate: string | undefined = data.metadata.latest_date
   const metrics = data.full_sample_top3.metrics
   const yearly = data.full_sample_top3.yearly_stats
   const recentPositions = data.full_sample_top3.recent_positions || []
   const latestPos = recentPositions[recentPositions.length - 1]
   const ep004 = data.metadata.ep004_evaluation || {}
   const alphaDecomp = ep004.alpha_decomposition || {}
-  const dsr = ep004.deflated_sharpe || {}
-  const mc = ep004.monte_carlo_bootstrap || {}
-  const bear = ep004.bear_stress_test_2022 || {}
   const recentOOS = ep004.ultra_recent_oos || {}
+  const rangeStart = fmtYM(String(data.metadata.backtest_range || '').split('~')[0]?.trim())
+  const oosRange = String(data.metadata.oos_range || '')
+  const regimeOff = latestPos?.regime_healthy === false
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 space-y-8 font-sans">
       {/* 顶部标题与最新更新日期 */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b pb-6 dark:border-gray-800">
         <div>
-          <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 mb-2">
-            <span>🟢 数据更新至 {latestDate}</span>
-            <span>•</span>
-            <span>EP004 因果检验 100% PASS</span>
+          <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-800/60 dark:text-gray-300 mb-2">
+            <span>最后有效数据日: {latestDate || '未知'}</span>
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
             A 股核心赛道龙头相对强弱 Alpha 策略 (精选 2~3 只股)
@@ -241,7 +253,7 @@ export default function AShareStrategyPage() {
                 : 'text-gray-500 hover:text-gray-900 dark:text-gray-400'
             }`}
           >
-            全样本 (2019-2026.09)
+            全样本 ({rangeStart}~{fmtYM(latestDate)})
           </button>
           <button
             onClick={() => setActiveTab('recent')}
@@ -251,7 +263,7 @@ export default function AShareStrategyPage() {
                 : 'text-gray-500 hover:text-gray-900 dark:text-gray-400'
             }`}
           >
-            最新盲测 (2026.03~09)
+            最新盲测 ({fmtYM(recentOOS?.start_date)}~{fmtYM(recentOOS?.end_date)})
           </button>
           <button
             onClick={() => setActiveTab('oos')}
@@ -261,7 +273,7 @@ export default function AShareStrategyPage() {
                 : 'text-gray-500 hover:text-gray-900 dark:text-gray-400'
             }`}
           >
-            前瞻样本外 (2024~2026.02)
+            前瞻样本外 ({fmtYM(oosRange.split('~')[0]?.trim())}~{fmtYM(oosRange.split('~')[1]?.trim())})
           </button>
         </div>
       </div>
@@ -289,7 +301,6 @@ export default function AShareStrategyPage() {
           <div className="text-xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">
             {fmtNum(metrics.sharpe_ratio)}
           </div>
-          <div className="text-xs text-gray-400 mt-1">基准: 0.12</div>
         </div>
 
         <div className="p-4 rounded-xl border bg-white dark:bg-gray-900/60 dark:border-gray-800 shadow-sm">
@@ -322,10 +333,7 @@ export default function AShareStrategyPage() {
         <div className="flex items-center justify-between border-b pb-3 border-sky-100 dark:border-sky-900/40">
           <div className="flex items-center gap-2">
             <span className="text-base font-bold text-sky-950 dark:text-sky-200">
-              最新盲测段 (2026-03-01 ~ {latestDate})
-            </span>
-            <span className="text-xs px-2 py-0.5 rounded bg-sky-100 dark:bg-sky-900/60 text-sky-700 dark:text-sky-300">
-              无参数泄露
+              最新盲测段 ({recentOOS?.start_date || '—'} ~ {recentOOS?.end_date || '—'})
             </span>
           </div>
         </div>
@@ -351,11 +359,17 @@ export default function AShareStrategyPage() {
             </div>
           </div>
           <div className="p-3 bg-white dark:bg-gray-900 rounded-lg border dark:border-gray-800">
-            <div className="text-gray-500">未来函数检验</div>
-            <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
-              100% PASS
+            <div className="text-gray-500">区间纯 Alpha (p 值)</div>
+            <div
+              className={`text-lg font-bold mt-0.5 ${
+                recentOOS?.alpha_decomp?.is_alpha_significant
+                  ? 'text-emerald-600 dark:text-emerald-400'
+                  : 'text-gray-700 dark:text-gray-300'
+              }`}
+            >
+              {fmtPct(recentOOS?.alpha_decomp?.annual_alpha)}
             </div>
-            <div className="text-gray-400">全量 vs 截断 21 个交易日零偏差</div>
+            <div className="text-gray-400">p = {fmtNum(recentOOS?.alpha_decomp?.p_value, 3)}</div>
           </div>
         </div>
       </div>
@@ -375,7 +389,7 @@ export default function AShareStrategyPage() {
         <div className="rounded-xl border bg-white dark:bg-gray-900/60 dark:border-gray-800 shadow-sm p-5">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-              <span>🎯</span> 今日精选持仓决策 (最新交易日: {latestDate})
+              <span>🎯</span> 最新精选持仓决策 (数据日: {latestDate || '未知'})
             </h3>
             <span className="text-xs px-2 py-0.5 rounded bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300">
               持股数: {latestPos?.holdings?.length || 0} / 3 只
@@ -405,12 +419,17 @@ export default function AShareStrategyPage() {
                   </div>
                 </div>
               ))
-            ) : (
+            ) : regimeOff ? (
               <div className="py-6 px-4 rounded-lg bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 text-amber-800 dark:text-amber-300 text-xs leading-relaxed">
                 <div className="font-bold text-sm mb-1 flex items-center gap-1.5">
                   <span>🛡️</span> 触发宏观避险过滤: 100% 现金空仓避险
                 </div>
                 当前沪深300指数（510300）跌破 60 日均线且 20 日均线下行，判定为弱势防守期，不逆势加仓，保持 100% 现金，等待大盘右侧信号。
+              </div>
+            ) : (
+              <div className="py-6 px-4 rounded-lg bg-gray-50/60 dark:bg-gray-800/20 border border-gray-200 dark:border-gray-700/40 text-gray-600 dark:text-gray-300 text-xs leading-relaxed">
+                <div className="font-bold text-sm mb-1">当前空仓 (大盘环境合格)</div>
+                回测最终快照无持仓：没有标的通过相对强弱筛选，或持仓已全部止损离场。
               </div>
             )}
 

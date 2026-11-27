@@ -17,6 +17,9 @@ A股真实交易回测引擎 (高保真、严格防未来函数)
 4. 规范指标结算:
    - 总收益、年化复合收益率 (CAGR)、最大回撤 (MDD)、夏普比率 (Sharpe, Rf=2%)、
      卡尔玛比率 (Calmar)、索提诺比率 (Sortino)、胜率、盈亏比、年换手率。
+5. FIFO 成本批次账务:
+   - 买入按批次记录含费成本, 卖出按 FIFO 消耗最早批次, 部分减仓/多次加仓不重复配对;
+   - Trade 记录真实含滑点成交价与费用, 并给出该笔卖出按批次配对的已实现净盈亏。
 """
 
 from __future__ import annotations
@@ -24,6 +27,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple, Any
 import numpy as np
 import pandas as pd
+from collections import deque
 
 
 @dataclass
@@ -42,11 +46,13 @@ class Trade:
     symbol: str
     action: str
     shares: int
-    price: float
+    price: float         # 实际成交价 (含滑点: 买入 open*(1+s), 卖出 open*(1-s))
     trade_date: str
     fee: float           # 佣金 + 印花税
     slippage: float      # 滑点成本
     total_cost: float    # 实际资金变动量
+    realized_pnl: float = 0.0    # SELL: 本次成交按 FIFO 批次实现的净盈亏 (已含费用); BUY 为 0
+    realized_basis: float = 0.0  # SELL: 本次成交匹配到的买入批次含费成本合计; BUY 为 0
     reason: str = ""
 
 
@@ -82,6 +88,8 @@ class BacktestEngine:
         self.trade_counter = 0
         self.pending_orders: List[Order] = []
         self.last_trading_date: Optional[str] = None
+        # FIFO 成本批次: symbol -> deque([股数, 每股含费成本]), 仅用于已实现盈亏配对
+        self.open_lots: Dict[str, deque] = {}
         
         # 历史记录
         self.history_records: List[Dict[str, Any]] = []
@@ -93,6 +101,7 @@ class BacktestEngine:
         self.trade_counter = 0
         self.pending_orders.clear()
         self.last_trading_date = None
+        self.open_lots.clear()
         self.history_records.clear()
 
     def is_limit_up(self, open_p: float, high_p: float, low_p: float, prev_close: float) -> bool:
@@ -170,6 +179,27 @@ class BacktestEngine:
             if pos.shares == 0:
                 del self.positions[sym]
 
+            # FIFO 批次配对: 部分减仓只消耗最早批次, 多次加仓不重复配对
+            lots = self.open_lots.get(sym)
+            matched_basis = 0.0
+            remaining = shares_to_sell
+            if lots:
+                while remaining > 0 and lots:
+                    lot_sh, lot_ps = lots[0]
+                    take = min(remaining, lot_sh)
+                    matched_basis += take * lot_ps
+                    remaining -= take
+                    if take >= lot_sh:
+                        lots.popleft()
+                    else:
+                        lots[0] = [lot_sh - take, lot_ps]
+            if remaining > 0:
+                raise ValueError(
+                    f"{current_date} {sym} 卖出 {shares_to_sell} 股与成本批次账实不符, 撮合状态异常"
+                )
+            if not lots:
+                self.open_lots.pop(sym, None)
+
             self.trade_counter += 1
             self.trades.append(
                 Trade(
@@ -177,11 +207,13 @@ class BacktestEngine:
                     symbol=sym,
                     action="SELL",
                     shares=shares_to_sell,
-                    price=bar["open"],
+                    price=exec_price,
                     trade_date=current_date,
                     fee=total_fee,
                     slippage=slippage_cost,
                     total_cost=net_proceeds,
+                    realized_pnl=net_proceeds - matched_basis,
+                    realized_basis=matched_basis,
                     reason=order.reason
                 )
             )
@@ -234,6 +266,10 @@ class BacktestEngine:
             p.shares += shares_to_buy
             p.cost_price = exec_price
             p.locked_shares += shares_to_buy  # T+1 锁定，当日不可卖
+            # FIFO 成本批次: 每股含费成本 = (成交金额 + 佣金) / 股数
+            self.open_lots.setdefault(sym, deque()).append(
+                [shares_to_buy, total_cost / shares_to_buy]
+            )
 
             self.trade_counter += 1
             self.trades.append(
@@ -242,7 +278,7 @@ class BacktestEngine:
                     symbol=sym,
                     action="BUY",
                     shares=shares_to_buy,
-                    price=bar["open"],
+                    price=exec_price,
                     trade_date=current_date,
                     fee=commission,
                     slippage=slippage_cost,

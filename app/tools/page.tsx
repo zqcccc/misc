@@ -4,7 +4,7 @@ import Link from 'next/link'
 export const metadata: Metadata = {
   title: '自用工具',
   description:
-    'c9cu 的研究工具与浏览器工具：A 股策略信号与回测、小微盘持仓与回测、利润线与估值，以及在本地浏览器处理的图片合并、图片压缩和元素滚动截图扩展。',
+    'c9cu 的研究工具与浏览器工具：A 股策略信号与回测、小微盘持仓与回测、跨境 ETF 溢价监控、利润线与估值，以及在本地浏览器处理的图片合并、图片压缩和元素滚动截图扩展。',
   alternates: { canonical: '/tools' },
 }
 
@@ -22,6 +22,13 @@ const tools = [
     href: '/smallcap-strategy',
     kind: '研究工具',
     detail: 'T+1 撮合，计入历史真实摩擦；包含 2024 年初流动性挤兑压力测试。',
+  },
+  {
+    name: '跨境 ETF 溢价监控',
+    desc: '比较跨境 ETF 的场内价格、IOPV 与单位净值口径的溢价，并核对同一指数的跟踪载体。',
+    href: '/etf-premium',
+    kind: '数据工具',
+    detail: '高溢价不等于看空海外指数；限购可能阻断套利并使溢价持续。',
   },
   {
     name: '利润线与估值',

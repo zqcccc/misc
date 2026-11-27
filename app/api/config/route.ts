@@ -1,43 +1,6 @@
-import { NextResponse } from 'next/server'
-import { Prisma, PrismaClient, Share } from '@prisma/client'
+// 已下线：无仓库内消费者的旧配置读写接口，稳定返回 404。
+// 恢复时从 git 历史找回原实现。
+const offline = () => new Response(null, { status: 404 })
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url)
-  const id = searchParams.get('id')
-  if (!id) return NextResponse.json({ id, msg: 'id required' })
-  const prisma = new PrismaClient()
-  try {
-    const config = await prisma.lowCodeConfig.findUnique({
-      where: { id: Number(id) },
-    })
-    return NextResponse.json(config)
-  } catch (e) {
-    console.log('error: ', e)
-    return NextResponse.json({ error: e })
-  } finally {
-    await prisma.$disconnect()
-  }
-}
-
-export async function POST(request: Request) {
-  const body = await request.json()
-  console.log('body: ', body)
-  if (!body) return NextResponse.json({ msg: 'body required' })
-  const prisma = new PrismaClient()
-  try {
-    body.json = JSON.stringify(body.json)
-    const update = Object.assign({}, body)
-    delete update.id
-    const config = await prisma.lowCodeConfig.upsert({
-      where: { id: Number(body.id) || -1 },
-      create: update,
-      update,
-    })
-    return NextResponse.json(config)
-  } catch (e) {
-    console.log('error: ', e)
-    return NextResponse.json({ error: e })
-  } finally {
-    await prisma.$disconnect()
-  }
-}
+export const GET = offline
+export const POST = offline

@@ -2,6 +2,7 @@
 
 import Script from 'next/script'
 import { useSyncExternalStore } from 'react'
+import { EZOIC_ENABLED } from '@/lib/ads'
 
 const CONSENT_KEY = 'c9cu-analytics-consent'
 const CONSENT_EVENT = 'c9cu-consent-change'
@@ -49,6 +50,13 @@ export default function AnalyticsConsent() {
               gtag('config', 'G-4DLMMFXJMP', { anonymize_ip: true });
             `}
           </Script>
+          {EZOIC_ENABLED && (
+            <Script
+              id='ezoic-analytics'
+              src='https://ezoicanalytics.com/analytics.js'
+              strategy='afterInteractive'
+            />
+          )}
         </>
       )}
       {decision === null && (
@@ -56,7 +64,7 @@ export default function AnalyticsConsent() {
           <div>
             <strong>是否允许匿名访问统计？</strong>
             <p>
-              只有你同意后才会加载 Google Analytics。拒绝不会影响网站功能。
+              只有你同意后才会加载 Google Analytics 和 Ezoic Analytics。拒绝不会影响网站功能。
               <a href='/privacy#analytics'>了解详情</a>
             </p>
           </div>

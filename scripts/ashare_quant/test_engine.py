@@ -40,7 +40,7 @@ class TestBacktestEngineAndAntiLookAhead(unittest.TestCase):
         self.assertEqual(pos.shares, 500)
         self.assertAlmostEqual(pos.cost_price, 1500.0 * 1.001, places=2)
         self.assertEqual(len(self.engine.trades), 1)
-        self.assertEqual(self.engine.trades[0].price, 1500.0)
+        self.assertAlmostEqual(self.engine.trades[0].price, 1500.0 * 1.001, places=6)  # 实际成交价含滑点
         self.assertEqual(self.engine.trades[0].trade_date, "2024-01-03")
 
     def test_t_plus_one_restriction(self):
@@ -158,6 +158,112 @@ class TestBacktestEngineAndAntiLookAhead(unittest.TestCase):
             self.assertEqual(o1.shares, o2.shares)
 
         print("[TEST PASS] 因果防未来函数扰动测试通过: 未来数据变动对当前决策完全无影响！")
+
+
+class TestFifoRealizedPnl(unittest.TestCase):
+    """确定性场景: 多次加仓 -> 部分减仓 -> 全部卖出 -> 再次买入 -> 卖出。
+    校验 FIFO 批次配对不重复配对, Trade 记录含滑点成交价, 已实现净盈亏 (含费用) 精确可重建。"""
+
+    def _exec(self):
+        eng = BacktestEngine(initial_capital=1_000_000.0)
+        sym = "600519.SS"
+        steps = [
+            # (日期, 动作, 股数, 开盘价)
+            ("2024-01-02", "BUY", 1000, 100.0),
+            ("2024-01-03", "BUY", 1000, 110.0),
+            ("2024-01-04", "SELL", 500, 120.0),
+            ("2024-01-05", "SELL", 1500, 130.0),
+            ("2024-01-08", "BUY", 1000, 90.0),
+            ("2024-01-09", "SELL", 1000, 95.0),
+        ]
+        for d, action, shares, open_p in steps:
+            eng.pending_orders.append(Order(sym, action, shares, 0.0, d))
+            bar = {sym: {"open": open_p, "high": open_p * 1.01, "low": open_p * 0.99, "close": open_p}}
+            eng.execute_pending_orders(d, bar, {sym: open_p})
+        return eng, sym
+
+    def test_fifo_matching_and_net_pnl(self):
+        eng, sym = self._exec()
+        sells = [t for t in eng.trades if t.action == "SELL"]
+        buys = [t for t in eng.trades if t.action == "BUY"]
+        self.assertEqual(len(sells), 3)
+        self.assertEqual(len(buys), 3)
+
+        # 买入批次含费成本: (成交金额 + 佣金) / 股数
+        lot1_ps = (1000 * 100.0 * 1.001 + max(5.0, 100100.0 * 0.00025)) / 1000
+        lot2_ps = (1000 * 110.0 * 1.001 + max(5.0, 110110.0 * 0.00025)) / 1000
+        lot3_ps = (1000 * 90.0 * 1.001 + max(5.0, 90090.0 * 0.00025)) / 1000
+
+        # 卖1 (500股): 只消耗批次1前半, 净额 = 卖出净进款 - 匹配成本
+        sell1_net = 500 * 120.0 * 0.999 - (max(5.0, 59940.0 * 0.00025) + 59940.0 * 0.0005)
+        self.assertAlmostEqual(sells[0].realized_pnl, sell1_net - 500 * lot1_ps, places=4)
+        self.assertAlmostEqual(sells[0].realized_basis, 500 * lot1_ps, places=4)
+
+        # 卖2 (1500股): 批次1剩余500股 + 批次2全部1000股, 不重复配对批次1已卖部分
+        sell2_net = 1500 * 130.0 * 0.999 - (max(5.0, 194805.0 * 0.00025) + 194805.0 * 0.0005)
+        self.assertAlmostEqual(
+            sells[1].realized_pnl, sell2_net - (500 * lot1_ps + 1000 * lot2_ps), places=4
+        )
+        self.assertAlmostEqual(sells[1].realized_basis, 500 * lot1_ps + 1000 * lot2_ps, places=4)
+
+        # 卖3 (1000股): 再买入的批次3
+        sell3_net = 1000 * 95.0 * 0.999 - (max(5.0, 94905.0 * 0.00025) + 94905.0 * 0.0005)
+        self.assertAlmostEqual(sells[2].realized_pnl, sell3_net - 1000 * lot3_ps, places=4)
+        self.assertAlmostEqual(sells[2].realized_basis, 1000 * lot3_ps, places=4)
+
+        # 盈亏守恒: 全部平仓后, 已实现净盈亏之和 == 账户净变动
+        total_realized = sum(t.realized_pnl for t in sells)
+        self.assertAlmostEqual(eng.cash - 1_000_000.0, total_realized, places=4)
+        self.assertNotIn(sym, eng.positions)
+        self.assertNotIn(sym, eng.open_lots)
+
+        # Trade 记录真实含滑点成交价
+        self.assertAlmostEqual(sells[0].price, 120.0 * 0.999, places=6)
+        self.assertAlmostEqual(buys[0].price, 100.0 * 1.001, places=6)
+
+    def test_partial_sell_consumes_earliest_lot_first(self):
+        """部分减仓只消耗最早批次的剩余股数, 全部平仓后批次清空。"""
+        eng = BacktestEngine(initial_capital=1_000_000.0)
+        sym = "600519.SS"
+
+        def bar(open_p):
+            return {sym: {"open": open_p, "high": open_p * 1.01, "low": open_p * 0.99, "close": open_p}}
+
+        eng.pending_orders.append(Order(sym, "BUY", 1000, 0.0, "2024-01-02"))
+        eng.execute_pending_orders("2024-01-02", bar(100.0), {sym: 100.0})
+        eng.pending_orders.append(Order(sym, "BUY", 1000, 0.0, "2024-01-03"))
+        eng.execute_pending_orders("2024-01-03", bar(110.0), {sym: 110.0})
+
+        lot1_ps = eng.open_lots[sym][0][1]
+        lot2_ps = eng.open_lots[sym][1][1]
+        self.assertNotAlmostEqual(lot1_ps, lot2_ps, places=6)  # 两个批次成本不同
+
+        eng.pending_orders.append(Order(sym, "SELL", 500, 0.0, "2024-01-04"))
+        eng.execute_pending_orders("2024-01-04", bar(120.0), {sym: 120.0})
+
+        lots = eng.open_lots[sym]
+        self.assertEqual(len(lots), 2)
+        self.assertEqual(lots[0][0], 500)   # 最早批次只剩 500 股
+        self.assertEqual(lots[1][0], 1000)  # 第二批次未被动过
+        sell = eng.trades[-1]
+        self.assertAlmostEqual(sell.realized_basis, 500 * lot1_ps, places=6)
+
+        # 全部平仓后批次清空
+        eng.pending_orders.append(Order(sym, "SELL", 1500, 0.0, "2024-01-05"))
+        eng.execute_pending_orders("2024-01-05", bar(130.0), {sym: 130.0})
+        self.assertNotIn(sym, eng.open_lots)
+        self.assertNotIn(sym, eng.positions)
+
+    def test_realized_series_rebuildable_from_trades(self):
+        """交付物口径: 盈亏序列可由 trades 逐笔重建 (net_proceeds - matched_basis)。"""
+        eng, sym = self._exec()
+        rebuilt = []
+        for t in eng.trades:
+            if t.action == "SELL" and t.realized_basis > 0:
+                rebuilt.append(t.realized_pnl / t.realized_basis)
+        self.assertEqual(len(rebuilt), 3)
+        for r, t in zip(rebuilt, [t for t in eng.trades if t.action == "SELL"]):
+            self.assertAlmostEqual(r, t.realized_pnl / t.realized_basis, places=12)
 
 
 if __name__ == "__main__":

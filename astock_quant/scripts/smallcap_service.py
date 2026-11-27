@@ -33,7 +33,7 @@ PROJECT_ROOT = os.path.dirname(AQ_ROOT)
 sys.path.insert(0, AQ_ROOT)
 sys.path.insert(0, PROJECT_ROOT)
 
-from aq import backtest, config, factors, live_smallcap, metrics, panel, strategy, universe, validate
+from aq import adjust, backtest, config, factors, live_smallcap, metrics, panel, strategy, universe, validate
 
 # 接入报警系统
 try:
@@ -44,14 +44,40 @@ except Exception:
 TRADING_DAYS = 244
 
 
-def send_alert(title: str, message: str, important: bool = True):
-    """发送统一告警通知至 Telegram / 飞书 / 企业微信 / macOS"""
+class NotificationDeliveryError(RuntimeError):
+    """需要投递通知但所有渠道均未成功 (未配置或发送失败)，游标不推进，
+    供调度层 (非零退出码 / 守护循环捕获重试) 明确感知。"""
+
+
+def send_alert(title: str, message: str, important: bool = True) -> bool:
+    """发送统一告警通知至 Telegram / 飞书 / 企业微信 / macOS。
+
+    返回真实投递结果，不吞错：
+    - 至少一个已配置渠道明确返回成功 -> True
+    - 通知模块不可用 / 未配置任何渠道 / 已配置渠道全部发送失败 -> False
+    本函数自身不抛异常；调用方必须依据返回值决定后续动作
+    （例如推进去重游标前先确认投递成功，否则以异常/非零状态上报调度）。
+    """
     print(f"[ALERT] {title}\n{message}", file=sys.stderr, flush=True)
-    if notify_all:
-        try:
-            notify_all(title=title, message=message, important=important)
-        except Exception as e:
-            print(f"[ALERT-ERR] 发送告警通知失败: {e}", file=sys.stderr, flush=True)
+    if notify_all is None:
+        print("[ALERT-ERR] monitor.notifiers 不可用，告警未投递", file=sys.stderr, flush=True)
+        return False
+    try:
+        results = notify_all(title=title, message=message, important=important)
+    except Exception as e:
+        print(f"[ALERT-ERR] 发送告警通知失败: {e}", file=sys.stderr, flush=True)
+        return False
+    delivered = sorted(name for name, ok in (results or {}).items() if ok)
+    if delivered:
+        print(f"[ALERT] 告警已投递至渠道: {', '.join(delivered)}", flush=True)
+        return True
+    print(
+        "[ALERT-ERR] 所有通知渠道均未成功投递 (未配置或发送失败)，告警未送达；"
+        "请检查 monitor 下 feishu/telegram/wechat_work 配置与网络",
+        file=sys.stderr,
+        flush=True,
+    )
+    return False
 
 
 def handle_uncaught_exception(exc_type, exc_value, exc_traceback):
@@ -63,9 +89,6 @@ def handle_uncaught_exception(exc_type, exc_value, exc_traceback):
     err_text = f"【A股小微盘量化服务进程崩溃退出】\n时间: {datetime.now()}\n类型: {exc_type.__name__}\n详情: {exc_value}\n堆栈:\n{tb_str}"
     send_alert("🚨【A股小微盘量化服务崩溃退出】", err_text, important=True)
     sys.__excepthook__(exc_type, exc_value, exc_traceback)
-
-
-sys.excepthook = handle_uncaught_exception
 
 
 def fetch_live_snapshots(codes: list[str]) -> dict[str, dict]:
@@ -122,10 +145,23 @@ def build_smallcap_deliverable(
     meta_df = pd.read_csv(os.path.join(AQ_ROOT, "data", "meta.csv")).set_index("code")
     code_to_name = meta_df["name"].to_dict()
 
+    # 复权唯一入口（seed/历史回测与线上增量服务共用）：研究面板的 close/open 已经是
+    # baostock 对账过的重建复权价（build_panel 只收通过逐日对账的标的，宁缺毋滥），
+    # 走 verified 路径；解不出复权的标的在对账阶段就被隔离，不会带着 raw 收益进来。
+    adjustment = adjust.build_scoring_panels(
+        close_verified=panels["close"],
+        close_raw=panels["close_raw"],
+        open_verified=panels.get("open"),
+        open_raw=panels.get("open_raw"),
+    )
+    scoring_panels = dict(panels)
+    scoring_panels["close"] = adjustment.close
+    scoring_panels["open"] = adjustment.open
+
     print("[AShare-SmallCap-Quant] 计算小微盘因子复合打分 (小市值 + 5日反转 + 低特质波动)...", flush=True)
-    fp = {k: v.astype(np.float32) for k, v in factors.build_all(panels).items()}
-    inv_mask = universe.investable(panels, min_listed=250, exclude_st=True, liquidity_top_pct=1.0)
-    ew_mkt = universe.equal_weight_benchmark(panels, inv_mask).fillna(0.0)
+    fp = {k: v.astype(np.float32) for k, v in factors.build_all(scoring_panels).items()}
+    inv_mask = universe.investable(scoring_panels, min_listed=250, exclude_st=True, liquidity_top_pct=1.0)
+    ew_mkt = universe.equal_weight_benchmark(scoring_panels, inv_mask).fillna(0.0)
     small_style = ew_mkt - hs300_ret
 
     weights = {"liqsize20": 1.0, "rev5": 0.5, "ivol60": 0.5}
@@ -134,13 +170,28 @@ def build_smallcap_deliverable(
         name: strategy.masked_rank_score(fp[name], inv_mask)
         for name in weights
     }
-    # 2026-09-08: 10 -> 20（月频），与 live_smallcap.REBALANCE_FREQUENCY 保持一致。
-    rb_dates = strategy.rebalance_dates(dates, 20, start="2019-01-02", end=dates[-1])
+    # 调仓频率唯一来源：live_smallcap.REBALANCE_FREQUENCY（2026-09-08: 10 -> 20 月频）。
+    rb_dates = strategy.rebalance_dates(
+        dates, live_smallcap.REBALANCE_FREQUENCY, start="2019-01-02", end=dates[-1]
+    )
 
     # 1. 灵敏度矩阵测试: N in [3, 5, 6, 7, 8, 10, 15, 20, 30]
     top_n_eval_list = [3, 5, 6, 7, 8, 10, 15, 20, 30]
     sensitivity_table = []
-    
+    # 各 N 的静态风险特征描述，刻意不含任何收益/回撤排名断言——
+    # 排名类结论必须等回测跑完后由当期数据实算派生（见下方 claims 逻辑）。
+    static_assessment = {
+        3: "极脆弱·尾部腰斩风险高",
+        5: "集中度偏高·踩踏下杀大",
+        6: "爆发力强·踩踏下杀仍偏大",
+        7: "默认实操档",
+        8: "平衡档",
+        10: "标准精选",
+        15: "多头充分分散",
+        20: "多头充分分散",
+        30: "多头充分分散",
+    }
+
     print("[AShare-SmallCap-Quant] 执行持仓只数敏感性测试对比...", flush=True)
     for n in top_n_eval_list:
         sig_n = strategy.top_n_signals_buffered(score, rb_dates, top_n=n, buffer_mult=2.0)
@@ -161,16 +212,6 @@ def build_smallcap_deliverable(
         mc_n = validate.block_bootstrap(r_n, iters=1500, block=10, seed=42)
         p5_n = mc_n.get("P5", 0.0)
 
-        assessment = (
-            "极脆弱·尾部腰斩风险高" if n <= 3
-            else "集中度偏高·踩踏下杀大" if n == 5
-            else "爆发力强·踩踏下杀仍偏大" if n == 6
-            else "🔥收益之王·年化超额最高" if n == 7
-            else "★黄金平衡点·回撤控制最好" if n == 8
-            else "标准精选" if n == 10
-            else "多头充分分散"
-        )
-
         sensitivity_table.append({
             "N": n,
             "cagr_pct": round(cagr_n, 2),
@@ -181,10 +222,33 @@ def build_smallcap_deliverable(
             "alpha_annual_pct": round(alpha_n, 2),
             "alpha_t_nw": round(alpha_t_n, 2),
             "mc_p5": round(p5_n, 2),
-            "is_recommended": (n == 7),
-            "is_top_cagr": (n == 7),
-            "assessment": assessment
+            "assessment": static_assessment.get(n, "多头充分分散"),
         })
+
+    # 排名类结论由当前 sensitivity 数据实算派生，禁止沿用历史硬编码：
+    # 上一版把 N=7 硬编码为 is_top_cagr/「收益之王」，而 2026-09 数据里 N=15 的
+    # CAGR 更高——过期断言会误导实操。平局取表中靠前的 N（确定性）。
+    top_cagr_row = None
+    mildest_dd_row = None
+    for row in sensitivity_table:
+        if top_cagr_row is None or row["cagr_pct"] > top_cagr_row["cagr_pct"]:
+            top_cagr_row = row
+        if mildest_dd_row is None or row["max_drawdown_pct"] > mildest_dd_row["max_drawdown_pct"]:
+            mildest_dd_row = row
+    top_cagr_n = top_cagr_row["N"] if top_cagr_row is not None else None
+    mildest_dd_n = mildest_dd_row["N"] if mildest_dd_row is not None else None
+    recommended_n = 7  # 默认展示配置（页签/推荐理由围绕它生成，但不冒充排名断言）
+    for row in sensitivity_table:
+        claims = []
+        if row["N"] == top_cagr_n:
+            claims.append(f"🔥本表年化最高（CAGR {row['cagr_pct']}%）")
+        if row["N"] == mildest_dd_n:
+            claims.append(f"全期回撤最浅（{row['max_drawdown_pct']}%）")
+        row["assessment"] = (
+            f"{row['assessment']}·{'·'.join(claims)}" if claims else row["assessment"]
+        )
+        row["is_top_cagr"] = (row["N"] == top_cagr_n)
+        row["is_recommended"] = (row["N"] == recommended_n)
 
     # 2. 为 [7, 8, 6, 5, 10, 30] 分别生成完整的详情结构
     detailed_configs = [7, 8, 6, 5, 10, 30]
@@ -200,8 +264,10 @@ def build_smallcap_deliverable(
         signals_by_n[n] = sig
         res_by_n[n] = res
 
-    latest_cand_top = score.iloc[-1].dropna().nlargest(100).index.tolist()
-    needed_codes.update(latest_cand_top)
+    # 快照只拉各配置最后一期缓冲后持仓（与回测末期信号同源）；旧版从原始分
+    # Top100 拉取补满，没有滞后带状态，会偏离回测实际持仓。
+    for n in detailed_configs:
+        needed_codes.update(live_smallcap.signal_holdings_at(signals_by_n[n]))
 
     print(f"[AShare-SmallCap-Quant] 批量拉取 {len(needed_codes)} 只候选股票的实时行情快照...", flush=True)
     live_snaps = fetch_live_snapshots(list(needed_codes))
@@ -227,20 +293,19 @@ def build_smallcap_deliverable(
         
         reg_style = validate.alpha_beta(r, {"沪深300": hs300_ret.loc[r.index], "小盘风格": small_style.loc[r.index]})
 
-        # 最新持仓 (严格过滤 ST 并精准补齐到 n 只)
+        # 最新持仓 = 最后一期缓冲后信号，与回测末期目标持仓严格同源。
+        # ST 已在可投资池（universe.investable 的 infer_st_cap）剔除，不再按快照名
+        # 二次截补——那会改变持仓集合，破坏 seed==回测末期信号的一致性。
         latest_rb_dt = sig.index[-1]
-        raw_candidates = score.loc[latest_rb_dt].dropna().nlargest(100).index.tolist()
+        signal_codes = live_smallcap.signal_holdings_at(sig)
         tot_eq = float(res.equity.iloc[-1])
         target_wt_val = round(100.0 / n, 2)
 
         holdings_list = []
-        for code in raw_candidates:
+        for code in signal_codes:
             base_name = code_to_name.get(code, code)
             snap = live_snaps.get(code, {})
             name = snap.get("name", base_name)
-            if "ST" in name or "*ST" in name:
-                continue
-            
             px = snap.get("price", float(close.loc[dates[-1], code]))
             f_cap = snap.get("float_cap_billion", 0.0)
             t_cap = snap.get("total_cap_billion", 0.0)
@@ -270,8 +335,6 @@ def build_smallcap_deliverable(
                     code,
                 ),
             })
-            if len(holdings_list) == n:
-                break
 
         holdings_list = sorted(holdings_list, key=lambda x: (x["float_cap_billion"] if x["float_cap_billion"] > 0 else 9999))
 
@@ -281,7 +344,9 @@ def build_smallcap_deliverable(
             latest_rb_dt,
             dates[-1],
             close_raw=panels.get("close_raw"),
-            open_panel=panels.get("open"),
+            open_panel=scoring_panels.get("open"),
+            frequency=live_smallcap.REBALANCE_FREQUENCY,
+            unresolved_events=adjustment.unresolved_events,
         )
         for item in holdings_list:
             period = current_period["returns_by_code"].get(item["code"], {})
@@ -356,6 +421,29 @@ def build_smallcap_deliverable(
             "equity_curve": curve,
         }
 
+    # 推荐理由由当期 sensitivity 实算生成（含默认配置的实算数字与全表对比），
+    # 不引用历史固定值。
+    rec_row = next((row for row in sensitivity_table if row["N"] == recommended_n), None)
+    if rec_row is None:
+        recommendation_reason = (
+            f"默认展示 N={recommended_n}（当前 sensitivity 数据未覆盖该配置，"
+            "推荐理由待全量重算后生成）。"
+        )
+    else:
+        top_note = (
+            f"本表年化最高为 N={top_cagr_n}（CAGR {top_cagr_row['cagr_pct']}%）。"
+            if top_cagr_n != recommended_n
+            else "该配置即为本表年化最高。"
+        )
+        recommendation_reason = (
+            f"由当前 sensitivity 数据实算：默认展示 N={recommended_n}，"
+            f"年化 {rec_row['cagr_pct']}%、纯超额 Alpha {rec_row['alpha_annual_pct']}%"
+            f"（NW t={rec_row['alpha_t_nw']}）、蒙卡 P5 极端尾部 {rec_row['mc_p5']}、"
+            f"2024 初踩踏回撤 {rec_row['crash_2024_mdd_pct']}%、"
+            f"年换手 {rec_row['annual_turnover']}x。{top_note}"
+            "所有数字随每次全量重算更新，不引用历史固定值。"
+        )
+
     # 主交付物结构
     deliverable = {
         "strategy_id": "ashare_joinquant_smallcap_micro",
@@ -364,13 +452,13 @@ def build_smallcap_deliverable(
         "market": "A 股专属 (中国资本市场特有的小市值溢价与流动性补偿)",
         "update_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "latest_trading_date": latest_date_str,
-        "latest_rebalance_date": str(signals_by_n[7].index[-1].date()),
-        "recommended_n": 7,
-        "recommendation_reason": "回测验证显示：持仓 7 只时年化收益全场最高(21.01%)、纯超额Alpha最高(10.32%, NW t=1.79)，且蒙特卡洛 P5 极端尾部达 1.12(+12%)，在不超过10只的实操约束下兼具最高弹性和足够分散度，为实操默认首选。",
+        "latest_rebalance_date": str(signals_by_n[recommended_n].index[-1].date()),
+        "recommended_n": recommended_n,
+        "recommendation_reason": recommendation_reason,
         "rules": {
             "universe": "A 股全市场，剔除 ST、次新 (<250天)、停牌与一字板",
             "weights": "小盘规模 (1.0) + 短期反转 (0.5) + 低特质波动 (0.5)",
-            "freq_days": 10,
+            "freq_days": live_smallcap.REBALANCE_FREQUENCY,
             "buffer_mult": 2.0,
             "execution": "T 日收盘定权重，T+1 日开盘撮合成交 (严格无未来函数)",
             "friction": "双边佣金万2.5 + 印花税(历史动态税率) + 滑点冲击 0.1%",
@@ -390,7 +478,14 @@ def build_smallcap_deliverable(
 
 
 def notify_rebalance_if_needed(deliverable: dict, force: bool = False) -> bool:
-    """若当期存在股票调仓变动，自动向 Telegram / 飞书 / 企业微信 发送调仓通知"""
+    """若当期存在股票调仓变动，自动向 Telegram / 飞书 / 企业微信 发送调仓通知。
+
+    返回值契约:
+    - True: 通知已成功投递，且 last_notified_rebalance 游标推进一次；
+    - False: 当期无调仓变动 / 该调仓日已发送过，无需投递；
+    - 抛出 NotificationDeliveryError: 需要投递但所有渠道失败（未配置或发送失败），
+      游标不推进，由调度层（单次运行非零退出 / 守护循环捕获后告警并重试）感知。
+    """
     cfg_7 = deliverable.get("configs", {}).get("7")
     if not cfg_7:
         return False
@@ -467,13 +562,19 @@ def notify_rebalance_if_needed(deliverable: dict, force: bool = False) -> bool:
     title = f"🔔【A股小微盘量化策略】调仓操作提醒 ({rb_date})"
 
     print(f"[AShare-SmallCap-Quant] 发送调仓通知推送:\n{msg_body}", flush=True)
-    send_alert(title, msg_body, important=True)
+    if not send_alert(title, msg_body, important=True):
+        # 全部渠道未投递成功: 不推进去重游标，以明确异常让调度感知。
+        raise NotificationDeliveryError(
+            f"调仓通知 ({rb_date}) 所有通知渠道投递失败，last_notified_rebalance 游标未推进；"
+            f"调度将重试，请检查 monitor 通知渠道配置与网络"
+        )
 
     try:
         with open(stamp_file, "w") as f:
             f.write(rb_date)
     except Exception as e:
-        print(f"[WARN] 写入调仓通知时间戳失败: {e}", file=sys.stderr)
+        # 通知已送达但游标写盘失败: 下次触发会对同一调仓日重复推送，如实告知。
+        print(f"[WARN] 调仓通知已送达但写入时间戳失败 ({e})，下次触发可能重复推送", file=sys.stderr)
 
     return True
 
@@ -523,19 +624,27 @@ def main():
         build_smallcap_deliverable(args.out)
         return
 
-    if args.force_notify or args.notify:
-        target_abs = os.path.isabs(args.out) and args.out or os.path.join(PROJECT_ROOT, args.out)
-        if not os.path.exists(target_abs):
-            build_smallcap_deliverable(args.out)
-        with open(target_abs, "r", encoding="utf-8") as f:
-            d = json.load(f)
-        notify_rebalance_if_needed(d, force=args.force_notify)
-    elif args.daemon:
-        run_daemon(args.out)
-    else:
-        deliverable = build_smallcap_deliverable(args.out)
-        notify_rebalance_if_needed(deliverable)
+    # 单次运行模式: 投递失败以非零退出码上报调度，不走崩溃兜底告警
+    # (通知失败不是进程崩溃，避免误导性的重复告警)。
+    try:
+        if args.force_notify or args.notify:
+            target_abs = os.path.isabs(args.out) and args.out or os.path.join(PROJECT_ROOT, args.out)
+            if not os.path.exists(target_abs):
+                build_smallcap_deliverable(args.out)
+            with open(target_abs, "r", encoding="utf-8") as f:
+                d = json.load(f)
+            notify_rebalance_if_needed(d, force=args.force_notify)
+        elif args.daemon:
+            run_daemon(args.out)
+        else:
+            deliverable = build_smallcap_deliverable(args.out)
+            notify_rebalance_if_needed(deliverable)
+    except NotificationDeliveryError as e:
+        print(f"[AShare-SmallCap-Quant] 调仓通知投递失败，以非零状态退出供调度感知: {e}",
+              file=sys.stderr, flush=True)
+        sys.exit(2)
 
 
 if __name__ == "__main__":
+    sys.excepthook = handle_uncaught_exception
     main()

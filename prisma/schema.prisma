@@ -121,7 +121,7 @@ model CompanyExploration {
   @@index([companyId, createdAt])
   @@index([visibility, pinned, createdAt])
   @@index([score])
-  @@index([companyId, runId])
+  @@unique([companyId, runId])
   @@schema("public")
 }
 
@@ -159,7 +159,7 @@ model CompanyValuationSnapshot {
   @@index([companyId, asOfDate])
   @@index([ttmPe])
   @@index([profitQualityScore])
-  @@index([companyId, runId])
+  @@unique([companyId, runId])
   @@schema("public")
 }
 
@@ -187,7 +187,7 @@ model CompanyValuationExplanation {
 
   @@index([companyId, explanationType, isCurrent])
   @@index([valuationSnapshotId])
-  @@index([companyId, runId])
+  @@unique([companyId, runId, explanationType])
   @@schema("public")
 }
 

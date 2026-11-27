@@ -26,17 +26,36 @@ const MOBILE_PRICE_CHART_GRID = {
   bottom: 56,
   left: 8,
 }
+const THEME_EVENT = 'c9cu-theme-change'
+
+// ThemeButton 派发的 c9cu-theme-change 是不带 detail 的 Event，
+// effect 重跑时从 documentElement 的 dark class 读取当前主题。
+function useThemeTick() {
+  const [themeTick, setThemeTick] = useState(0)
+  useEffect(() => {
+    const handleThemeChange = () => setThemeTick((tick) => tick + 1)
+    window.addEventListener(THEME_EVENT, handleThemeChange)
+    return () => window.removeEventListener(THEME_EVENT, handleThemeChange)
+  }, [])
+  return themeTick
+}
 
 export function useProfitLineData(symbolInput: string) {
   const [submittedSymbol, setSubmittedSymbol] = useState('00700.HK')
   const [data, setData] = useState<ProfitLineData | null>(null)
   const [state, setState] = useState<LoadState>('idle')
   const [error, setError] = useState('')
+  const abortRef = useRef<AbortController | null>(null)
 
   const fetchData = useCallback(
     async (symbol: string) => {
       const cleanSymbol = symbol.trim().toUpperCase()
       if (!cleanSymbol) return
+
+      // 快速切换公司时终止旧请求，避免旧响应覆盖新 symbol
+      abortRef.current?.abort()
+      const controller = new AbortController()
+      abortRef.current = controller
 
       setState('loading')
       setError('')
@@ -45,7 +64,7 @@ export function useProfitLineData(symbolInput: string) {
       try {
         const response = await fetch(
           `/api/profit-line?symbol=${encodeURIComponent(cleanSymbol)}`,
-          { cache: 'no-store' },
+          { cache: 'no-store', signal: controller.signal },
         )
         const payload = await response.json()
 
@@ -53,9 +72,13 @@ export function useProfitLineData(symbolInput: string) {
           throw new Error(payload?.message || '数据获取失败')
         }
 
+        if (controller.signal.aborted) return
+
         setData(payload)
         setState('ready')
       } catch (requestError) {
+        // 主动 abort（切换公司 / 卸载）不算错误，也不覆盖新一轮请求状态
+        if (controller.signal.aborted || abortRef.current !== controller) return
         setData(null)
         setState('error')
         setError(
@@ -65,6 +88,12 @@ export function useProfitLineData(symbolInput: string) {
     },
     [],
   )
+
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort()
+    }
+  }, [])
 
   return { submittedSymbol, data, state, error, fetchData }
 }
@@ -117,6 +146,8 @@ export function useValuationEntries(searchQuery: string, filterQuality: string) 
   const [entriesLoadingMore, setEntriesLoadingMore] = useState(false)
   const [totalCount, setTotalCount] = useState(0)
   const [hasMore, setHasMore] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+
   const [currentPage, setCurrentPage] = useState(1)
   const loadingRef = useRef(false)
 
@@ -156,8 +187,9 @@ export function useValuationEntries(searchQuery: string, filterQuality: string) 
       setTotalCount(payload.total || 0)
       setHasMore(payload.hasMore || false)
       setCurrentPage(payload.page || page)
-    } catch {
-      // 列表加载失败不阻塞主流程
+      setLoadError(null)
+    } catch (requestError) {
+      setLoadError(requestError instanceof Error ? requestError.message : '列表加载失败')
     } finally {
       loadingRef.current = false
       if (page === 1) {
@@ -177,16 +209,24 @@ export function useValuationEntries(searchQuery: string, filterQuality: string) 
         const response = await fetch(buildUrl(1), {
           cache: 'no-store',
         })
-        if (!response.ok) return
+        if (!response.ok) {
+          setLoadError(`HTTP ${response.status}`)
+          return
+        }
         const payload = (await response.json()) as CompanyValuationListPayload
         if (!cancelled) {
           setValuationEntries(payload.entries || [])
           setTotalCount(payload.total || 0)
           setHasMore(payload.hasMore || false)
           setCurrentPage(payload.page || 1)
+          setLoadError(null)
         }
-      } catch {
-        // 列表加载失败不阻塞主流程
+      } catch (requestError) {
+        if (!cancelled) {
+          setLoadError(
+            requestError instanceof Error ? requestError.message : '列表加载失败',
+          )
+        }
       } finally {
         if (!cancelled) {
           setEntriesLoading(false)
@@ -209,7 +249,7 @@ export function useValuationEntries(searchQuery: string, filterQuality: string) 
     await loadPage(currentPage + 1, true)
   }, [loadPage, currentPage, entriesLoadingMore, hasMore])
 
-  return { valuationEntries, entriesLoading, entriesLoadingMore, totalCount, hasMore, fetchEntries, loadMore }
+  return { valuationEntries, entriesLoading, entriesLoadingMore, totalCount, hasMore, loadError, fetchEntries, loadMore }
 }
 
 export function useChart() {
@@ -254,6 +294,8 @@ export function useChartOptions(
   chartRef: React.MutableRefObject<any>,
   onVisibleAlertCountChange?: (count: number) => void,
 ) {
+  const themeTick = useThemeTick()
+
   useEffect(() => {
     if (!chartRef.current) return
 
@@ -602,6 +644,7 @@ export function useChartOptions(
     // 初始计算一次
     calcVisibleAlerts()
   }, [
+    themeTick,
     chartReady,
     data?.currency,
     data?.balanceCurrency,
@@ -622,6 +665,8 @@ export function useDividendChartOptions(
   chartReady: boolean,
   chartRef: React.MutableRefObject<any>,
 ) {
+  const themeTick = useThemeTick()
+
   useEffect(() => {
     if (!chartRef.current) return
 
@@ -751,7 +796,7 @@ export function useDividendChartOptions(
     if (source.length === 0 && state === 'ready') {
       chartRef.current.clear()
     }
-  }, [chartReady, chartRef, data?.currency, data?.dividends, state])
+  }, [chartReady, chartRef, data?.currency, data?.dividends, state, themeTick])
 }
 
 export function useDerivedData(
@@ -796,62 +841,19 @@ export function useDerivedData(
     return calculatePePercentile(data.points, currentPe, 'all')
   }, [currentPe, data])
 
-  const pePercentile3Y = useMemo(() => {
-    if (!data || currentPe === null) return null
-    return calculatePePercentile(data.points, currentPe, 3)
-  }, [currentPe, data])
-
-  const pePercentile5Y = useMemo(() => {
-    if (!data || currentPe === null) return null
-    return calculatePePercentile(data.points, currentPe, 5)
-  }, [currentPe, data])
-
   const periodStats = useMemo(() => {
     if (!data) return null
     return calculatePeriodStats(data.points, selectedPeriod)
   }, [data, selectedPeriod])
 
-  const allPeriodStats = useMemo(() => {
-    if (!data) return []
-    const periods: PeriodType[] = [1, 3, 5, 'all']
-    return periods.map((p) => calculatePeriodStats(data.points, p))
-  }, [data])
-
   return {
     preparedPoints,
-    latestQuarterPoint,
     latestMarketPrice,
     latestMarketDate,
     currentPe,
     alertCount,
     pePercentileAll,
-    pePercentile3Y,
-    pePercentile5Y,
     periodStats,
-    allPeriodStats,
   }
 }
 
-export function useFilteredEntries(
-  valuationEntries: CompanyValuationCard[],
-  searchQuery: string,
-  filterQuality: '全部' | CompanyValuationCard['profitQuality'],
-) {
-  return useMemo(() => {
-    return valuationEntries.filter((entry) => {
-      if (filterQuality !== '全部' && entry.profitQuality !== filterQuality) {
-        return false
-      }
-      if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase().trim()
-        const matchTitle = entry.title.toLowerCase().includes(query)
-        const matchSymbol = entry.symbol.toLowerCase().includes(query)
-        const matchTags = entry.tags.some((tag) => tag.toLowerCase().includes(query))
-        if (!matchTitle && !matchSymbol && !matchTags) {
-          return false
-        }
-      }
-      return true
-    })
-  }, [valuationEntries, filterQuality, searchQuery])
-}

@@ -12,29 +12,28 @@ const publicRoutes = [
   '/contact',
   '/standards',
   '/privacy',
+  '/privacy/element-scroll-capture',
   '/advertise',
   '/tools',
   '/tools/merge-images',
   '/tools/compress-images',
   '/tools/element-scroll-capture',
   '/pe',
+  '/etf-premium',
   '/ashare-strategy',
   '/smallcap-strategy',
-  '/trhrp-backtest',
 ]
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const posts = await getAllPost()
-  const now = new Date()
 
   return [
     ...publicRoutes.map((route) => ({
       url: `${SITE_URL}${route}`,
-      lastModified: now,
       changeFrequency: route === '' ? ('weekly' as const) : ('monthly' as const),
       priority: route === ''
         ? 1
-        : ['/about', '/contact', '/standards', '/privacy'].includes(route)
+        : ['/about', '/contact', '/standards', '/privacy', '/privacy/element-scroll-capture'].includes(route)
           ? 0.9
           : route.startsWith('/tools')
             ? 0.7
@@ -42,15 +41,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })),
     ...posts.map((post) => {
       const candidate = new Date(String(post.data.updated || post.data.date || ''))
-      return {
+      const entry: MetadataRoute.Sitemap[number] = {
         url: `${SITE_URL}/post/${post.path
           .split('/')
           .map(encodeURIComponent)
           .join('/')}`,
-        lastModified: Number.isNaN(candidate.getTime()) ? now : candidate,
-        changeFrequency: 'yearly' as const,
+        changeFrequency: 'yearly',
         priority: 0.72,
       }
+      // Frontmatter 日期不可靠时省略 lastModified，不伪造更新时间。
+      if (!Number.isNaN(candidate.getTime())) {
+        entry.lastModified = candidate
+      }
+      return entry
     }),
   ]
 }

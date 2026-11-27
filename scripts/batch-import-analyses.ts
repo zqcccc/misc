@@ -8,7 +8,7 @@
 import { readdir, readFile } from 'fs/promises'
 import { join } from 'path'
 import { PrismaClient } from '@prisma/client'
-import { writeMarketAnalysisCrossMarket, type CrossMarketWriteInput } from '../lib/market-analysis'
+import { writeMarketAnalysisCrossMarket, disconnectMarketAnalysisClient, type CrossMarketWriteInput } from '../lib/market-analysis'
 import { recordMarketAnalysisScratchpad } from '../lib/market-analysis-scratchpad'
 
 const prisma = new PrismaClient()
@@ -113,8 +113,8 @@ async function main() {
       const content = await readFile(filePath, 'utf8')
       const payload = JSON.parse(content) as CrossMarketWriteInput
 
-      if (!payload.company?.symbol || !payload.company?.market) {
-        console.log(`${progress} ${fileName}... ✗ 缺少必要字段`)
+      if (!payload.company?.symbol || !payload.company?.market || !payload.runId) {
+        console.log(`${progress} ${fileName}... ✗ 缺少必要字段（company.symbol/company.market/runId）`)
         failed++
         continue
       }
@@ -125,49 +125,25 @@ async function main() {
         filePath,
       })
 
-      const key = `${payload.company.market}:${payload.company.symbol}`
-      let companyId = companyMap.get(key)
-
-      // 公司不存在则创建
-      if (!companyId) {
-        if (DRY_RUN) {
-          console.log(`${progress} ${fileName}... [DRY-RUN] 创建公司: ${key}`)
-          success++
-        } else {
-          const newCompany = await prisma.company.create({
-            data: {
-              symbol: payload.company.symbol,
-              market: payload.company.market,
-              name: payload.company.name || payload.company.symbol,
-              exchange: payload.company.exchange || null,
-              currency: payload.company.currency || null,
-              sector: payload.company.sector || null,
-              industry: payload.company.industry || null,
-              country: payload.company.country || null,
-              status: 'active',
-            },
-          })
-          companyId = newCompany.id
-          companyMap.set(key, companyId)
-          console.log(`${progress} ${fileName}... ✓ 创建公司: ${key}`)
-        }
-      } else {
-        if (DRY_RUN) {
+      if (DRY_RUN) {
+        const key = `${payload.company.market}:${payload.company.symbol}`
+        if (companyMap.has(key)) {
           console.log(`${progress} ${fileName}... [DRY-RUN] 跳过（已存在）`)
           skipped++
-          continue
+        } else {
+          console.log(`${progress} ${fileName}... [DRY-RUN] 创建公司并写入分析: ${key}`)
+          success++
         }
+        continue
       }
 
-      if (!DRY_RUN && companyId) {
-        await writeMarketAnalysisCrossMarket(payload)
-        console.log(`${progress} ${fileName}... ✓`)
-      }
-
+      // 公司创建/更新与数据写入统一走 lib 的幂等管道（含摘要刷新与缓存失效）
+      await writeMarketAnalysisCrossMarket(payload)
+      console.log(`${progress} ${fileName}... ✓`)
       success++
 
       // 批量暂停，防止数据库过载
-      if (!DRY_RUN && i > 0 && i % BATCH_SIZE === 0) {
+      if (i > 0 && i % BATCH_SIZE === 0) {
         await sleep(100)
       }
 
@@ -201,11 +177,15 @@ async function main() {
       console.log(`  ... 还有 ${errors.length - 20} 个错误`)
     }
   }
+
+  if (failed > 0) {
+    process.exitCode = 1
+  }
 }
 
 main()
   .finally(async () => {
-    await prisma.$disconnect()
+    await Promise.all([prisma.$disconnect(), disconnectMarketAnalysisClient()])
   })
   .catch(error => {
     console.error('脚本执行失败:', error)

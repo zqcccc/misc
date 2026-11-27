@@ -216,20 +216,18 @@ def run_5282_comparison():
     corr_ml = float(np.corrcoef(r_m, r_l)[0, 1])
 
     def get_trades_stats(engine, df_eq):
-        trades_pnl = []
-        buy_map = {}
-        for t in engine.trades:
-            if t.action == "BUY": buy_map[t.symbol] = t.price
-            elif t.action == "SELL" and t.symbol in buy_map:
-                trades_pnl.append((t.price / buy_map[t.symbol]) - 1.0)
-        wr = (sum(1 for p in trades_pnl if p > 0) / len(trades_pnl)) if trades_pnl else 0.0
-        w_list = [p for p in trades_pnl if p > 0]
-        l_list = [abs(p) for p in trades_pnl if p <= 0]
+        # 已实现净盈亏序列 (引擎 FIFO 批次配对, 成交价含滑点与费用)
+        closed = [t for t in engine.trades if t.action == "SELL" and t.realized_basis > 0.0]
+        realized_pnls = [t.realized_pnl for t in closed]
+        realized_rets = [t.realized_pnl / t.realized_basis for t in closed]
+        wr = (sum(1 for p in realized_pnls if p > 0) / len(realized_pnls)) if realized_pnls else 0.0
+        w_list = [p for p in realized_rets if p > 0]
+        l_list = [abs(p) for p in realized_rets if p <= 0]
         plr = (np.mean(w_list) / np.mean(l_list)) if w_list and l_list else 0.0
         years = len(df_eq) / 250.0
         to = (sum(abs(t.total_cost) for t in engine.trades) / 1_000_000.0) / years
-        mc = run_monte_carlo_block_bootstrap(trades_pnl, iters=5000, block_size=6)
-        return len(trades_pnl), wr, plr, to, mc
+        mc = run_monte_carlo_block_bootstrap(realized_rets, iters=5000, block_size=6)
+        return len(realized_pnls), wr, plr, to, mc
 
     n_tm, wr_m, plr_m, to_m, mc_m = get_trades_stats(eng_mom, df_mom)
     n_tl, wr_l, plr_l, to_l, mc_l = get_trades_stats(eng_low, df_low)

@@ -1,4 +1,10 @@
-import { PrismaClient } from '@prisma/client'
+import { Prisma, PrismaClient } from '@prisma/client'
+import type {
+  Company,
+  CompanyExploration,
+  CompanyValuationExplanation,
+  CompanyValuationSnapshot,
+} from '@prisma/client'
 import type {
   MarketType,
   EntryType,
@@ -135,24 +141,54 @@ function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error)
 }
 
-async function refreshCompanyValuationSummaryAfterWrite(companyId: string) {
-  try {
-    await refreshCompanyValuationSummary(prisma, companyId)
-  } catch (error) {
-    console.warn('[market-analysis] refresh company valuation summary failed:', error instanceof Error ? error.message : String(error))
-  }
-}
-
-async function invalidateValuationCacheAfterWrite() {
+// 摘要刷新与缓存失效是写入成功的必要条件：
+// - 摘要刷新在写入事务内执行，失败即整体回滚；
+// - 缓存失效在事务提交后执行，失败将使 run 记为 failed 并向上抛出。
+// SKIP_COMPANY_VALUATION_CACHE_INVALIDATION=1 为无 Redis 环境的显式豁免。
+async function invalidateValuationCacheOrThrow() {
   if (process.env.SKIP_COMPANY_VALUATION_CACHE_INVALIDATION === '1') {
     return
   }
 
+  await invalidateCompanyValuationCache()
+}
+
+async function ensureExplorationRun(runId: string) {
+  const existingRun = await prisma.companyExplorationRun.findUnique({
+    where: { id: runId },
+  })
+  if (existingRun) return
+
+  await prisma.companyExplorationRun.create({
+    data: {
+      id: runId,
+      prompt: `Market analysis run: ${runId}`,
+      status: 'running',
+    },
+  })
+}
+
+async function markRunFinished(
+  runId: string,
+  status: 'completed' | 'failed',
+  message?: string,
+) {
   try {
-    await invalidateCompanyValuationCache()
+    await prisma.companyExplorationRun.update({
+      where: { id: runId },
+      data: {
+        status,
+        finishedAt: new Date(),
+        ...(status === 'failed' && message ? { error: message } : {}),
+      },
+    })
   } catch (error) {
-    console.warn('[market-analysis] invalidate company valuation cache failed:', error)
+    console.error(`[market-analysis] 更新 run 状态为 ${status} 失败 (${runId}):`, errorMessage(error))
   }
+}
+
+export async function disconnectMarketAnalysisClient() {
+  await prisma.$disconnect()
 }
 
 // 跨市场 symbol 映射表（常见 A+H 股）
@@ -194,37 +230,28 @@ export function detectGroupId(companyName: string): string | null {
   return null
 }
 
-export async function findOrCreateCompany(input: CompanyInput) {
-  const existingCompany = await prisma.company.findUnique({
+// 公司幂等键：market + symbol（数据库已有唯一约束）
+async function upsertCompanyInTx(tx: Prisma.TransactionClient, input: CompanyInput) {
+  const detectedGroupId = input.groupId || detectGroupId(input.name)
+
+  return tx.company.upsert({
     where: {
       market_symbol: {
         market: input.market,
         symbol: input.symbol,
       },
     },
-  })
-
-  // 自动检测 groupId
-  const detectedGroupId = input.groupId || detectGroupId(input.name)
-
-  if (existingCompany) {
-    return prisma.company.update({
-      where: { id: existingCompany.id },
-      data: {
-        name: input.name,
-        exchange: input.exchange,
-        currency: input.currency,
-        sector: input.sector,
-        industry: input.industry,
-        country: input.country,
-        website: input.website,
-        groupId: detectedGroupId || existingCompany.groupId,
-      },
-    })
-  }
-
-  return prisma.company.create({
-    data: {
+    update: {
+      name: input.name,
+      exchange: input.exchange,
+      currency: input.currency,
+      sector: input.sector,
+      industry: input.industry,
+      country: input.country,
+      website: input.website,
+      groupId: detectedGroupId || undefined,
+    },
+    create: {
       symbol: input.symbol,
       market: input.market,
       exchange: input.exchange,
@@ -239,101 +266,102 @@ export async function findOrCreateCompany(input: CompanyInput) {
   })
 }
 
-export async function findRelatedCompanies(companyId: string) {
-  const company = await prisma.company.findUnique({
-    where: { id: companyId },
-  })
-
-  if (!company || !company.groupId) {
-    return []
-  }
-
-  return prisma.company.findMany({
+// 跨市场同步只补齐分组与市场级基础信息，不带入主市场的交易所/货币等差异字段
+async function upsertCrossMarketCompanyInTx(
+  tx: Prisma.TransactionClient,
+  input: CompanyInput,
+  groupId: string,
+  targetMarket: string,
+  targetSymbol: string,
+) {
+  return tx.company.upsert({
     where: {
-      groupId: company.groupId,
-      id: { not: companyId },
+      market_symbol: {
+        market: targetMarket,
+        symbol: targetSymbol,
+      },
+    },
+    update: { groupId },
+    create: {
+      symbol: targetSymbol,
+      market: targetMarket,
+      name: input.name,
+      groupId,
+      sector: input.sector,
+      industry: input.industry,
+      country: input.country,
     },
   })
 }
 
-export async function upsertPageEntry(
+async function upsertPageEntryInTx(
+  tx: Prisma.TransactionClient,
   companyId: string,
   input: PageEntryInput,
 ) {
-  const existingCompany = await prisma.company.findUnique({
-    where: { id: companyId },
-  })
-
-  if (!existingCompany) {
-    throw new Error(`Company not found: ${companyId}`)
-  }
-
-  return prisma.company.update({
+  // 未提供的字段为 undefined，保持数据库现值
+  return tx.company.update({
     where: { id: companyId },
     data: {
       entryType: input.entryType,
       entryNote: input.note,
-      sortOrder: input.sortOrder ?? existingCompany.sortOrder,
-      visible: input.visible ?? existingCompany.visible,
+      sortOrder: input.sortOrder,
+      visible: input.visible,
     },
   })
 }
 
-export async function upsertExploration(
+async function upsertExplorationInTx(
+  tx: Prisma.TransactionClient,
   companyId: string,
   input: ExplorationInput,
   runId?: string,
 ) {
-  if (runId) {
-    const existing = await prisma.companyExploration.findFirst({
-      where: {
-        companyId,
-        runId,
-      },
-    })
-
-    if (existing) {
-      return prisma.companyExploration.update({
-        where: { id: existing.id },
-        data: {
-          title: input.title,
-          summary: input.summary,
-          thesis: input.thesis,
-          catalysts: input.catalysts,
-          risks: input.risks,
-          tags: input.tags ? JSON.stringify(input.tags) : null,
-          score: input.score,
-          confidence: input.confidence,
-          sourceUrls: normalizeSourceUrls(input.sourceUrls),
-          rawJson: normalizeRawJson(input.rawJson),
-          visibility: input.visibility ?? existing.visibility,
-          pinned: input.pinned ?? existing.pinned,
-        },
-      })
-    }
+  const data = {
+    title: input.title,
+    summary: input.summary,
+    thesis: input.thesis,
+    catalysts: input.catalysts,
+    risks: input.risks,
+    tags: input.tags ? JSON.stringify(input.tags) : null,
+    score: input.score,
+    confidence: input.confidence,
+    sourceUrls: normalizeSourceUrls(input.sourceUrls),
+    rawJson: normalizeRawJson(input.rawJson),
   }
 
-  return prisma.companyExploration.create({
+  // 幂等键：companyId + runId；无 runId 的写入每次创建新版本
+  if (runId) {
+    return tx.companyExploration.upsert({
+      where: { companyId_runId: { companyId, runId } },
+      update: {
+        ...data,
+        visibility: input.visibility,
+        pinned: input.pinned,
+      },
+      create: {
+        companyId,
+        runId,
+        ...data,
+        visibility: input.visibility ?? 'draft',
+        pinned: input.pinned ?? false,
+      },
+    })
+  }
+
+  return tx.companyExploration.create({
     data: {
       companyId,
-      runId: runId || null,
-      title: input.title,
-      summary: input.summary,
-      thesis: input.thesis,
-      catalysts: input.catalysts,
-      risks: input.risks,
-      tags: input.tags ? JSON.stringify(input.tags) : null,
-      score: input.score,
-      confidence: input.confidence,
-      sourceUrls: normalizeSourceUrls(input.sourceUrls),
-      rawJson: normalizeRawJson(input.rawJson),
+      runId: null,
+      ...data,
       visibility: input.visibility ?? 'draft',
       pinned: input.pinned ?? false,
     },
   })
 }
 
-export async function upsertValuationSnapshot(
+async function upsertValuationSnapshotInTx(
+  tx: Prisma.TransactionClient,
   companyId: string,
   input: ValuationSnapshotInput,
   runId?: string,
@@ -342,160 +370,222 @@ export async function upsertValuationSnapshot(
     ? input.asOfDate
     : new Date(input.asOfDate)
 
-  if (runId) {
-    const existing = await prisma.companyValuationSnapshot.findFirst({
-      where: {
-        companyId,
-        runId,
-      },
-    })
-
-    if (existing) {
-      return prisma.companyValuationSnapshot.update({
-        where: { id: existing.id },
-        data: {
-          asOfDate,
-          price: input.price,
-          marketCap: input.marketCap,
-          ttmEps: input.ttmEps,
-          normalizedTtmEps: input.normalizedTtmEps,
-          ttmPe: input.ttmPe,
-          normalizedTtmPe: input.normalizedTtmPe,
-          revenueTtm: input.revenueTtm,
-          profitTtm: input.profitTtm,
-          normalizedProfitTtm: input.normalizedProfitTtm,
-          profitMultiple: input.profitMultiple,
-          referenceMultiple: input.referenceMultiple,
-          profitLinePrice: input.profitLinePrice,
-          referenceLinePrice: input.referenceLinePrice,
-          upsideToProfitLine: input.upsideToProfitLine,
-          upsideToReferenceLine: input.upsideToReferenceLine,
-          nonRecurringProfit: input.nonRecurringProfit,
-          profitQualityScore: input.profitQualityScore,
-          profitQualitySummary: input.profitQualitySummary,
-          source: input.source,
-          rawJson: normalizeRawJson(input.rawJson),
-        },
-      })
-    }
+  const data = {
+    asOfDate,
+    price: input.price,
+    marketCap: input.marketCap,
+    ttmEps: input.ttmEps,
+    normalizedTtmEps: input.normalizedTtmEps,
+    ttmPe: input.ttmPe,
+    normalizedTtmPe: input.normalizedTtmPe,
+    revenueTtm: input.revenueTtm,
+    profitTtm: input.profitTtm,
+    normalizedProfitTtm: input.normalizedProfitTtm,
+    profitMultiple: input.profitMultiple,
+    referenceMultiple: input.referenceMultiple,
+    profitLinePrice: input.profitLinePrice,
+    referenceLinePrice: input.referenceLinePrice,
+    upsideToProfitLine: input.upsideToProfitLine,
+    upsideToReferenceLine: input.upsideToReferenceLine,
+    nonRecurringProfit: input.nonRecurringProfit,
+    profitQualityScore: input.profitQualityScore,
+    profitQualitySummary: input.profitQualitySummary,
+    source: input.source,
+    rawJson: normalizeRawJson(input.rawJson),
   }
 
-  return prisma.companyValuationSnapshot.create({
+  // 幂等键：companyId + runId
+  if (runId) {
+    return tx.companyValuationSnapshot.upsert({
+      where: { companyId_runId: { companyId, runId } },
+      update: data,
+      create: {
+        companyId,
+        runId,
+        ...data,
+      },
+    })
+  }
+
+  return tx.companyValuationSnapshot.create({
     data: {
       companyId,
-      runId: runId || null,
-      asOfDate,
-      price: input.price,
-      marketCap: input.marketCap,
-      ttmEps: input.ttmEps,
-      normalizedTtmEps: input.normalizedTtmEps,
-      ttmPe: input.ttmPe,
-      normalizedTtmPe: input.normalizedTtmPe,
-      revenueTtm: input.revenueTtm,
-      profitTtm: input.profitTtm,
-      normalizedProfitTtm: input.normalizedProfitTtm,
-      profitMultiple: input.profitMultiple,
-      referenceMultiple: input.referenceMultiple,
-      profitLinePrice: input.profitLinePrice,
-      referenceLinePrice: input.referenceLinePrice,
-      upsideToProfitLine: input.upsideToProfitLine,
-      upsideToReferenceLine: input.upsideToReferenceLine,
-      nonRecurringProfit: input.nonRecurringProfit,
-      profitQualityScore: input.profitQualityScore,
-      profitQualitySummary: input.profitQualitySummary,
-      source: input.source,
-      rawJson: normalizeRawJson(input.rawJson),
+      runId: null,
+      ...data,
     },
   })
 }
 
-export async function upsertValuationExplanation(
+async function upsertValuationExplanationInTx(
+  tx: Prisma.TransactionClient,
   companyId: string,
   input: ValuationExplanationInput,
   runId?: string,
 ) {
-  if (runId) {
-    const existing = await prisma.companyValuationExplanation.findFirst({
-      where: {
-        companyId,
-        runId,
-        explanationType: input.explanationType,
-      },
-    })
-
-    if (existing) {
-      return prisma.companyValuationExplanation.update({
-        where: { id: existing.id },
-        data: {
-          valuationSnapshotId: input.valuationSnapshotId,
-          title: input.title,
-          body: input.body,
-          impactDirection: input.impactDirection,
-          impactAmount: input.impactAmount,
-          isRecurring: input.isRecurring,
-          sourceUrls: normalizeSourceUrls(input.sourceUrls),
-          confidence: input.confidence,
-        },
-      })
-    }
+  const data = {
+    title: input.title,
+    body: input.body,
+    impactDirection: input.impactDirection,
+    impactAmount: input.impactAmount,
+    isRecurring: input.isRecurring,
+    sourceUrls: normalizeSourceUrls(input.sourceUrls),
+    confidence: input.confidence,
   }
 
-  return prisma.companyValuationExplanation.create({
+  // 幂等键：companyId + runId + explanationType
+  if (runId) {
+    return tx.companyValuationExplanation.upsert({
+      where: {
+        companyId_runId_explanationType: {
+          companyId,
+          runId,
+          explanationType: input.explanationType,
+        },
+      },
+      update: {
+        ...data,
+        valuationSnapshotId: input.valuationSnapshotId,
+      },
+      create: {
+        companyId,
+        runId,
+        valuationSnapshotId: input.valuationSnapshotId,
+        explanationType: input.explanationType,
+        ...data,
+        authorType: 'ai',
+      },
+    })
+  }
+
+  return tx.companyValuationExplanation.create({
     data: {
       companyId,
-      runId: runId || null,
+      runId: null,
       valuationSnapshotId: input.valuationSnapshotId,
       explanationType: input.explanationType,
-      title: input.title,
-      body: input.body,
-      impactDirection: input.impactDirection,
-      impactAmount: input.impactAmount,
-      isRecurring: input.isRecurring,
-      sourceUrls: normalizeSourceUrls(input.sourceUrls),
-      confidence: input.confidence,
+      ...data,
       authorType: 'ai',
     },
   })
 }
 
-export async function writeMarketAnalysis(input: MarketAnalysisWriteInput) {
-  const company = await findOrCreateCompany(input.company)
-  const explorationInput = withAnalysisContext(input.exploration, input.analysisContext)
+type CompanyWriteResults = {
+  company: Company
+  pageEntry: Company | null
+  exploration: CompanyExploration | null
+  valuation: CompanyValuationSnapshot | null
+  explanations: CompanyValuationExplanation[]
+}
 
-  const results: any = {
-    company,
-    pageEntry: null,
-    exploration: null,
-    valuation: null,
-    explanations: [],
-  }
+type CrossMarketSyncTarget = {
+  market: string
+  symbol: string
+  companyId: string
+  explorationId: string
+}
 
-  if (input.pageEntry) {
-    results.pageEntry = await upsertPageEntry(company.id, input.pageEntry)
-  }
+async function writeCompanyRecordsInTx(
+  marketAnalysisInput: MarketAnalysisWriteInput,
+  runId: string | undefined,
+): Promise<CompanyWriteResults> {
+  const explorationInput = withAnalysisContext(marketAnalysisInput.exploration, marketAnalysisInput.analysisContext)
 
-  if (explorationInput) {
-    results.exploration = await upsertExploration(company.id, explorationInput)
-  }
+  return prisma.$transaction(async (tx) => {
+    const company = await upsertCompanyInTx(tx, marketAnalysisInput.company)
 
-  if (input.valuation) {
-    results.valuation = await upsertValuationSnapshot(company.id, input.valuation)
+    const results: CompanyWriteResults = {
+      company,
+      pageEntry: null,
+      exploration: null,
+      valuation: null,
+      explanations: [],
+    }
 
-    if (input.explanations && input.explanations.length > 0) {
-      for (const explanation of input.explanations) {
-        const exp = await upsertValuationExplanation(company.id, {
+    if (marketAnalysisInput.pageEntry) {
+      results.pageEntry = await upsertPageEntryInTx(tx, company.id, marketAnalysisInput.pageEntry)
+    }
+
+    if (explorationInput) {
+      results.exploration = await upsertExplorationInTx(tx, company.id, explorationInput, runId)
+    }
+
+    if (marketAnalysisInput.valuation) {
+      results.valuation = await upsertValuationSnapshotInTx(tx, company.id, marketAnalysisInput.valuation, runId)
+
+      for (const explanation of marketAnalysisInput.explanations || []) {
+        const written = await upsertValuationExplanationInTx(tx, company.id, {
           ...explanation,
           valuationSnapshotId: results.valuation.id,
-        })
-        results.explanations.push(exp)
+        }, runId)
+        results.explanations.push(written)
       }
     }
+
+    // 摘要刷新在写入事务内执行：失败即整体回滚，不出现“数据已写入但摘要过期”的中间态
+    await refreshCompanyValuationSummary(tx, company.id)
+
+    return results
+  })
+}
+
+async function syncExplorationsToCrossMarkets(
+  marketAnalysisInput: MarketAnalysisWriteInput,
+  runId: string,
+  syncToMarkets?: CrossMarketWriteInput['syncToMarkets'],
+): Promise<CrossMarketSyncTarget[]> {
+  const groupId = marketAnalysisInput.company.groupId || detectGroupId(marketAnalysisInput.company.name)
+  const explorationInput = withAnalysisContext(
+    marketAnalysisInput.exploration,
+    marketAnalysisInput.analysisContext,
+  )
+
+  if (!groupId || !explorationInput) return []
+
+  const crossMarketSymbols = getCrossMarketSymbols(groupId)
+  if (!crossMarketSymbols) return []
+
+  const marketsToSync = syncToMarkets || Object.keys(crossMarketSymbols).filter(
+    (m) => m !== marketAnalysisInput.company.market,
+  )
+
+  const syncedCompanies: CrossMarketSyncTarget[] = []
+
+  for (const targetMarket of marketsToSync) {
+    const targetSymbol = crossMarketSymbols[targetMarket]
+    if (!targetSymbol) continue
+
+    const synced = await prisma.$transaction(async (tx) => {
+      const targetCompany = await upsertCrossMarketCompanyInTx(
+        tx,
+        marketAnalysisInput.company,
+        groupId,
+        targetMarket,
+        targetSymbol,
+      )
+
+      if (marketAnalysisInput.pageEntry) {
+        await upsertPageEntryInTx(tx, targetCompany.id, {
+          ...marketAnalysisInput.pageEntry,
+          title: marketAnalysisInput.pageEntry.title || marketAnalysisInput.company.name,
+        })
+      }
+
+      const syncedExploration = await upsertExplorationInTx(tx, targetCompany.id, explorationInput, runId)
+
+      await refreshCompanyValuationSummary(tx, targetCompany.id)
+
+      return {
+        market: targetMarket,
+        symbol: targetSymbol,
+        companyId: targetCompany.id,
+        explorationId: syncedExploration.id,
+      }
+    })
+
+    syncedCompanies.push(synced)
   }
 
-  await refreshCompanyValuationSummaryAfterWrite(company.id)
-  await invalidateValuationCacheAfterWrite()
-
-  return results
+  return syncedCompanies
 }
 
 export async function writeMarketAnalysisIdempotent(input: IdempotentWriteInput) {
@@ -519,79 +609,14 @@ export async function writeMarketAnalysisIdempotent(input: IdempotentWriteInput)
     )
   }
 
-  const explorationInput = withAnalysisContext(
-    marketAnalysisInput.exploration,
-    marketAnalysisInput.analysisContext,
-  )
-
   try {
-    if (runId) {
-      const existingRun = await prisma.companyExplorationRun.findUnique({
-        where: { id: runId },
-      })
-      if (!existingRun) {
-        await prisma.companyExplorationRun.create({
-          data: {
-            id: runId,
-            prompt: `Market analysis run: ${runId}`,
-            status: 'running',
-          },
-        })
-      }
-    }
+    await ensureExplorationRun(runId)
 
-    const company = await findOrCreateCompany(marketAnalysisInput.company)
+    const results = await writeCompanyRecordsInTx(marketAnalysisInput, runId)
 
-    const results: any = {
-      company,
-      pageEntry: null,
-      exploration: null,
-      valuation: null,
-      explanations: [],
-    }
-
-    if (marketAnalysisInput.pageEntry) {
-      results.pageEntry = await upsertPageEntry(company.id, marketAnalysisInput.pageEntry)
-    }
-
-    if (explorationInput) {
-      results.exploration = await upsertExploration(
-        company.id,
-        explorationInput,
-        runId,
-      )
-    }
-
-    if (marketAnalysisInput.valuation) {
-      results.valuation = await upsertValuationSnapshot(
-        company.id,
-        marketAnalysisInput.valuation,
-        runId,
-      )
-
-      if (marketAnalysisInput.explanations && marketAnalysisInput.explanations.length > 0) {
-        for (const explanation of marketAnalysisInput.explanations) {
-          const exp = await upsertValuationExplanation(company.id, {
-            ...explanation,
-            valuationSnapshotId: results.valuation.id,
-          }, runId)
-          results.explanations.push(exp)
-        }
-      }
-    }
-
-    await refreshCompanyValuationSummaryAfterWrite(company.id)
-    await invalidateValuationCacheAfterWrite()
-
-    if (runId) {
-      await prisma.companyExplorationRun.update({
-        where: { id: runId },
-        data: {
-          status: 'completed',
-          finishedAt: new Date(),
-        },
-      }).catch(() => {})
-    }
+    // 缓存失效是必要成功条件：失败 → run 记 failed 并向上抛出
+    await invalidateValuationCacheOrThrow()
+    await markRunFinished(runId, 'completed')
 
     await recordMarketAnalysisScratchpad(runId, 'write_result', {
       companyId: results.company.id,
@@ -607,6 +632,7 @@ export async function writeMarketAnalysisIdempotent(input: IdempotentWriteInput)
       stage: 'write',
       message: errorMessage(error),
     })
+    await markRunFinished(runId, 'failed', errorMessage(error))
     throw error
   }
 }
@@ -614,152 +640,52 @@ export async function writeMarketAnalysisIdempotent(input: IdempotentWriteInput)
 export async function writeMarketAnalysisCrossMarket(input: CrossMarketWriteInput) {
   const { runId, syncToMarkets, ...marketAnalysisInput } = input
 
-  // 1. 写入主市场公司
-  const primaryResult = await writeMarketAnalysisIdempotent({
-    ...marketAnalysisInput,
-    runId,
+  await recordMarketAnalysisScratchpad(runId, 'init', {
+    company: marketAnalysisInput.company,
+    hasPageEntry: Boolean(marketAnalysisInput.pageEntry),
+    hasExploration: Boolean(marketAnalysisInput.exploration),
+    hasValuation: Boolean(marketAnalysisInput.valuation),
+    explanationsCount: marketAnalysisInput.explanations?.length || 0,
+    hasAnalysisContext: Boolean(marketAnalysisInput.analysisContext),
+    toolResultsCount: marketAnalysisInput.analysisContext?.toolResults?.length || 0,
   })
 
-  const syncedCompanies: {
-    market: string
-    symbol: string
-    companyId: string
-    explorationId: string
-  }[] = []
+  for (const toolResult of marketAnalysisInput.analysisContext?.toolResults || []) {
+    await recordMarketAnalysisScratchpad(
+      runId,
+      'tool_result',
+      toolResult as unknown as Record<string, unknown>,
+    )
+  }
 
-  // 2. 如果提供了 groupId，同步 exploration 到其他市场
-  const groupId = marketAnalysisInput.company.groupId || detectGroupId(marketAnalysisInput.company.name)
-  const explorationInput = withAnalysisContext(
-    marketAnalysisInput.exploration,
-    marketAnalysisInput.analysisContext,
-  )
+  try {
+    await ensureExplorationRun(runId)
 
-  if (groupId && explorationInput) {
-    const crossMarketSymbols = getCrossMarketSymbols(groupId)
+    const primaryResult = await writeCompanyRecordsInTx(marketAnalysisInput, runId)
+    const syncedCompanies = await syncExplorationsToCrossMarkets(marketAnalysisInput, runId, syncToMarkets)
 
-    if (crossMarketSymbols) {
-      // 确定要同步的市场
-      const marketsToSync = syncToMarkets || Object.keys(crossMarketSymbols).filter(
-        m => m !== marketAnalysisInput.company.market
-      )
+    await invalidateValuationCacheOrThrow()
+    await markRunFinished(runId, 'completed')
 
-      for (const targetMarket of marketsToSync) {
-        const targetSymbol = crossMarketSymbols[targetMarket]
-        if (!targetSymbol) continue
+    await recordMarketAnalysisScratchpad(runId, 'write_result', {
+      stage: 'cross_market_sync',
+      companyId: primaryResult.company.id,
+      explorationId: primaryResult.exploration?.id || null,
+      valuationId: primaryResult.valuation?.id || null,
+      explanationsCount: primaryResult.explanations.length,
+      syncedCompanies,
+    })
 
-        // 查找或创建目标市场的公司记录
-        let targetCompany = await prisma.company.findUnique({
-          where: {
-            market_symbol: {
-              market: targetMarket,
-              symbol: targetSymbol,
-            },
-          },
-        })
-
-        if (!targetCompany) {
-          targetCompany = await prisma.company.create({
-            data: {
-              symbol: targetSymbol,
-              market: targetMarket,
-              name: marketAnalysisInput.company.name,
-              groupId: groupId,
-              sector: marketAnalysisInput.company.sector,
-              industry: marketAnalysisInput.company.industry,
-              country: marketAnalysisInput.company.country,
-            },
-          })
-        } else if (!targetCompany.groupId) {
-          // 更新 groupId
-          targetCompany = await prisma.company.update({
-            where: { id: targetCompany.id },
-            data: { groupId },
-          })
-        }
-
-        // 同步创建 PageEntry（如果主市场有）
-        if (marketAnalysisInput.pageEntry) {
-          await upsertPageEntry(targetCompany.id, {
-            ...marketAnalysisInput.pageEntry,
-            title: marketAnalysisInput.pageEntry.title || marketAnalysisInput.company.name,
-          })
-        }
-
-        // 同步 exploration（使用相同的 runId）
-        const syncedExploration = await upsertExploration(
-          targetCompany.id,
-          explorationInput,
-          runId,
-        )
-
-        await refreshCompanyValuationSummaryAfterWrite(targetCompany.id)
-
-        syncedCompanies.push({
-          market: targetMarket,
-          symbol: targetSymbol,
-          companyId: targetCompany.id,
-          explorationId: syncedExploration.id,
-        })
-      }
+    return {
+      ...primaryResult,
+      syncedCompanies,
     }
+  } catch (error) {
+    await recordMarketAnalysisScratchpad(runId, 'error', {
+      stage: 'cross_market_sync',
+      message: errorMessage(error),
+    })
+    await markRunFinished(runId, 'failed', errorMessage(error))
+    throw error
   }
-
-  await invalidateValuationCacheAfterWrite()
-
-  await recordMarketAnalysisScratchpad(runId, 'write_result', {
-    stage: 'cross_market_sync',
-    syncedCompanies,
-  })
-
-  return {
-    ...primaryResult,
-    syncedCompanies,
-  }
-}
-
-export async function getCompanyByMarketSymbol(
-  market: string,
-  symbol: string,
-) {
-  return prisma.company.findUnique({
-    where: {
-      market_symbol: {
-        market,
-        symbol,
-      },
-    },
-    include: {
-      valuations: {
-        orderBy: [{ asOfDate: 'desc' }, { createdAt: 'desc' }],
-        take: 1,
-      },
-      explorations: {
-        where: { visibility: 'published' },
-        orderBy: [{ pinned: 'desc' }, { createdAt: 'desc' }],
-        take: 1,
-      },
-      explanations: {
-        where: { isCurrent: true },
-        orderBy: [{ asOfDate: 'desc' }, { createdAt: 'desc' }],
-        take: 8,
-      },
-    },
-  })
-}
-
-export async function getCompanyGroupMembers(groupId: string) {
-  return prisma.company.findMany({
-    where: { groupId },
-    include: {
-      valuations: {
-        orderBy: [{ asOfDate: 'desc' }, { createdAt: 'desc' }],
-        take: 1,
-      },
-      explorations: {
-        where: { visibility: 'published' },
-        orderBy: [{ pinned: 'desc' }, { createdAt: 'desc' }],
-        take: 1,
-      },
-    },
-  })
 }

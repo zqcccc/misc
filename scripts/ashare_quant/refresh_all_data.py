@@ -1,23 +1,29 @@
 """
-全量刷新股票池日线数据至最新日期 (2026-09-02)
+全量刷新股票池日线数据至运行时最新日期 (yfinance 的 end 为开区间, 统一以运行日次日为右界)
 """
 
-import os
 import time
+
 import pandas as pd
 import yfinance as yf
-from scripts.ashare_quant.data_feed import UNIVERSE, BENCHMARK_SYMBOL, CACHE_DIR, get_cache_path
+from scripts.ashare_quant.data_feed import (
+    UNIVERSE,
+    BENCHMARK_SYMBOL,
+    get_cache_path,
+    resolve_end_date,
+)
 
 all_symbols = list(UNIVERSE.keys()) + [BENCHMARK_SYMBOL]
+end_date = resolve_end_date()
 
-print(f"正在全量刷新 {len(all_symbols)} 只标的数据至 2026-09-02...")
+print(f"正在全量刷新 {len(all_symbols)} 只标的数据至运行时最新日期 (下载右界 {end_date})...")
 for sym in all_symbols:
     p = get_cache_path(sym)
     print(f"-> 刷新 {sym} ({UNIVERSE.get(sym, '基准')})...", end=" ", flush=True)
     success = False
     for attempt in range(3):
         try:
-            raw = yf.download(sym, start="2018-01-01", end="2026-09-05", auto_adjust=True, progress=False)
+            raw = yf.download(sym, start="2018-01-01", end=end_date, auto_adjust=True, progress=False)
             if raw is not None and len(raw) > 50:
                 if hasattr(raw.columns, "levels"):
                     raw.columns = [c[0].lower() for c in raw.columns]

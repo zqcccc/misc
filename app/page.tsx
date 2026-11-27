@@ -35,6 +35,12 @@ const works = [
     status: '交易日盘后更新',
   },
   {
+    href: '/etf-premium',
+    title: '跨境 ETF 溢价监控',
+    description: '比较场内价格、IOPV 与单位净值口径的溢价，并核对同一指数的跟踪载体。',
+    status: '公开行情 · 手动刷新',
+  },
+  {
     href: '/pe',
     title: '利润线与估值',
     description: '股价、TTM EPS、利润线与估值区间的历史查询入口。',

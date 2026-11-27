@@ -6,6 +6,11 @@ import {
   writeProfitLineCache,
 } from './cache'
 import {
+  type HkEpsPreparation,
+  HkCurrencyError,
+  prepareHkEps,
+} from './hk-currency'
+import {
   adjustUsEpsForShareClass,
   buildQuarterPoints,
   buildQuarterlyEpsRows,
@@ -99,8 +104,6 @@ const BERKSHIRE_CLASS_MEMBER_BY_TICKER: Record<string, string> = {
   'BRK-B': 'brka:EquivalentClassBMember',
 }
 
-const CNY_TO_HKD_FALLBACK_RATE = 1.08
-
 function jsonError(message: string, status = 400) {
   return NextResponse.json({ message }, { status })
 }
@@ -124,7 +127,10 @@ class ProfitLineDataError extends Error {
 }
 
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, init)
+  const response = await fetch(url, {
+    ...init,
+    signal: init?.signal ?? AbortSignal.timeout(10_000),
+  })
   if (!response.ok) {
     throw new Error(`${response.status} ${response.statusText}`)
   }
@@ -132,7 +138,10 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 async function fetchText(url: string, init?: RequestInit): Promise<string> {
-  const response = await fetch(url, init)
+  const response = await fetch(url, {
+    ...init,
+    signal: init?.signal ?? AbortSignal.timeout(10_000),
+  })
   if (!response.ok) {
     throw new Error(`${response.status} ${response.statusText}`)
   }
@@ -715,93 +724,6 @@ function toRegionalYahooSymbol(
     : `${marketSymbol.symbol}.SZ`
 }
 
-async function fetchCnyToHkdRate(): Promise<number> {
-  const url =
-    'https://query2.finance.yahoo.com/v8/finance/chart/CNYHKD=X?range=5d&interval=1d'
-
-  try {
-    const data = await fetchJson<any>(url, {
-      headers: {
-        Accept: 'application/json',
-        'User-Agent':
-          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-      },
-      cache: 'no-store',
-    })
-    const rate = data?.chart?.result?.[0]?.meta?.regularMarketPrice
-    if (typeof rate === 'number' && Number.isFinite(rate) && rate > 0) {
-      return rate
-    }
-
-    throw new Error('无法获取 CNY/HKD 汇率')
-  } catch (error) {
-    console.warn('[profit-line] CNY/HKD rate fallback used:', error)
-    return CNY_TO_HKD_FALLBACK_RATE
-  }
-}
-
-type HkCompanyProfile = {
-  zqzl?: {
-    zqlx?: string
-    mgmz?: string
-  }
-  gszl?: {
-    zcd?: string
-  }
-}
-
-async function fetchHkCompanyProfile(symbol: string): Promise<HkCompanyProfile> {
-  const url = `http://f10.eastmoney.com/PC_HKF10/CompanyProfile/PageAjax?code=${symbol}`
-  try {
-    const data = await fetchJson<HkCompanyProfile>(url, {
-      headers: {
-        Accept: 'application/json',
-        Referer: 'http://f10.eastmoney.com/',
-        'User-Agent':
-          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-      },
-      cache: 'no-store',
-    })
-    return data
-  } catch {
-    return {}
-  }
-}
-
-const HKD_EPS_STOCKS = new Set([
-  '00001',
-  '01038',
-  '01113',
-  '01929',
-  '01997',
-])
-
-function isEpsInCny(symbol: string, profile: HkCompanyProfile): boolean {
-  if (HKD_EPS_STOCKS.has(symbol)) {
-    return false
-  }
-
-  const zqlx = profile.zqzl?.zqlx
-  const zcd = profile.gszl?.zcd || ''
-
-  if (zqlx === 'H股' || zqlx === '红筹股') {
-    return true
-  }
-
-  if (zqlx === '非H股' && zcd.includes('中国') && !zcd.includes('Cayman')) {
-    return false
-  }
-
-  if (
-    zqlx === '非H股' &&
-    (zcd.includes('United Kingdom') || zcd.includes('英国'))
-  ) {
-    return false
-  }
-
-  return true
-}
-
 async function buildEastmoneyPayload(
   marketSymbol: RegionalMarketSymbol,
 ): Promise<ProfitLinePayload> {
@@ -817,17 +739,19 @@ async function buildEastmoneyPayload(
   let convertedQuarters = quarters
 
   if (marketSymbol.market === 'hk') {
-    const profile = await fetchHkCompanyProfile(marketSymbol.symbol)
-    if (isEpsInCny(marketSymbol.symbol, profile)) {
-      const rate = await fetchCnyToHkdRate()
-      epsCurrency = 'CNY'
-      fxRate = rate
-      convertedQuarters = quarters.map((q) => ({
-        ...q,
-        eps: q.eps * rate,
-        ttmEps: q.ttmEps != null ? q.ttmEps * rate : undefined,
-      }))
+    let hkEps: HkEpsPreparation
+    try {
+      hkEps = await prepareHkEps(marketSymbol.symbol, quarters)
+    } catch (error) {
+      if (error instanceof HkCurrencyError) {
+        console.warn('[profit-line] hk eps currency unresolved:', error.message)
+        throw new ProfitLineDataError(error.message, 502)
+      }
+      throw error
     }
+    epsCurrency = hkEps.epsCurrency
+    fxRate = hkEps.fxRate
+    convertedQuarters = hkEps.convertedQuarters
   }
 
   const yahooSymbol = toRegionalYahooSymbol(marketSymbol)

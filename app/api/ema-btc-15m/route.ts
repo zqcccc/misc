@@ -1,26 +1,7 @@
 import { NextResponse } from 'next/server'
-import fs from 'node:fs/promises'
-import path from 'node:path'
 
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
-
-const DATA_FILE = path.join(process.cwd(), 'data', 'ema-btc-15m.json')
-
-export async function GET() {
-  try {
-    const raw = await fs.readFile(DATA_FILE, 'utf-8')
-    return new NextResponse(raw, {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8',
-        'Cache-Control': 'no-store, max-age=0',
-      },
-    })
-  } catch {
-    return NextResponse.json(
-      { message: 'BTC 15m 研究数据未生成。请运行: btc_ema_15m/export_research_json.py' },
-      { status: 503 },
-    )
-  }
+// BTC 15m 研究数据 API 已下线：读取 data/ema-btc-15m.json 的旧执行路径已删除，
+// 统一返回 404。历史实现见仓库历史。
+export function GET() {
+  return NextResponse.json({ message: 'Not Found' }, { status: 404 })
 }

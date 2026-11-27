@@ -7,6 +7,8 @@ import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
+let errorCount = 0
+
 type ImpactDirection = 'positive' | 'neutral' | 'negative'
 
 interface CompanyData {
@@ -841,7 +843,6 @@ async function main() {
   }
 
   let processedCount = 0
-  let errorCount = 0
 
   for (const exploration of shortFormat) {
     const company = exploration.company
@@ -915,7 +916,7 @@ async function main() {
 main()
   .then(async () => {
     await prisma.$disconnect()
-    process.exit(0)
+    process.exit(errorCount > 0 ? 1 : 0)
   })
   .catch(async (error) => {
     console.error('脚本执行失败:', error)

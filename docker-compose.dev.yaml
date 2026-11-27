@@ -1,38 +1,25 @@
-version: '3'
 services:
   netflix-test:
     container_name: netflix-test
-    image: node:16.20.0-alpine
-    #build:
-    #  context: .
-    #    dockerfile: ./Dockerfile
+    image: node:22-alpine
+    environment:
+      # corepack 按 packageManager 字段下载 pnpm; 非交互容器关闭下载确认提示
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
     restart: always
     volumes:
-      - './public:/app/public'
-      - './app:/app/app'
-      - ./package.json:/app/package.json
-      - ./yarn.lock:/app/yarn.lock
-      - ./tailwind.config.js:/app/tailwind.config.js
-      - ./postcss.config.js:/app/postcss.config.js
-      - ./next.config.js:/app/next.config.js
-      - ./tsconfig.json:/app/tsconfig.json
-      - ./.env.local:/app/.env.local
-      - ./.eslintrc.json:/app/.eslintrc.json
+      - .:/app
+      - /app/node_modules
+      - /app/.next
     ports:
-      - 3010:3010
+      - 3011:3011
     working_dir: /app
-    # network_mode: 'host'
-    command: tail -f /dev/null
-    # entrypoint:
-    #   - sh
+    command: sh -c "corepack pnpm install --frozen-lockfile && corepack pnpm dev"
+
   caddy:
     container_name: caddy
     restart: always
-    # network_mode: host
     ports:
       - 8080:8080
-    image: "caddy:alpine"
+    image: caddy:alpine
     volumes:
-      # - ./static:/usr/share/caddy
       - ./Caddyfile:/etc/caddy/Caddyfile
-    

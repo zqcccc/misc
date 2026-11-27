@@ -5,6 +5,9 @@ A股量化策略数据源模块
 
 import os
 import time
+from datetime import date, timedelta
+from typing import Optional
+
 import pandas as pd
 import numpy as np
 import yfinance as yf
@@ -41,7 +44,20 @@ def get_cache_path(symbol: str) -> str:
     return os.path.join(CACHE_DIR, f"{clean_sym}.csv")
 
 
-def fetch_symbol_daily(symbol: str, start: str = "2018-01-01", end: str = "2026-03-01", force: bool = False) -> pd.DataFrame:
+def resolve_end_date(end: Optional[str] = None, *, today: Optional[date] = None) -> str:
+    """
+    解析日线数据右端点:
+    - 显式传入 end 时原样返回 (兼容旧调用)
+    - 缺省时取运行日期次日: yfinance 的 end 为开区间, 以次日为界才能覆盖运行当日
+      已发布的最新K线, 等价于旧固定截止日"多留一天余量"的口径
+    """
+    if end is not None:
+        return end
+    base = today or date.today()
+    return (base + timedelta(days=1)).isoformat()
+
+
+def fetch_symbol_daily(symbol: str, start: str = "2018-01-01", end: Optional[str] = None, force: bool = False) -> pd.DataFrame:
     cache_file = get_cache_path(symbol)
     if not force and os.path.exists(cache_file) and os.path.getsize(cache_file) > 1024:
         df = pd.read_csv(cache_file)
@@ -49,11 +65,12 @@ def fetch_symbol_daily(symbol: str, start: str = "2018-01-01", end: str = "2026-
         df = df.sort_values("date").drop_duplicates(subset=["date"]).reset_index(drop=True)
         return df
 
-    print(f"[data_feed] 从 yfinance 下载 {symbol} ({start} ~ {end})...", flush=True)
+    resolved_end = resolve_end_date(end)
+    print(f"[data_feed] 从 yfinance 下载 {symbol} ({start} ~ {resolved_end})...", flush=True)
     last_err = None
     for attempt in range(3):
         try:
-            raw = yf.download(symbol, start=start, end=end, auto_adjust=True, progress=False)
+            raw = yf.download(symbol, start=start, end=resolved_end, auto_adjust=True, progress=False)
             if raw is not None and len(raw) > 50:
                 if isinstance(raw.columns, pd.MultiIndex):
                     raw.columns = [c[0].lower() for c in raw.columns]
@@ -78,7 +95,7 @@ def fetch_symbol_daily(symbol: str, start: str = "2018-01-01", end: str = "2026-
     raise RuntimeError(f"拉取 {symbol} 失败: {last_err}")
 
 
-def load_all_universe(start: str = "2018-01-01", end: str = "2026-03-01", force: bool = False) -> dict[str, pd.DataFrame]:
+def load_all_universe(start: str = "2018-01-01", end: Optional[str] = None, force: bool = False) -> dict[str, pd.DataFrame]:
     all_symbols = list(UNIVERSE.keys()) + [BENCHMARK_SYMBOL]
     data_map = {}
     for sym in all_symbols:

@@ -193,7 +193,7 @@ export function companyValuationCardFromSummary(
 }
 
 export async function refreshCompanyValuationSummary(
-  prisma: PrismaClient,
+  prisma: Prisma.TransactionClient,
   companyId: string,
 ) {
   const company = await prisma.company.findUnique({
