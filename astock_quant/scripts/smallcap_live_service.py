@@ -48,7 +48,7 @@ def _bars_frame(bars: list) -> pd.DataFrame:
 def index_trading_days(end: str | None, count: int) -> pd.DatetimeIndex:
     """按同一抓取根数取上证指数的真实交易日序列（交易日历的唯一事实来源）。"""
     end = end or datetime.now().strftime("%Y-%m-%d")
-    bars, _ = ds.fetch_chunk("sh000001", end=end, count=count, fq="hfq")
+    bars, _ = ds.fetch_chunk("sh000001", end=end, count=count, fq="")
     frame = _bars_frame(bars)
     if frame.empty:
         raise RuntimeError("无法从上证指数行情获取交易日历")
