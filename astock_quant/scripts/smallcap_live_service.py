@@ -642,7 +642,6 @@ def mark_runtime_failure(out_path: str | Path, error: Exception) -> None:
 
 def run_daemon(args: argparse.Namespace) -> None:
     fail_count = 0
-    startup_pending = True
     while True:
         now = datetime.now()
         state_path = Path(args.cache_dir) / "state.json"
@@ -668,7 +667,7 @@ def run_daemon(args: argparse.Namespace) -> None:
             except Exception as exc:  # noqa: BLE001
                 print(f"[WARN] 轮询最新交易日失败: {exc}", flush=True)
         scheduled = after_close and market_advanced
-        if startup_pending or scheduled:
+        if scheduled:
             try:
                 run_once(args)
                 fail_count = 0
@@ -682,7 +681,6 @@ def run_daemon(args: argparse.Namespace) -> None:
                 print(f"[ERROR] {message}", file=sys.stderr, flush=True)
                 if fail_count <= 3:
                     send_alert("🚨【A股小微盘增量数据管线失败】", message, important=True)
-            startup_pending = False
         time.sleep(300 if fail_count == 0 else 900)
 
 
