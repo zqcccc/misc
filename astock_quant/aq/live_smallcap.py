@@ -138,6 +138,7 @@ def atomic_write_json(path: str | Path, value: Any) -> None:
             json.dump(value, handle, ensure_ascii=False, indent=2, allow_nan=False)
             handle.flush()
             os.fsync(handle.fileno())
+        os.chmod(tmp_name, 0o644)
         os.replace(tmp_name, target)
     finally:
         if os.path.exists(tmp_name):
@@ -152,6 +153,7 @@ def atomic_write_parquet(path: str | Path, frame: pd.DataFrame) -> None:
     os.close(fd)
     try:
         frame.copy().to_parquet(tmp_name)
+        os.chmod(tmp_name, 0o644)
         os.replace(tmp_name, target)
     finally:
         if os.path.exists(tmp_name):

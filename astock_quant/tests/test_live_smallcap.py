@@ -156,6 +156,12 @@ def test_coverage_gate_rejects_partial_cross_section():
         )
 
 
+def test_atomic_json_is_readable_by_other_users(tmp_path):
+    target = tmp_path / "signal.json"
+    live_smallcap.atomic_write_json(target, {"status": "ok"})
+    assert target.stat().st_mode & 0o444 == 0o444
+
+
 def test_atomic_json_never_publishes_nan(tmp_path):
     target = tmp_path / "signal.json"
     live_smallcap.atomic_write_json(target, {"status": "old"})
