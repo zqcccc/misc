@@ -119,6 +119,11 @@ def test_merge_overwrites_recent_corrections():
     assert merged["close"].at[dates[2], "a"] == pytest.approx(3.0)
 
 
+def test_explicit_end_does_not_require_calendar_request():
+    service = _import_live_service()
+    assert service.expected_trading_date("2026-11-27") == pd.Timestamp("2026-11-27")
+
+
 def test_merge_allows_float64_updates_into_float32_cache():
     dates = pd.bdate_range("2026-01-01", periods=3)
     old_close = pd.DataFrame({"a": np.array([1.0, 2.0], dtype=np.float32)}, index=dates[:2])

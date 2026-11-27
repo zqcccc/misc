@@ -56,7 +56,9 @@ def index_trading_days(end: str | None, count: int) -> pd.DatetimeIndex:
 
 
 def expected_trading_date(end: str | None = None) -> pd.Timestamp:
-    return pd.Timestamp(index_trading_days(end, 10)[-1])
+    if end:
+        return pd.Timestamp(end)
+    return pd.Timestamp(index_trading_days(None, 10)[-1])
 
 
 def load_codes(meta_path: str | Path, universe_path: str | Path) -> list[str]:
